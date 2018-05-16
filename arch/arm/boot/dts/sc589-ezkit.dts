@@ -1,0 +1,29 @@
+/*
+ * Device tree for ADI sc589-ezkit board
+ *
+ * Copyright 2018 Analog Devices Inc.
+ *
+ * Licensed under the GPL-2 or later.
+ *
+ */
+
+/dts-v1/;
+
+#include "sc58x.dtsi"
+
+/ {
+	model = "ADI sc589-ezkit";
+	compatible = "adi,sc589-ezkit", "adi,sc58x";
+
+	aliases {
+	};
+
+	memory@C3000000 {
+		device_type = "memory";
+		reg = <0xC3000000 0xF000000>;
+	};
+
+	scb {
+		
+	};
+};
