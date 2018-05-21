@@ -556,6 +556,25 @@ config ARCH_SC58X
 	help
 	  This enables support for ADI Ltd sc58x board.
 
+config ARCH_SC57X
+	bool "ADI Ltd. sc57x family"
+	select ARM_GIC
+	select CPU_V7
+	select VFP
+	select NEON
+	select MIGHT_HAVE_CACHE_L2X0
+	select HAVE_CLK
+	select CLKDEV_LOOKUP
+	select GENERIC_CLOCKEVENTS
+	select IRQ_DOMAIN
+	select HAVE_MACH_CLKDEV
+	select NEED_MACH_GPIO_H
+	select SPARSE_IRQ
+	select ARCH_REQUIRE_GPIOLIB
+	select PINCTRL
+	help
+		This enables support for ADI Ltd sc57x board.
+
 endchoice
 
 menu "Multiple platform selection"
@@ -769,6 +788,7 @@ source "arch/arm/mach-zx/Kconfig"
 source "arch/arm/mach-zynq/Kconfig"
 
 source "arch/arm/mach-sc58x/Kconfig"
+source "arch/arm/mach-sc57x/Kconfig"
 
 # ARMv7-M architecture
 config ARCH_EFM32

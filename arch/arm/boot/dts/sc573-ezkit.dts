@@ -1,0 +1,30 @@
+/*
+ * Device tree for ADI sc573-ezkit board
+ *
+ * Copyright 2014 - 2018 Analog Devices Inc.
+ *
+ * Licensed under the GPL-2 or later.
+ *
+ */
+
+/dts-v1/;
+
+#include "sc57x.dtsi"
+
+/ {
+	model = "ADI sc573-ezkit";
+	compatible = "adi,sc573-ezkit", "adi,sc57x";
+
+	aliases {
+		/* serial2 = &uart2; */
+	};
+
+	memory@80000000 {
+		device_type = "memory";
+		reg = <0x80000000 0xF000000>;
+	};
+
+	scb {
+
+	};
+};
