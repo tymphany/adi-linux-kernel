@@ -1280,6 +1280,13 @@ choice
 		  Say Y here if you want the debug print routines to direct
 		  their output to the uart0 port on ADI SC58X devices.
 
+	config DEBUG_ADI_SC57X_UART0
+        	bool "Kernel low-level debugging messages via ADI SC57X UART0"
+        	depends on ARCH_SC57X
+        	help
+		  Say Y here if you want the debug print routines to direct
+		  their output to the uart0 port on ADI SC57X devices.
+
 	config DEBUG_U300_UART
 		bool "Kernel low-level debugging messages via U300 UART0"
 		depends on ARCH_U300
@@ -1563,6 +1570,7 @@ config DEBUG_LL_INCLUDE
 	default "debug/renesas-scif.S" if DEBUG_RMOBILE_SCIFA4
 	default "debug/s3c24xx.S" if DEBUG_S3C24XX_UART || DEBUG_S3C64XX_UART
 	default "debug/sc58x.S" if DEBUG_ADI_SC58X_UART0
+	default "debug/sc57x.S" if DEBUG_ADI_SC57X_UART0
 	default "debug/s5pv210.S" if DEBUG_S5PV210_UART
 	default "debug/sirf.S" if DEBUG_SIRFSOC_UART
 	default "debug/sti.S" if DEBUG_STI_UART

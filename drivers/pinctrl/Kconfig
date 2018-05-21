@@ -33,7 +33,7 @@ config DEBUG_PINCTRL
 
 config PINCTRL_ADI2
 	bool "ADI pin controller driver"
-	depends on (BF54x || BF60x || ARCH_SC58X)
+	depends on (BF54x || BF60x || ARCH_SC58X || ARCH_SC57X)
 	depends on !GPIO_ADI
 	select PINMUX
 	select IRQ_DOMAIN
@@ -88,6 +88,10 @@ config PINCTRL_BF60x
 
 config PINCTRL_SC58x
 	def_bool y if ARCH_SC58X
+	select PINCTRL_ADI2
+
+config PINCTRL_SC57x
+	def_bool y if ARCH_SC57X
 	select PINCTRL_ADI2
 
 config PINCTRL_AT91
