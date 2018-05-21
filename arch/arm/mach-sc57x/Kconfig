@@ -1,0 +1,96 @@
+menu "sc57x platform type"
+	depends on ARCH_SC57X
+
+choice
+	prompt "ADI sc57x Eval board"
+	default MACH_SC573_EZKIT
+	help
+	  This select the sc57x eval board type.
+
+config	MACH_SC573_EZKIT
+	bool "ADI sc573 EZKIT board"
+	help
+	  Say 'Y' here if you want your kernel to run on the ADI
+	  SC573-EZKIT board.
+
+endchoice
+
+config ARCH_SC57X_SLAVECORE_COUNT
+	int "Slave core count in sc57x"
+	range 0 2
+	default 2
+	help
+	This sets the slave core count in sc57x processor.
+
+choice
+	prompt "SC57X Core Clock Divider"
+	default SC57X_CCLK_DIV_1
+	help
+	This sets the frequency of the core. It can be 1, 2, 4 or 8
+	Core Frequency = (PLL frequency) / (this setting)
+
+config SC57X_CCLK_DIV_1
+	bool "1"
+
+config SC57X_CCLK_DIV_2
+	bool "2"
+
+config SC57X_CCLK_DIV_4
+	bool "4"
+
+config SC57X_CCLK_DIV_8
+	bool "8"
+endchoice
+
+config SCLK_DIV
+	int "System Clock Divider"
+	range 1 15
+	default 2
+	help
+	This sets the frequency of the system clock and provides the
+	source from which SCLK0 and SCLK1 are derived.
+	This can be between 1 and 15
+	System Clock = (PLL frequency) / (this setting)
+
+config SCLK0_DIV
+	int "System Clock0 Divider"
+	range 1 15
+	default 2
+	help
+	This sets the frequency of the system clock0.
+	This can be between 1 and 15
+	System Clock0 = (System Clock) / (this setting)
+
+config SCLK1_DIV
+	int "System Clock1 Divider"
+	range 1 15
+	default 2
+	help
+	This sets the frequency of the system clock1.
+	This can be between 1 and 15
+	System Clock1 = (System Clock) / (this setting)
+
+config ARCH_HEADER_IN_MACH
+	bool
+	default y
+	help
+	  Define the architecture specific head file path for
+	  ADI genenric peripheral drivers.
+
+config ARCH_SRAM_ALLOC
+	bool "Allocation API for sc57x onchip SRAM"
+	depends on !ICC
+	select GENERIC_ALLOCATOR
+	default n
+	help
+	  Enable the allocation and free API for sc57x on chip SRAM.
+
+config MACH_SC57X_DT
+	bool "Support sc57x platforms from device tree"
+	default y
+	select USE_OF
+	help
+	  Include support for sc57x based platforms using the device tree for
+	  discovery. Note: This is under development and not all peripherals
+	  can be supported with this machine file
+endmenu
