@@ -1305,5 +1305,6 @@ dtb-$(CONFIG_ARCH_ASPEED) += \
 	aspeed-bmc-quanta-q71l.dtb
 dtb-$(CONFIG_ARCH_SC58X) += \
 	sc58x.dtb \
+	sc589-mini.dtb \
 	sc589-ezkit.dtb \
 	sc584-ezkit.dtb
