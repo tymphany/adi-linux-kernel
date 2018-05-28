@@ -1,0 +1,624 @@
+<?xml version="1.0"?>
+<!--File origin can be one of: -->
+<!-- adi_created: File was entirely written by ADI without copying any content from any other sources file, from web etc -->
+<!-- adi_modified: File has some portions that were copied from a source other than ADI. This may be copying a function from a port for another -->
+<!-- not_shipped: The file is stored in the repository but is never shipped to customers -->
+<!-- external: The file has been copied from a source other than ADI, or is of unknown origin, and ADI have made NO Changes to the file -->
+<Linux-kernel-v4.16.0>
+<File1>
+cof.xml
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>not_shipped</File_Origin>
+<Added_by>dgibso2</Added_by>
+<File_License>none</File_License>
+<Comment>COF File for recording all ADI Changes</Comment>
+</File1>
+<File2>
+arch/arm/boot/dts/Makefile
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to Makefile</Comment>
+</File2>
+<File3>
+arch/arm/boot/dts/sc589-ezkit.dts
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created device tree file. Written entirely by ADI</Comment>
+</File3>
+<File4>
+arch/arm/boot/dts/sc58x.dtsi
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created device tree header. Written entirely by ADI</Comment>
+</File4>
+<File5>
+arch/arm/configs/sc589-ezkit_defconfig
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created kernel default configuration file. Written entirely by ADI</Comment>
+</File5>
+<File6>
+arch/arm/include/debug/sc58x.S
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created basic uart function assembly file for early print. Written entirely by ADI</Comment>
+</File6>
+<File7>
+arch/arm/mach-sc58x/include/mach/anomaly.h
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created anomaly header file for sc58x. Written entirely by ADI</Comment>
+</File7>
+<File8>
+arch/arm/mach-sc58x/include/mach/clkdev.h
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created clock header file for sc58x. Written entirely by ADI</Comment>
+</File8>
+<File9>
+arch/arm/mach-sc58x/include/mach/cpu.h
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created cpu header file for sc58x. Written entirely by ADI</Comment>
+</File9>
+<File10>
+arch/arm/mach-sc58x/include/mach/dma-sc58x.h
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created dma header file for sc58x. Written entirely by ADI</Comment>
+</File10>
+<File11>
+arch/arm/mach-sc58x/include/mach/dma.h
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created common dma header file. Written entirely by ADI</Comment>
+</File11>
+<File12>
+arch/arm/mach-sc58x/include/mach/gpio-sc58x.h
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created gpio header file for sc58x. Written entirely by ADI</Comment>
+</File12>
+<File13>
+arch/arm/mach-sc58x/include/mach/gpio.h
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created common gpio header file. Written entirely by ADI</Comment>
+</File13>
+<File14>
+arch/arm/mach-sc58x/include/mach/hardware.h
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created hardware header file for sc58x. Written entirely by ADI</Comment>
+</File14>
+<File15>
+arch/arm/mach-sc58x/include/mach/irqs.h
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created irq header file for sc58x. Written entirely by ADI</Comment>
+</File15>
+<File16>
+arch/arm/mach-sc58x/include/mach/portmux-sc58x.h
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created portmux header file for sc58x. Written entirely by ADI</Comment>
+</File16>
+<File17>
+arch/arm/mach-sc58x/include/mach/portmux.h
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created common portmux header file. Written entirely by ADI</Comment>
+</File17>
+<File18>
+arch/arm/mach-sc58x/include/mach/sc58x.h
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created sc58x header file. Written entirely by ADI</Comment>
+</File18>
+<File19>
+arch/arm/mach-sc58x/include/mach/sec.h
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created sec header file for sc58x. Written entirely by ADI</Comment>
+</File19>
+<File20>
+arch/arm/mach-sc58x/include/mach/timex.h
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created timer header file for sc58x. Written entirely by ADI</Comment>
+</File20>
+<File21>
+arch/arm/mach-sc58x/include/mach/uncompress.h
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created uncompress debug header file for sc58x. Written entirely by ADI</Comment>
+</File21>
+<File22>
+arch/arm/mach-sc58x/clock.c
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created clock driver source file for sc58x. Written entirely by ADI</Comment>
+</File22>
+<File23>
+arch/arm/mach-sc58x/core.c
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created core driver source file for sc58x. Written entirely by ADI</Comment>
+</File23>
+<File24>
+arch/arm/mach-sc58x/core.h
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created core driver header file for sc58x. Written entirely by ADI</Comment>
+</File24>
+<File25>
+arch/arm/mach-sc58x/dma.c
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created dma driver source file for sc58x. Written entirely by ADI</Comment>
+</File25>
+<File26>
+arch/arm/mach-sc58x/gptimers.c
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created gptimer driver source file for sc58x. Written entirely by ADI</Comment>
+</File26>
+<File27>
+arch/arm/mach-sc58x/Kconfig
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created Kconfig file for mach-sc58x portion. Written entirely by ADI</Comment>
+</File27>
+<File28>
+arch/arm/mach-sc58x/Makefile
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created Makefile for mach-sc58x portion. Written entirely by ADI</Comment>
+</File28>
+<File29>
+arch/arm/mach-sc58x/Makefile.boot
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created boot address information for mach-sc58x. Written entirely by ADI</Comment>
+</File29>
+<File30>
+arch/arm/mach-sc58x/sc58x-ezkit.c
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created machine file for sc58x-ezkit boards. Written entirely by ADI</Comment>
+</File30>
+<File31>
+arch/arm/mach-sc58x/sec.c
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created sec driver source file for sc58x. Written entirely by ADI</Comment>
+</File31>
+<File32>
+arch/arm/tools/mach-types
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added mach type of sc58x-ezkit boards portion to Makefile</Comment>
+</File32>
+<File33>
+arch/arm/Kconfig
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to Kconfig</Comment>
+</File33>
+<File34>
+arch/arm/Kconfig.debug
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to Kconfig.debug</Comment>
+</File34>
+<File35>
+arch/arm/Makefile
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to Makefile</Comment>
+</File35>
+<File36>
+drivers/pinctrl/Kconfig
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to pinctrl driver Kconfig</Comment>
+</File36>
+<File37>
+drivers/pinctrl/Makefile
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to pinctrl driver Makefile</Comment>
+</File37>
+<File38>
+drivers/pinctrl/pinctrl-adi2-sc58x.c
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created pinctrl driver source file for ADI SC58X SOC. Written entirely by ADI</Comment>
+</File38>
+<File39>
+drivers/pinctrl/pinctrl-adi2.c
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created pinctrl driver srouce file for ADI GPIO controller. Written entirely by ADI</Comment>
+</File39>
+<File40>
+drivers/tty/serial/adi_uart4.c
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created uart driver source file for sc58x. Written entirely by ADI</Comment>
+</File40>
+<File41>
+drivers/tty/serial/adi_uart4.h
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created uart driver header file for sc58x. Written entirely by ADI</Comment>
+</File41>
+<File42>
+drivers/tty/serial/Kconfig
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to uart driver Kconfig</Comment>
+</File42>
+<File43>
+drivers/tty/serial/Makefile
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to uart driver Makefile</Comment>
+</File43>
+<File44>
+arch/arm/boot/dts/sc584-ezkit.dts
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created device tree file. Written entirely by ADI</Comment>
+</File44>
+<File45>
+arch/arm/configs/sc584-ezkit_defconfig
+<Date_Added>2018/5/11</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created kernel default configuration file. Written entirely by ADI</Comment>
+</File45>
+<File46>
+arch/arm/boot/dts/sc573-ezkit.dts
+<Date_Added>2018/5/17</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created device tree file for sc57x. Written entirely by ADI</Comment>
+</File46>
+<File47>
+arch/arm/boot/dts/sc57x.dtsi
+<Date_Added>2018/5/17</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created device tree header for sc57x. Written entirely by ADI</Comment>
+</File47>
+<File48>
+arch/arm/configs/sc573-ezkit_defconfig
+<Date_Added>2018/5/17</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created kernel default configuration file for sc57x. Written entirely by ADI</Comment>
+</File48>
+<File49>
+arch/arm/include/debug/sc57x.S
+<Date_Added>2018/5/17</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created basic uart function assembly file for early print for sc57x. Written entirely by ADI</Comment>
+</File49>
+<File50>
+arch/arm/mach-sc57x/include/mach/anomaly.h
+<Date_Added>2018/5/17</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created anomaly header file for sc57x. Written entirely by ADI</Comment>
+</File50>
+<File51>
+arch/arm/mach-sc57x/include/mach/clkdev.h
+<Date_Added>2018/5/17</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created clock header file for sc57x. Written entirely by ADI</Comment>
+</File51>
+<File52>
+arch/arm/mach-sc57x/include/mach/cpu.h
+<Date_Added>2018/5/17</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created cpu header file for sc57x. Written entirely by ADI</Comment>
+</File52>
+<File53>
+arch/arm/mach-sc57x/include/mach/dma.h
+<Date_Added>2018/5/17</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created dma header file for sc57x. Written entirely by ADI</Comment>
+</File53>
+<File54>
+arch/arm/mach-sc57x/include/mach/dma-sc57x.h
+<Date_Added>2018/5/17</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created common dma header file. Written entirely by ADI</Comment>
+</File54>
+<File55>
+arch/arm/mach-sc57x/include/mach/gpio-sc57x.h
+<Date_Added>2018/5/17</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created gpio header file for sc57x. Written entirely by ADI</Comment>
+</File55>
+<File56>
+arch/arm/mach-sc57x/include/mach/gpio.h
+<Date_Added>2018/5/17</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created common gpio header file. Written entirely by ADI</Comment>
+</File56>
+<File57>
+arch/arm/mach-sc57x/include/mach/hardware.h
+<Date_Added>2018/5/17</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created hardware header file for sc57x. Written entirely by ADI</Comment>
+</File57>
+<File58>
+arch/arm/mach-sc57x/include/mach/irqs.h
+<Date_Added>2018/5/17</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created irq header file for sc57x. Written entirely by ADI</Comment>
+</File58>
+<File59>
+arch/arm/mach-sc57x/include/mach/portmux.h
+<Date_Added>2018/5/17</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created portmux header file for sc57x. Written entirely by ADI</Comment>
+</File59>
+<File60>
+arch/arm/mach-sc57x/include/mach/portmux-sc57x.h
+<Date_Added>2018/5/17</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created common portmux header file. Written entirely by ADI</Comment>
+</File60>
+<File61>
+arch/arm/mach-sc57x/include/mach/sc57x.h
+<Date_Added>2018/5/17</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created sc57x header file. Written entirely by ADI</Comment>
+</File61>
+<File62>
+arch/arm/mach-sc57x/include/mach/sec.h
+<Date_Added>2018/5/17</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created sec header file for sc57x. Written entirely by ADI</Comment>
+</File62>
+<File63>
+arch/arm/mach-sc57x/include/mach/timex.h
+<Date_Added>2018/5/17</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created timer header file for sc57x. Written entirely by ADI</Comment>
+</File63>
+<File64>
+arch/arm/mach-sc57x/include/mach/uncompress.h
+<Date_Added>2018/5/17</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created uncompress debug header file for sc57x. Written entirely by ADI</Comment>
+</File64>
+<File65>
+arch/arm/mach-sc57x/clock.c
+<Date_Added>2018/5/17</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created clock driver source file for sc57x. Written entirely by ADI</Comment>
+</File65>
+<File66>
+arch/arm/mach-sc57x/core.c
+<Date_Added>2018/5/17</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created core driver source file for sc57x. Written entirely by ADI</Comment>
+</File66>
+<File67>
+arch/arm/mach-sc57x/core.h
+<Date_Added>2018/5/17</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created core driver header file for sc57x. Written entirely by ADI</Comment>
+</File67>
+<File68>
+arch/arm/mach-sc57x/dma.c
+<Date_Added>2018/5/17</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created dma driver source file for sc57x. Written entirely by ADI</Comment>
+</File68>
+<File69>
+arch/arm/mach-sc57x/gptimers.c
+<Date_Added>2018/5/17</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created gptimer driver source file for sc57x. Written entirely by ADI</Comment>
+</File69>
+<File70>
+arch/arm/mach-sc57x/Kconfig
+<Date_Added>2018/5/17</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created Kconfig file for mach-sc57x portion. Written entirely by ADI</Comment>
+</File70>
+<File71>
+arch/arm/mach-sc57x/Makefile
+<Date_Added>2018/5/17</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created Makefile for mach-sc57x portion. Written entirely by ADI</Comment>
+</File71>
+<File72>
+arch/arm/mach-sc57x/Makefile.boot
+<Date_Added>2018/5/17</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created boot address information for mach-sc57x. Written entirely by ADI</Comment>
+</File72>
+<File73>
+arch/arm/mach-sc57x/sc57x-ezkit.c
+<Date_Added>2018/5/17</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created machine file for sc57x-ezkit boards. Written entirely by ADI</Comment>
+</File73>
+<File74>
+arch/arm/mach-sc57x/sec.c
+<Date_Added>2018/5/17</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created sec driver source file for sc57x. Written entirely by ADI</Comment>
+</File74>
+<File75>
+drivers/pinctrl/pinctrl-adi2-sc57x.c
+<Date_Added>2018/5/17</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created pinctrl driver source file for ADI sc57x SOC. Written entirely by ADI</Comment>
+</File75>
+<File76>
+arch/arm/boot/dts/sc589-mini.dts
+<Date_Added>2018/5/23</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>awu2</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created device tree file. Written entirely by ADI</Comment>
+</File76>
+<File77>
+arch/arm/configs/sc589-mini_defconfig
+<Date_Added>2018/5/23</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>awu2</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created board configuration file. Written entirely by ADI</Comment>
+</File77>
+</Linux-kernel-v4.16.0>
