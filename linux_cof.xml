@@ -621,4 +621,28 @@ arch/arm/configs/sc589-mini_defconfig
 <File_License>GPL2</File_License>
 <Comment>ADI Created board configuration file. Written entirely by ADI</Comment>
 </File77>
+<File78>
+drivers/watchdog/adi_wdt.c
+<Date_Added>2018/5/29</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created watchdog driver file. Written entirely by ADI</Comment>
+</File78>
+<File79>
+drivers/watchdog/Kconfig
+<Date_Added>2018/5/29</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to watchdog driver Kconfig</Comment>
+</File79>
+<File80>
+drivers/watchdog/Makefile
+<Date_Added>2018/5/29</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to watchdog driver Makefile</Comment>
+</File80>
 </Linux-kernel-v4.16.0>
