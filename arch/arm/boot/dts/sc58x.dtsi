@@ -86,6 +86,12 @@
 			interrupts = <0 27 0>;
 		};
 
+		watchdog@0x31008000 {
+			compatible = "arm,adi-watchdog";
+			reg = <0x31008000 0x10>;
+			timeout-sec = <30>;
+		};
+
 		pinctrl0: pinctrl@0 {
 			compatible = "adi,adi2-pinctrl";
 			#address-cells = <1>;
