@@ -658,7 +658,7 @@ static void adi_dt_free_map(struct pinctrl_dev *pctldev,
 	kfree(map);
 }
 
-static struct pinctrl_ops adi_pctrl_ops = {
+static const struct pinctrl_ops adi_pctrl_ops = {
 	.get_groups_count = adi_get_groups_count,
 	.get_group_name = adi_get_group_name,
 	.get_group_pins = adi_get_group_pins,
@@ -1114,7 +1114,8 @@ static int adi_gpio_probe(struct platform_device *pdev)
 	if (ret) {
 		dev_err(&pdev->dev, "Fail to add pin range to %s.\n",
 				pinctrl_devname);
-		goto out_remove_gpiochip;
+		ret1 = gpiochip_remove(&port->chip);
+		goto out_remove_domain;
 	}
 #endif
 
@@ -1122,8 +1123,6 @@ static int adi_gpio_probe(struct platform_device *pdev)
 
 	return 0;
 
-out_remove_gpiochip:
-	gpiochip_remove(&port->chip);
 out_remove_domain:
 	if (port->pint)
 		irq_domain_remove(port->domain);
@@ -1176,18 +1175,8 @@ static int adi_pinctrl_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int adi_pinctrl_remove(struct platform_device *pdev)
-{
-	struct adi_pinctrl *pinctrl = platform_get_drvdata(pdev);
-
-	pinctrl_unregister(pinctrl->pctl);
-
-	return 0;
-}
-
 static struct platform_driver adi_pinctrl_driver = {
 	.probe		= adi_pinctrl_probe,
-	.remove		= adi_pinctrl_remove,
 	.driver		= {
 		.name	= DRIVER_NAME,
 		.of_match_table = of_match_ptr(adi_pinctrl_of_match),
