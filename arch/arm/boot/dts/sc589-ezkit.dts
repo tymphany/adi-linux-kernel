@@ -24,6 +24,16 @@
 	};
 
 	scb {
+		button0: button@0 {
+			compatible = "adi,button-led";
+			button_gpio = <80>;
+			led_gpio = <77>;
+		};
+		button1: button@1 {
+			compatible = "adi,button-led";
+			button_gpio = <81>;
+			led_gpio = <78>;
+		};
 		
 	};
 };
