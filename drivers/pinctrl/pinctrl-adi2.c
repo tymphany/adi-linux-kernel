@@ -25,7 +25,7 @@
 #include <linux/pinctrl/machine.h>
 #include <linux/slab.h>
 #include <linux/syscore_ops.h>
-#include <linux/gpio.h>
+#include <linux/gpio/driver.h>
 #include <mach/gpio.h>
 #ifdef CONFIG_ARCH_HEADER_IN_MACH
 #include <mach/portmux.h>
