@@ -112,6 +112,42 @@
 			};
 		};
 
+		pint0: pint@0x31005000 {
+			compatible = "adi,pint";
+			reg = <0x31005000 0xFF>;
+			interrupts = <0 38 0>;
+		};
+
+		pint1: pint@0x31005100 {
+			compatible = "adi,pint";
+			reg = <0x31005100 0xFF>;
+			interrupts = <0 39 0>;
+		};
+
+		pint2: pint@0x31005200 {
+			compatible = "adi,pint";
+			reg = <0x31005200 0xFF>;
+			interrupts = <0 40 0>;
+		};
+
+		pint3: pint@0x31005300 {
+			compatible = "adi,pint";
+			reg = <0x31005300 0xFF>;
+			interrupts = <0 41 0>;
+		};
+
+		pint4: pint@0x31005400 {
+			compatible = "adi,pint";
+			reg = <0x31005400 0xFF>;
+			interrupts = <0 42 0>;
+		};
+
+		pint5: pint@0x31005500 {
+			compatible = "adi,pint";
+			reg = <0x31005500 0xFF>;
+			interrupts = <0 43 0>;
+		};
+
 		gpa: gport@0x31004000 {
 			compatible = "adi,gport";
 			gpio-controller;
