@@ -20,6 +20,9 @@
 		serial0 = &uart0;
 		timer0 = &gptimer0;
 		timer1 = &gptimer1;
+		i2c0 = &i2c0;
+		i2c1 = &i2c1;
+		i2c2 = &i2c2;
 	};
 
 	cpus {
@@ -70,6 +73,36 @@
 			interrupts = <0 106 0>,
 			             <0 107 0>,
 			             <0 108 0>;
+		};
+
+		i2c0: twi@0x31001400 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "adi,twi";
+			reg = <0x31001400 0xFF>;
+			interrupts = <0 115 0>;
+			clock-khz = <100>;
+			status = "disabled";
+		};
+
+		i2c1: twi@0x31001500 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "adi,twi";
+			reg = <0x31001500 0xFF>;
+			interrupts = <0 116 0>;
+			clock-khz = <100>;
+			status = "disabled";
+		};
+
+		i2c2: twi@0x31001600 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "adi,twi";
+			reg = <0x31001600 0xFF>;
+			interrupts = <0 117 0>;
+			clock-khz = <100>;
+			status = "disabled";
 		};
 
 		gptimer0: gptimer@0x31018060 {
