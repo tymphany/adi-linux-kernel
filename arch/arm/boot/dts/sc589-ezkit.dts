@@ -34,6 +34,30 @@
 			button_gpio = <81>;
 			led_gpio = <78>;
 		};
-		
+
 	};
+};
+
+&i2c0 {
+	status = "okay";
+	ssw0: gpio@0x21 {
+		compatible = "microchip,mcp23017";
+		gpio-controller;
+		#gpio-cells = <2>;
+		reg = <0x21>;
+	};
+	ssw1: gpio@0x22 {
+		compatible = "microchip,mcp23017";
+		gpio-controller;
+		#gpio-cells = <2>;
+		reg = <0x22>;
+	};
+};
+
+&i2c1 {
+	status = "okay";
+};
+
+&i2c2 {
+	status = "okay";
 };
