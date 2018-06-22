@@ -653,4 +653,52 @@ drivers/char/button_led.c
 <File_License>GPL2</File_License>
 <Comment>ADI Created an example of using the GPIO as external interrupt</Comment>
 </File81>
+<File82>
+arch/arm/mach-sc58x/include/mach/adi_twi.h
+<Date_Added>2018/6/20</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created twi header file for sc58x. Written entirely by ADI</Comment>
+</File82>
+<File83>
+arch/arm/mach-sc57x/include/mach/adi_twi.h
+<Date_Added>2018/6/20</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created twi header file for sc57x. Written entirely by ADI</Comment>
+</File83>
+<File84>
+drivers/i2c/busses/i2c-adi-twi.c
+<Date_Added>2018/6/20</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created twi driver source file for sc5xx. Written entirely by ADI</Comment>
+</File84>
+<File85>
+drivers/i2c/busses/Kconfig
+<Date_Added>2018/6/20</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to i2c/twi driver Kconfig</Comment>
+</File85>
+<File86>
+drivers/i2c/busses/Makefile
+<Date_Added>2018/6/20</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to i2c/twi driver Makefile</Comment>
+</File86>
+<File87>
+include/linux/adi_twi.h
+<Date_Added>2018/6/20</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created interface to ADI TWI controller for sc5xx. Written entirely by ADI</Comment>
+</File87>
 </Linux-kernel-v4.16.0>
