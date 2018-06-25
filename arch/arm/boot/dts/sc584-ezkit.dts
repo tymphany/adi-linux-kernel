@@ -24,6 +24,7 @@
 	};
 
 	scb {
+
 		button0: button@0 {
 			compatible = "adi,button-led";
 			button_gpio = <15>;
@@ -39,6 +40,30 @@
 			button_gpio = <47>;
 			led_gpio = <67>;
 		};
-		
+
 	};
+};
+
+&i2c0 {
+	status = "okay";
+	ssw0: gpio@0x21 {
+		compatible = "microchip,mcp23017";
+		gpio-controller;
+		#gpio-cells = <2>;
+		reg = <0x21>;
+	};
+	ssw1: gpio@0x22 {
+		compatible = "microchip,mcp23017";
+		gpio-controller;
+		#gpio-cells = <2>;
+		reg = <0x22>;
+	};
+};
+
+&i2c1 {
+	status = "okay";
+};
+
+&i2c2 {
+	status = "okay";
 };
