@@ -67,3 +67,13 @@
 &i2c2 {
 	status = "okay";
 };
+
+&emac0 {
+	snps,reset-gpio = <&gpa 5 0>;
+	snps,reset-active-low;
+	snps,reset-delays-us = <0 10000 10000>;
+	phy-mode = "rgmii";
+	pinctrl-names = "default";
+	pinctrl-0 = <&eth0_default>;
+	status = "okay";
+};
