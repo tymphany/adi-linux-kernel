@@ -166,6 +166,9 @@
    PADS0
    ========================= */
 #define REG_PADS0_PCFG0                 0x31004404         /* PADS0 Peripheral Configuration0 Register */
+#define BITM_PADS_PCFG0_EMACPHYISEL     0x00000018         /* Bitmask of selecting PHY Interface RGMII/RMII/MII */
+#define BITP_PADS_PCFG0_EMACPHYISEL     0x3                /* Position of selecting PHY Interface RGMII/RMII/MII */
+#define BITM_PADS_PCFG0_EMACRESET       0x00000004         /* Bitmask of reseting enable for RGMII */
 
 /* =========================
         LP0
