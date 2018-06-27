@@ -180,6 +180,8 @@
 #define REG_PADS0_PCFG0                 0x31004404         /* PADS0 Peripheral Configuration0 Register */
 #define REG_PADS0_DAI0_IE               0x31004460         /* PADS DAI0 IE Register */
 #define REG_PADS0_DAI1_IE               0x31004464         /* PADS DAI1 IE Register */
+#define BITM_PADS_PCFG0_EMACPHYISEL     0x00000008         /* Bitmask of selecting PHY Interface RGMII/RMII */
+#define BITM_PADS_PCFG0_EMACRESET       0x00000004         /* Bitmask of reseting enable for RGMII */
 
 /* =========================
         LP0

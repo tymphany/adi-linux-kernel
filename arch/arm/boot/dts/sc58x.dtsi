@@ -20,6 +20,8 @@
 		serial0 = &uart0;
 		timer0 = &gptimer0;
 		timer1 = &gptimer1;
+		ethernet0 = &emac0;
+		ethernet1 = &emac1;
 		i2c0 = &i2c0;
 		i2c1 = &i2c1;
 		i2c2 = &i2c2;
@@ -125,6 +127,35 @@
 			timeout-sec = <30>;
 		};
 
+		emac0: ethernet@0x3100C000 {
+			compatible = "snps,dwmac", "snps,dwmac-3.710";
+			reg = <0x3100C000 0x2000>;
+			interrupt-parent = <&gic>;
+			interrupts = <0 148 0>;
+			interrupt-names = "macirq";
+			snps,fixed-burst;
+			snps,burst_len = <0x8>;	/* BLEN16 */
+			snps,pbl = <2>;
+			snps,force_sf_dma_mode;
+			snps,perfect-filter-entries = <32>;
+			clock-names = "stmmaceth";
+			status = "disabled";
+		};
+
+		emac1: ethernet@0x3100E000 {
+			compatible = "snps,dwmac", "snps,dwmac-3.710";
+			reg = <0x3100E000 0x2000>;
+			interrupt-parent = <&gic>;
+			interrupts = <0 149 0>;
+			interrupt-names = "macirq";
+			snps,fixed-burst;
+			snps,burst_len = <0x4>;	/* BLEN8 */
+			snps,pbl = <1>;
+			snps,force_thresh_dma_mode;
+			clock-names = "stmmaceth";
+			status = "disabled";
+		};
+
 		pinctrl0: pinctrl@0 {
 			compatible = "adi,adi2-pinctrl";
 			#address-cells = <1>;
@@ -141,6 +172,17 @@
 				uart0_hwflow: uart0@1 {
 					adi,group = "uart0_hwflowgrp";
 					adi,function = "uart0";
+				};
+			};
+
+			eth {
+				eth0_default: eth0@0 {
+					adi,group = "eth0grp";
+					adi,function = "eth0";
+				};
+				eth1_default: eth1@0 {
+					adi,group = "eth1grp";
+					adi,function = "eth1";
 				};
 			};
 		};
