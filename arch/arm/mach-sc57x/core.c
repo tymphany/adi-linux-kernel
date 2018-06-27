@@ -135,13 +135,11 @@ static struct of_device_id sc57x_of_bus_ids[] __initdata = {
 };
 #endif
 
-#ifdef CONFIG_NATIONAL_PHY
 #define DP83865_PHY_ID          0x20005c7a
 #define REG_DP83865_AUX_CTRL    0x12
 #define BITP_AUX_CTRL_RGMII_EN  12
 #define RGMII_3COM_MODE         3
-
-static int sc57x_phy0_fixup(struct phy_device *phydev)
+static int sc57x_dp83865_fixup(struct phy_device *phydev)
 {
 	int  phy_data = 0;
 
@@ -153,7 +151,21 @@ static int sc57x_phy0_fixup(struct phy_device *phydev)
 
 	return 0;
 }
-#endif
+
+static void sc57x_init_ethernet(void)
+{
+	if (IS_BUILTIN(CONFIG_PHYLIB)) {
+		/* select RGMII as the external PHY interface for EMAC0 */
+		writel((readl(__io_address(REG_PADS0_PCFG0)) &
+		     (~(BITM_PADS_PCFG0_EMACPHYISEL))), __io_address(REG_PADS0_PCFG0));
+		writel((readl(__io_address(REG_PADS0_PCFG0)) |
+		     (1 << BITP_PADS_PCFG0_EMACPHYISEL) | BITM_PADS_PCFG0_EMACRESET),
+		     __io_address(REG_PADS0_PCFG0));
+		/* register a fixup to be run for PHY DP83865 */
+		phy_register_fixup_for_uid(DP83865_PHY_ID, 0xffffffff,
+				sc57x_dp83865_fixup);
+	}
+}
 
 void __init sc57x_init(void)
 {
@@ -169,19 +181,7 @@ void __init sc57x_init(void)
 	of_platform_populate(NULL, sc57x_of_bus_ids,
 				sc57x_auxdata_lookup, NULL);
 #endif
-#ifdef CONFIG_NATIONAL_PHY
-	/* select RGMII as the external PHY interface for EMAC */
-	if (IS_BUILTIN(CONFIG_PHYLIB)) {
-		writel((readl(__io_address(REG_PADS0_PCFG0)) &
-		     (~(BITM_PADS_PCFG0_EMACPHYISEL))), __io_address(REG_PADS0_PCFG0));
-		writel((readl(__io_address(REG_PADS0_PCFG0)) |
-		     (1 << BITP_PADS_PCFG0_EMACPHYISEL) | BITM_PADS_PCFG0_EMACRESET),
-		     __io_address(REG_PADS0_PCFG0));
-	}
-	if (IS_BUILTIN(CONFIG_PHYLIB))
-		phy_register_fixup_for_uid(DP83865_PHY_ID, 0xffffffff,
-			    sc57x_phy0_fixup);
-#endif
+	sc57x_init_ethernet();
 }
 
 static void __iomem *spu_base;
