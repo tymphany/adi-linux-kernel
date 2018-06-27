@@ -9,6 +9,7 @@
 
 /dts-v1/;
 
+#include <dt-bindings/net/ti-dp83867.h>
 #include "sc58x.dtsi"
 
 / {
@@ -59,5 +60,37 @@
 };
 
 &i2c2 {
+	status = "okay";
+};
+
+&emac0 {
+	snps,pwd-gpio = <&gpc 15 0>;
+	snps,pwd-active-low;
+	snps,reset-gpio = <&gpb 14 0>;
+	snps,reset-active-low;
+	snps,reset-delays-us = <0 200 500>;
+	phy-handle = <&dp83867>;
+	phy-mode = "rgmii";
+	pinctrl-names = "default";
+	pinctrl-0 = <&eth0_default>;
+	status = "okay";
+	mdio0 {
+		compatible = "snps,dwmac-mdio";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		dp83867: ethernet-phy@0 {
+			reg = <0>;
+			ti,rx-internal-delay = <DP83867_RGMIIDCTL_2_00_NS>;
+			ti,tx-internal-delay = <DP83867_RGMIIDCTL_2_00_NS>;
+			ti,fifo-depth = <DP83867_PHYCR_FIFO_DEPTH_8_B_NIB>;
+			ti,dp83867-rxctrl-strap-quirk;
+		};
+	};
+};
+
+&emac1 {
+	phy-mode = "rmii";
+	pinctrl-names = "default";
+	pinctrl-0 = <&eth1_default>;
 	status = "okay";
 };
