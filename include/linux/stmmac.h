@@ -82,6 +82,11 @@ struct stmmac_mdio_bus_data {
 	int *irqs;
 	int probed_phy_irq;
 	bool needs_reset;
+#ifdef CONFIG_OF
+	int reset_gpio, active_low;
+	int pwd_gpio, pwd_active_low;
+	u32 delays[3];
+#endif
 };
 
 struct stmmac_dma_cfg {
