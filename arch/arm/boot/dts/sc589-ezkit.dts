@@ -39,6 +39,10 @@
 	};
 };
 
+&rtc0 {
+	status = "okay";
+};
+
 &i2c0 {
 	status = "okay";
 	ssw0: gpio@0x21 {
