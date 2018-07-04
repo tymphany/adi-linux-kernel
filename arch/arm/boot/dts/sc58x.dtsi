@@ -25,6 +25,7 @@
 		i2c0 = &i2c0;
 		i2c1 = &i2c1;
 		i2c2 = &i2c2;
+		rtc0 = &rtc0;
 	};
 
 	cpus {
@@ -63,6 +64,14 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges;
+
+		rtc0: rtc@0x310C8000 {
+			compatible = "adi,rtc2";
+			reg = <0x310C8000 0x100>;
+			interrupts = <0 165 0>;
+			calibration = /bits/ 8 <0>;
+			status = "disabled";
+		};
 
 		uart0: uart@0x31003000 {
 			compatible = "arm,adi-uart4";
