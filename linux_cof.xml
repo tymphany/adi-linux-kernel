@@ -765,4 +765,20 @@ drivers/rtc/Kconfig
 <File_License>GPL2</File_License>
 <Comment>Added ADI portion to RTC driver Kconfig</Comment>
 </File95>
+<File96>
+drivers/spi/Kconfig
+<Date_Added>2018/7/03</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>awu2</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Modify to support sc5xx processors</Comment>
+</File96>
+<File97>
+drivers/spi/spi-adi-v3.c
+<Date_Added>2018/7/03</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>awu2</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Modify to support sc5xx processors</Comment>
+</File97>
 </Linux-kernel-v4.16.0>
