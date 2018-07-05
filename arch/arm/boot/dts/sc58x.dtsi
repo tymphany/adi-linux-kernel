@@ -22,6 +22,9 @@
 		timer1 = &gptimer1;
 		ethernet0 = &emac0;
 		ethernet1 = &emac1;
+		spi0   = &spi0;
+		spi1   = &spi1;
+		spi2   = &spi2;
 		i2c0 = &i2c0;
 		i2c1 = &i2c1;
 		i2c2 = &i2c2;
@@ -136,6 +139,39 @@
 			timeout-sec = <30>;
 		};
 
+		spi0: spi@0x31042000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "adi,spi3";
+			reg = <0x31042000 0xFF>;
+			interrupts = <0 109 0>;
+			num-cs = <128>;
+			dma-channel = <22>, <23>;
+			status = "disabled";
+		};
+
+		spi1: spi@0x31043000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "adi,spi3";
+			reg = <0x31043000 0xFF>;
+			interrupts = <0 113 0>;
+			num-cs = <128>;
+			dma-channel = <24>, <25>;
+			status = "disabled";
+		};
+
+		spi2: spi@0x31044000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "adi,spi3";
+			reg = <0x31044000 0xFF>;
+			interrupts = <0 71 0>;
+			num-cs = <128>;
+			dma-channel = <26>, <27>;
+			status = "disabled";
+		};
+
 		emac0: ethernet@0x3100C000 {
 			compatible = "snps,dwmac", "snps,dwmac-3.710";
 			reg = <0x3100C000 0x2000>;
@@ -181,6 +217,25 @@
 				uart0_hwflow: uart0@1 {
 					adi,group = "uart0_hwflowgrp";
 					adi,function = "uart0";
+				};
+			};
+
+			spi {
+				spi0_default: spi0@0 {
+					adi,group = "spi0grp";
+					adi,function = "spi0";
+				};
+				spi1_default: spi1@0 {
+					adi,group = "spi1grp";
+					adi,function = "spi1";
+				};
+				spi2_default: spi2@0 {
+					adi,group = "spi2grp";
+					adi,function = "spi2";
+				};
+				spi2_quad: spi2@1 {
+					adi,group = "spi2quadgrp";
+					adi,function = "spi2";
 				};
 			};
 

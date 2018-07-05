@@ -126,6 +126,7 @@ static const struct of_dev_auxdata sc58x_auxdata_lookup[] __initconst = {
 	OF_DEV_AUXDATA("adi,adi2-pinctrl", 0, "pinctrl-adi2.0", NULL),
 	OF_DEV_AUXDATA("arm,adi-uart4", UART0_REVID, "adi-uart4.0", NULL),
 	OF_DEV_AUXDATA("arm,adi-watchdog", REG_WDOG0_CTL, "adi-watchdog.0", NULL),
+	OF_DEV_AUXDATA("adi,spi3", 0, "adi-spi3.2", NULL),
 	{},
 };
 
