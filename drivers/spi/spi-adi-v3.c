@@ -1,7 +1,7 @@
 /*
  * Analog Devices SPI3 controller driver
  *
- * Copyright (c) 2014 Analog Devices Inc.
+ * Copyright (c) 2018 Analog Devices Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -30,8 +30,8 @@
 #include <linux/spi/adi_spi3.h>
 #include <linux/types.h>
 
-#include <asm/dma.h>
-#include <asm/portmux.h>
+#include <mach/dma.h>
+#include <mach/portmux.h>
 
 enum adi_spi_state {
 	START_STATE,
@@ -633,22 +633,6 @@ static int adi_spi_transfer_one_message(struct spi_master *master,
 	return 0;
 }
 
-#define MAX_SPI_SSEL	7
-
-static const u16 ssel[][MAX_SPI_SSEL] = {
-	{P_SPI0_SSEL1, P_SPI0_SSEL2, P_SPI0_SSEL3,
-	P_SPI0_SSEL4, P_SPI0_SSEL5,
-	P_SPI0_SSEL6, P_SPI0_SSEL7},
-
-	{P_SPI1_SSEL1, P_SPI1_SSEL2, P_SPI1_SSEL3,
-	P_SPI1_SSEL4, P_SPI1_SSEL5,
-	P_SPI1_SSEL6, P_SPI1_SSEL7},
-
-	{P_SPI2_SSEL1, P_SPI2_SSEL2, P_SPI2_SSEL3,
-	P_SPI2_SSEL4, P_SPI2_SSEL5,
-	P_SPI2_SSEL6, P_SPI2_SSEL7},
-};
-
 static int adi_spi_setup(struct spi_device *spi)
 {
 	struct adi_spi_master *drv_data = spi_master_get_devdata(spi->master);
@@ -792,6 +776,36 @@ static irqreturn_t adi_spi_rx_dma_isr(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+static irqreturn_t spi_irq_err(int irq, void *dev_id)
+{
+	struct adi_spi_master *drv_data = dev_id;
+	u32 status;
+
+	status = ioread32(&drv_data->regs->status);
+	if (status & SPI_STAT_ROE)
+		dev_err(&drv_data->master->dev, "spi rx overrun\n");
+	iowrite32(status, &drv_data->regs->status);
+	drv_data->state = ERROR_STATE;
+	iowrite32(0, &drv_data->regs->tx_control);
+	iowrite32(0, &drv_data->regs->rx_control);
+	disable_dma(drv_data->tx_dma);
+	disable_dma(drv_data->rx_dma);
+	tasklet_schedule(&drv_data->pump_transfers);
+	return IRQ_HANDLED;
+}
+
+
+#ifdef CONFIG_OF
+static const struct of_device_id adi_spi_of_match[] = {
+	{
+		.compatible = "adi,spi3",
+	},
+	{},
+};
+MODULE_DEVICE_TABLE(of, adi_spi_of_match);
+#endif
+
+
 static int adi_spi_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -799,11 +813,11 @@ static int adi_spi_probe(struct platform_device *pdev)
 	struct spi_master *master;
 	struct adi_spi_master *drv_data;
 	struct resource *mem, *res;
-	unsigned int tx_dma, rx_dma;
+	unsigned int tx_dma, rx_dma, num_cs, bus_num;
 	struct clk *sclk;
 	int ret;
 
-	if (!info) {
+	if (!info && !dev->of_node) {
 		dev_err(dev, "platform data missing!\n");
 		return -ENODEV;
 	}
@@ -814,19 +828,42 @@ static int adi_spi_probe(struct platform_device *pdev)
 		return PTR_ERR(sclk);
 	}
 
-	res = platform_get_resource(pdev, IORESOURCE_DMA, 0);
-	if (!res) {
-		dev_err(dev, "can not get tx dma resource\n");
-		return -ENXIO;
-	}
-	tx_dma = res->start;
+	if (dev->of_node) {
+		ret = of_property_read_u32_index(dev->of_node,
+				"dma-channel", 0, &tx_dma);
+		if (ret) {
+			dev_err(dev, "can not get tx dma resource\n");
+			return ret;
+		}
+		ret = of_property_read_u32_index(dev->of_node,
+				"dma-channel", 1, &rx_dma);
+		if (ret) {
+			dev_err(dev, "can not get rx dma resource\n");
+			return ret;
+		}
+		ret = of_property_read_u32(dev->of_node, "num-cs", &num_cs);
+		if (ret) {
+			dev_err(dev, "can not get total number of cs\n");
+			return ret;
+		}
+		bus_num = -1;
+	} else {
+		res = platform_get_resource(pdev, IORESOURCE_DMA, 0);
+		if (!res) {
+			dev_err(dev, "can not get tx dma resource\n");
+			return -ENXIO;
+		}
+		tx_dma = res->start;
 
-	res = platform_get_resource(pdev, IORESOURCE_DMA, 1);
-	if (!res) {
-		dev_err(dev, "can not get rx dma resource\n");
-		return -ENXIO;
+		res = platform_get_resource(pdev, IORESOURCE_DMA, 1);
+		if (!res) {
+			dev_err(dev, "can not get rx dma resource\n");
+			return -ENXIO;
+		}
+		rx_dma = res->start;
+		num_cs = info->num_chipselect;
+		bus_num = pdev->id;
 	}
-	rx_dma = res->start;
 
 	/* allocate master with space for drv_data */
 	master = spi_alloc_master(dev, sizeof(*drv_data));
@@ -837,27 +874,40 @@ static int adi_spi_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, master);
 
 	/* the mode bits supported by this driver */
-	master->mode_bits = SPI_CPOL | SPI_CPHA | SPI_LSB_FIRST;
+	master->mode_bits = SPI_CPOL | SPI_CPHA | SPI_LSB_FIRST |
+				SPI_TX_DUAL | SPI_TX_QUAD |
+				SPI_RX_DUAL | SPI_RX_QUAD;
 
-	master->bus_num = pdev->id;
-	master->num_chipselect = info->num_chipselect;
+	master->dev.of_node = dev->of_node;
+	master->bus_num = bus_num;
+	master->num_chipselect = num_cs;
 	master->cleanup = adi_spi_cleanup;
 	master->setup = adi_spi_setup;
 	master->transfer_one_message = adi_spi_transfer_one_message;
-	master->bits_per_word_mask = SPI_BPW_MASK(32) | SPI_BPW_MASK(16) |
-				     SPI_BPW_MASK(8);
+	master->bits_per_word_mask = BIT(32 - 1) | BIT(16 - 1) | BIT(8 - 1);
 
 	drv_data = spi_master_get_devdata(master);
 	drv_data->master = master;
 	drv_data->tx_dma = tx_dma;
 	drv_data->rx_dma = rx_dma;
-	drv_data->pin_req = info->pin_req;
 	drv_data->sclk = clk_get_rate(sclk);
-
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	drv_data->regs = devm_ioremap_resource(dev, mem);
 	if (IS_ERR(drv_data->regs)) {
 		ret = PTR_ERR(drv_data->regs);
+		goto err_put_master;
+	}
+
+	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
+	if (!res) {
+		dev_err(dev, "can not get spi error irq\n");
+		ret = -ENXIO;
+		goto err_put_master;
+	}
+	ret = devm_request_irq(dev, res->start, spi_irq_err,
+			0, "SPI ERROR", drv_data);
+	if (ret) {
+		dev_err(dev, "can not request spi error irq\n");
 		goto err_put_master;
 	}
 
@@ -876,16 +926,10 @@ static int adi_spi_probe(struct platform_device *pdev)
 	}
 	set_dma_callback(drv_data->rx_dma, adi_spi_rx_dma_isr, drv_data);
 
-	/* request CLK, MOSI and MISO */
-	ret = peripheral_request_list(drv_data->pin_req, "adi-spi3");
-	if (ret < 0) {
-		dev_err(dev, "can not request spi pins\n");
-		goto err_free_rx_dma;
-	}
-
 	iowrite32(SPI_CTL_MSTR | SPI_CTL_CPHA, &drv_data->regs->control);
 	iowrite32(0x0000FE00, &drv_data->regs->ssel);
 	iowrite32(0x0, &drv_data->regs->delay);
+	iowrite32(SPI_IMSK_SET_ROM, &drv_data->regs->emaskst);
 
 	tasklet_init(&drv_data->pump_transfers,
 			adi_spi_pump_transfers, (unsigned long)drv_data);
@@ -893,13 +937,13 @@ static int adi_spi_probe(struct platform_device *pdev)
 	ret = devm_spi_register_master(dev, master);
 	if (ret) {
 		dev_err(dev, "can not  register spi master\n");
-		goto err_free_peripheral;
+		goto err_free_rx_dma;
 	}
 
+	dev_info(dev, "registered ADI SPI controller %s\n",
+					dev_name(&master->dev));
 	return ret;
 
-err_free_peripheral:
-	peripheral_free_list(drv_data->pin_req);
 err_free_rx_dma:
 	free_dma(rx_dma);
 err_free_tx_dma:
@@ -922,8 +966,7 @@ static int adi_spi_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#ifdef CONFIG_PM
-static int adi_spi_suspend(struct device *dev)
+static int __maybe_unused adi_spi_suspend(struct device *dev)
 {
 	struct spi_master *master = dev_get_drvdata(dev);
 	struct adi_spi_master *drv_data = spi_master_get_devdata(master);
@@ -941,7 +984,7 @@ static int adi_spi_suspend(struct device *dev)
 	return 0;
 }
 
-static int adi_spi_resume(struct device *dev)
+static int __maybe_unused adi_spi_resume(struct device *dev)
 {
 	struct spi_master *master = dev_get_drvdata(dev);
 	struct adi_spi_master *drv_data = spi_master_get_devdata(master);
@@ -963,7 +1006,7 @@ static int adi_spi_resume(struct device *dev)
 
 	return ret;
 }
-#endif
+
 static const struct dev_pm_ops adi_spi_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(adi_spi_suspend, adi_spi_resume)
 };
@@ -973,6 +1016,7 @@ static struct platform_driver adi_spi_driver = {
 	.driver	= {
 		.name	= "adi-spi3",
 		.pm     = &adi_spi_pm_ops,
+		.of_match_table = of_match_ptr(adi_spi_of_match),
 	},
 	.remove		= adi_spi_remove,
 };
