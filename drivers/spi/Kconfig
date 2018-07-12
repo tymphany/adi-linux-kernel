@@ -123,10 +123,9 @@ config SPI_BFIN5XX
 
 config SPI_ADI_V3
 	tristate "SPI controller v3 for ADI"
-	depends on BF60x
 	help
 	  This is the SPI controller v3 master driver
-	  found on Blackfin 60x processor.
+	  found on ADI SC5xx processor.
 
 config SPI_BFIN_SPORT
 	tristate "SPI bus via Blackfin SPORT"
