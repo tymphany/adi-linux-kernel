@@ -813,4 +813,132 @@ drivers/usb/musb/adi.h
 <File_License>GPL2</File_License>
 <Comment>ADI Created ADI USB header file for sc5xx. Written entirely by ADI</Comment>
 </File101>
+<File102>
+include/sound/sc5xx-dai.h
+<Date_Added>2018/7/6</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created interface to ADI DAI for sc5xx. Written entirely by ADI</Comment>
+</File102>
+<File103>
+include/sound/sc5xx-sru.h
+<Date_Added>2018/7/6</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created interface to ADI SRU for sc5xx. Written entirely by ADI</Comment>
+</File103>
+<File104>
+sound/soc/adi/Kconfig
+<Date_Added>2018/7/6</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to ADI sound driver Kconfig</Comment>
+</File104>
+<File105>
+sound/soc/adi/Makefile
+<Date_Added>2018/7/6</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to ADI sound driver Makefile</Comment>
+</File105>
+<File106>
+sound/soc/adi/sc5xx-asoc-card.c
+<Date_Added>2018/7/6</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created ASoC Machine driver for sc5xx. Written entirely by ADI</Comment>
+</File106>
+<File107>
+sound/soc/adi/sc5xx-i2s.c
+<Date_Added>2018/7/6</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created digital audio interface driver for sc5xx. Written entirely by ADI</Comment>
+</File107>
+<File108>
+sound/soc/adi/sc5xx-pcm.c
+<Date_Added>2018/7/6</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created audio dma driver for sc5xx. Written entirely by ADI</Comment>
+</File108>
+<File109>
+sound/soc/adi/sc5xx-sport.c
+<Date_Added>2018/7/6</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created SPORT driver for sc5xx. Written entirely by ADI</Comment>
+</File109>
+<File110>
+sound/soc/adi/sc5xx-sport.h
+<Date_Added>2018/7/6</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created interface to SPORT driver for sc5xx. Written entirely by ADI</Comment>
+</File110>
+<File111>
+sound/soc/codecs/adau1962-i2c.c
+<Date_Added>2018/7/6</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created adau1962-i2c codec driver for sc5xx. Written entirely by ADI</Comment>
+</File111>
+<File112>
+sound/soc/codecs/adau1962.c
+<Date_Added>2018/7/6</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created adau1962 codec driver for sc5xx. Written entirely by ADI</Comment>
+</File112>
+<File113>
+sound/soc/codecs/adau1962.h
+<Date_Added>2018/7/6</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created interface to adau1962 codec driver for sc5xx. Written entirely by ADI</Comment>
+</File113>
+<File114>
+sound/soc/codecs/adau1977-i2c.c
+<Date_Added>2018/7/6</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to adau1977-i2c codec driver.</Comment>
+</File114>
+<File115>
+sound/soc/codecs/adau1977.c
+<Date_Added>2018/7/6</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to adau1977 codec driver</Comment>
+</File115>
+<File116>
+sound/soc/codecs/Kconfig
+<Date_Added>2018/7/6</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to sound codecs driver Kconfig</Comment>
+</File116>
+<File117>
+sound/soc/codecs/Makefile
+<Date_Added>2018/7/6</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to sound codecs driver Makefile</Comment>
+</File117>
 </Linux-kernel-v4.16.0>

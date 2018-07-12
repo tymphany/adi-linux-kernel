@@ -27,6 +27,7 @@
 		i2c0 = &i2c0;
 		i2c1 = &i2c1;
 		i2c2 = &i2c2;
+		i2s0 = &i2s0;
 	};
 
 	cpus {
@@ -106,6 +107,14 @@
 			reg = <0x31001600 0xFF>;
 			interrupts = <0 117 0>;
 			clock-khz = <100>;
+			status = "disabled";
+		};
+
+		i2s0: i2s@0 {
+			compatible = "sc5xx,i2s-dai";
+			reg = <0x31002000 0x80>, <0x31002080 0x80>;
+			interrupts = <0 61 0>, <0 63 0>;/* SPORT0 */
+			dma-channel = <0>, <1>;
 			status = "disabled";
 		};
 
