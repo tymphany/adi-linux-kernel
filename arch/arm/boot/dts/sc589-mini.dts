@@ -89,3 +89,21 @@
 		};
 	};
 };
+
+&usb0_phy {
+	status = "okay";
+};
+
+&usb0 {
+	mode = <3>; /* OTG port */
+	status = "okay";
+};
+
+&usb1_phy {
+	status = "okay";
+};
+
+&usb1 {
+	mode = <1>; /* Host port */
+	status = "okay";
+};

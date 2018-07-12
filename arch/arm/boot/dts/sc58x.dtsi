@@ -56,9 +56,9 @@
 		      <0x310B4000 0x100>;
 	};
 
-    L2: cache-controller@10000000 {
-        compatible = "arm,pl310-cache";
-        reg = <0x10000000 0x1000>;
+	L2: cache-controller@10000000 {
+		compatible = "arm,pl310-cache";
+		reg = <0x10000000 0x1000>;
 		cache-level = <2>;
     };
 
@@ -370,6 +370,54 @@
 			gpio-ranges = <&pinctrl0 0 96 6>;
 			pint_id = /bits/ 8 <5>;
 			pint_map = /bits/ 8 <1>;
+		};
+
+		usb0_phy: usb-phy@310c1390 {
+			compatible = "usb-nop-xceiv";
+			reg = <0x310c1390 0x10>;
+			reg-names = "phy";
+			status = "disabled";
+		};
+
+		usb0: usb@310c1000 {
+			compatible = "ADI,musb";
+			reg = <0x310c1000 0x390>;
+			reg-names = "mc";
+			interrupts = <0 132 0>,
+						 <0 133 0>;
+			interrupt-names = "mc", "dma";
+			spu_securep_id = <153>;
+
+			mentor,multipoint = <1>;
+			mentor,num-eps = <16>;
+			mentor,ram-bits = <12>;
+			mentor,power = <500>;
+			phys = <&usb0_phy>;
+			status = "disabled";
+		};
+
+		usb1_phy: usb-phy@310c2390 {
+			compatible = "usb-nop-xceiv";
+			reg = <0x310c2390 0x10>;
+			reg-names = "phy";
+			status = "disabled";
+		};
+
+		usb1: usb@310c2000 {
+			compatible = "ADI,musb";
+			reg = <0x310c2000 0x390>;
+			reg-names = "mc";
+			interrupts = <0 134 0>,
+						 <0 135 0>;
+			interrupt-names = "mc", "dma";
+			spu_securep_id = <154>;
+
+			mentor,multipoint = <1>;
+			mentor,num-eps = <16>;
+			mentor,ram-bits = <12>;
+			mentor,power = <500>;
+			phys = <&usb1_phy>;
+			status = "disabled";
 		};
 
 		dma0: dma@0 {
