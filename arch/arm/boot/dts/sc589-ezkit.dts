@@ -1,7 +1,7 @@
 /*
  * Device tree for ADI sc589-ezkit board
  *
- * Copyright 2018 Analog Devices Inc.
+ * Copyright 2014 - 2018 Analog Devices Inc.
  *
  * Licensed under the GPL-2 or later.
  *
@@ -110,5 +110,23 @@
 	phy-mode = "rmii";
 	pinctrl-names = "default";
 	pinctrl-0 = <&eth1_default>;
+	status = "okay";
+};
+
+&usb0_phy {
+	status = "okay";
+};
+
+&usb0 {
+	mode = <3>; /* OTG port */
+	status = "okay";
+};
+
+&usb1_phy {
+	status = "okay";
+};
+
+&usb1 {
+	mode = <2>; /* Device port */
 	status = "okay";
 };

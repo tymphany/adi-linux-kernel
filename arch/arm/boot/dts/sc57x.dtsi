@@ -325,6 +325,30 @@
 			pint_map = /bits/ 8 <1>;
 		};
 
+		usb0_phy: usb-phy@310c1390 {
+			compatible = "usb-nop-xceiv";
+			reg = <0x310c1390 0x10>;
+			reg-names = "phy";
+			status = "disabled";
+		};
+
+		usb0: usb@310c1000 {
+			compatible = "ADI,musb";
+			reg = <0x310c1000 0x390>;
+			reg-names = "mc";
+			interrupts = <0 124 0>,
+						 <0 125 0>;
+			interrupt-names = "mc", "dma";
+			spu_securep_id = <109>;
+
+			mentor,multipoint = <1>;
+			mentor,num-eps = <16>;
+			mentor,ram-bits = <12>;
+			mentor,power = <500>;
+			phys = <&usb0_phy>;
+			status = "disabled";
+		};
+
 		dma0: dma@0 {
 			compatible = "adi,dma2";
 			reg = <0x31022000 0x7F>;
