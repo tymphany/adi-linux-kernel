@@ -91,3 +91,12 @@
 	pinctrl-0 = <&eth0_default>;
 	status = "okay";
 };
+
+&usb0_phy {
+	status = "okay";
+};
+
+&usb0 {
+	mode = <3>; /* OTG port */
+	status = "okay";
+};
