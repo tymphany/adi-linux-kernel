@@ -19,3 +19,59 @@ config SND_SOC_ADI_AXI_SPDIF
 	select REGMAP_MMIO
 	help
 	  ASoC driver for the Analog Devices AXI-SPDIF softcore peripheral.
+
+config SND_SC5XX_PCM
+	tristate "SoC Audio for the ADI SC5XX chip"
+	depends on ARCH_SC58X || ARCH_SC57X
+	select SND_SC5XX_SPORT
+	help
+	  Say Y or M if you want to add support for codecs attached to
+	  the SC5XX SPORT (synchronous serial ports) interface in I2S
+	  or TDM mode.
+	  You will also need to select the audio interfaces to support below.
+
+config SND_SC5XX_ADAU1979
+	tristate "Support for the ADAU1979 board on SC5XX ezkit board"
+	depends on SND_SC5XX_PCM && I2C
+	select SND_SC5XX_MACHINE
+	select SND_SOC_ADI_SC5XX_I2S
+	select SND_SOC_ADAU1977_I2C
+	help
+	Say Y if you want to add support for the Analog Devices ADAU1979
+        board connected to the SC5XX ezkit board.
+
+config SND_SC5XX_ADAU1962
+	tristate "Support for the ADAU1962 board on SC5XX ezkit board"
+	depends on SND_SC5XX_PCM && I2C
+	select SND_SC5XX_MACHINE
+	select SND_SOC_ADI_SC5XX_I2S
+	select SND_SOC_ADAU1962_I2C
+	help
+	Say Y if you want to add support for the Analog Devices ADAU1962
+        board connected to the SC5XX ezkit board.
+
+config SND_SC5XX_SPORT
+	tristate
+	depends on ARCH_SC58X || ARCH_SC57X
+	help
+	SPORT interface driver for SC5XX audio, audio data are sent and
+	received through the SPORT DMA buffers
+	Most audio devices on SC5xx requires this
+	Say Y or M if you want to enable this
+
+config SND_SOC_ADI_SC5XX_I2S
+	tristate
+	depends on ARCH_SC58X || ARCH_SC57X
+	help
+	Describes the Digital Audio Interface format, which is physcally
+	built on the SPORT
+	Most audio devices on SC5xx requires this
+	Say Y or M if you want to enable this
+
+config SND_SC5XX_MACHINE
+	tristate
+	depends on ARCH_SC58X || ARCH_SC57X
+	help
+	Describes the ASoC Machine driver for ADI SC5XX based boards
+	Audio devices on SC5xx requires this
+	Say Y or M if you want to enable this
