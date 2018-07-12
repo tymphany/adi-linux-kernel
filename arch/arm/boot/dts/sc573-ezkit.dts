@@ -42,6 +42,11 @@
 			led_gpio = <65>;
 		};
 
+		sound {
+			compatible = "sc5xx,asoc-card";
+			adi,cpu-dai = <&i2s0>;
+			adi,codec = <&adau1962>, <&adau1979>;
+		};
 	};
 };
 
@@ -73,6 +78,16 @@
 		#gpio-cells = <2>;
 		reg = <0x22>;
 	};
+	adau1979: adau1979@0x11 {
+		compatible = "adi,adau1977";
+		reg = <0x11>;
+		reset-gpio = <&gpa 7 0>;
+	};
+	adau1962: adau1962@0x4 {
+		compatible = "adi,adau1962";
+		reg = <0x4>;
+		reset-gpio = <&gpa 6 0>;
+	};
 };
 
 &i2c1 {
@@ -80,6 +95,10 @@
 };
 
 &i2c2 {
+	status = "okay";
+};
+
+&i2s0 {
 	status = "okay";
 };
 
