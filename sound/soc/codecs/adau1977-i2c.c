@@ -28,6 +28,20 @@ static int adau1977_i2c_probe(struct i2c_client *client,
 		id->driver_data, NULL);
 }
 
+static int adau1977_i2c_remove(struct i2c_client *client)
+{
+	snd_soc_unregister_codec(&client->dev);
+	return 0;
+}
+
+#ifdef CONFIG_OF
+static const struct of_device_id adau1977_dt_ids[] = {
+	{ .compatible = "adi,adau1977", },
+	{ }
+};
+MODULE_DEVICE_TABLE(of, adau1977_dt_ids);
+#endif
+
 static const struct i2c_device_id adau1977_i2c_ids[] = {
 	{ "adau1977", ADAU1977 },
 	{ "adau1978", ADAU1978 },
@@ -39,6 +53,7 @@ MODULE_DEVICE_TABLE(i2c, adau1977_i2c_ids);
 static struct i2c_driver adau1977_i2c_driver = {
 	.driver = {
 		.name = "adau1977",
+		.of_match_table = of_match_ptr(adau1977_dt_ids),
 	},
 	.probe = adau1977_i2c_probe,
 	.id_table = adau1977_i2c_ids,
