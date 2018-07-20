@@ -1308,3 +1308,5 @@ dtb-$(CONFIG_ARCH_SC58X) += \
 	sc589-mini.dtb \
 	sc589-ezkit.dtb \
 	sc584-ezkit.dtb
+dtb-$(CONFIG_ARCH_SC57X) += \
+    sc573-ezkit.dtb
