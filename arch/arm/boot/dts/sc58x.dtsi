@@ -1,7 +1,7 @@
 /*
  * Device tree header for ADI sc58x processor
  *
- * Copyright 2018 Analog Devices Inc.
+ * Copyright 2014 - 2018 Analog Devices Inc.
  *
  * Licensed under the GPL-2 or later.
  *
@@ -30,6 +30,7 @@
 		i2c2 = &i2c2;
 		rtc0 = &rtc0;
 		i2s0 = &i2s0;
+		mmc0 = &mmc0;
 	};
 
 	cpus {
@@ -61,7 +62,7 @@
 		compatible = "arm,pl310-cache";
 		reg = <0x10000000 0x1000>;
 		cache-level = <2>;
-    };
+	};
 
 	scb {
 		compatible = "simple-bus";
@@ -258,6 +259,28 @@
 					adi,function = "eth1";
 				};
 			};
+
+			mmc {
+				mmc0_8bgrp: mmc0@0 {
+					adi,group = "mmc0_8bgrp";
+					adi,function = "mmc0";
+				};
+				mmc0_4bgrp: mmc0@1 {
+					adi,group = "mmc0_4bgrp";
+					adi,function = "mmc0";
+				};
+			};
+		};
+
+		mmc0: mmc@0x31010000 {
+			compatible = "adi,mmc";
+			reg = <0x31010000 0xFFF>;
+			interrupts = <0 131 0>;
+			spu_securep_id = <58>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			fifo-depth = <1024>;
+			status = "disabled";
 		};
 
 		pint0: pint@0x31005000 {

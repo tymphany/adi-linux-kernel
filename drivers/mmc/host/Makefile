@@ -53,6 +53,7 @@ obj-$(CONFIG_MMC_DW_PLTFM)	+= dw_mmc-pltfm.o
 obj-$(CONFIG_MMC_DW_EXYNOS)	+= dw_mmc-exynos.o
 obj-$(CONFIG_MMC_DW_K3)		+= dw_mmc-k3.o
 obj-$(CONFIG_MMC_DW_PCI)	+= dw_mmc-pci.o
+obj-$(CONFIG_MMC_DW_ADI)	+= dw_mmc-adi.o
 obj-$(CONFIG_MMC_DW_ROCKCHIP)	+= dw_mmc-rockchip.o
 obj-$(CONFIG_MMC_DW_ZX)		+= dw_mmc-zx.o
 obj-$(CONFIG_MMC_SH_MMCIF)	+= sh_mmcif.o
