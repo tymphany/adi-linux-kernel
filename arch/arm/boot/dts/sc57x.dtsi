@@ -28,6 +28,7 @@
 		i2c1 = &i2c1;
 		i2c2 = &i2c2;
 		i2s0 = &i2s0;
+		mmc0 = &mmc0;
 	};
 
 	cpus {
@@ -57,9 +58,9 @@
 
 	L2: cache-controller@10000000 {
 		compatible = "arm,pl310-cache";
-        reg = <0x10000000 0x1000>;
-        cache-level = <2>;
-    };
+		reg = <0x10000000 0x1000>;
+		cache-level = <2>;
+	};
 
 	scb {
 		compatible = "simple-bus";
@@ -229,6 +230,23 @@
 				};
 			};
 
+			mmc {
+				mmc0_default: mmc0@0 {
+					adi,group = "mmc0grp";
+					adi,function = "mmc0";
+				};
+			};
+		};
+
+		mmc0: mmc@0x31010000 {
+			compatible = "adi,mmc";
+			reg = <0x31010000 0xFFF>;
+			interrupts = <0 123 0>;
+			spu_securep_id = <41>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			fifo-depth = <1024>;
+			status = "disabled";
 		};
 
 		pint0: pint@0x31005000 {
