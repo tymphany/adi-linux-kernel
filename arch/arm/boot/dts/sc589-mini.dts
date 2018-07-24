@@ -107,3 +107,11 @@
 	mode = <1>; /* Host port */
 	status = "okay";
 };
+
+&mmc0 {
+	bus-width = <4>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&mmc0_4bgrp>;
+	supports-highspeed;
+	status = "okay";
+};
