@@ -20,6 +20,12 @@
 		serial0 = &uart0;
 		timer0 = &gptimer0;
 		timer1 = &gptimer1;
+		timer2 = &gptimer2;
+		timer3 = &gptimer3;
+		timer4 = &gptimer4;
+		timer5 = &gptimer5;
+		timer6 = &gptimer6;
+		timer7 = &gptimer7;
 		ethernet0 = &emac0;
 		ethernet1 = &emac1;
 		spi0   = &spi0;
@@ -103,6 +109,48 @@
 			reg = <0x31001080 0x20>;
 			interrupt-parent = <&gic>;
 			interrupts = <0 27 0>;
+		};
+
+		gptimer2: gptimer@0x310010A0 {
+			compatible = "adi,sc58x-timer";
+			reg = <0x310010A0 0x20>;
+			interrupt-parent = <&gic>;
+			interrupts = <0 28 0>;
+		};
+
+		gptimer3: gptimer@0x310010C0 {
+			compatible = "adi,sc58x-timer";
+			reg = <0x310010C0 0x20>;
+			interrupt-parent = <&gic>;
+			interrupts = <0 29 0>;
+		};
+
+		gptimer4: gptimer@0x310010E0 {
+			compatible = "adi,sc58x-timer";
+			reg = <0x310010E0 0x20>;
+			interrupt-parent = <&gic>;
+			interrupts = <0 72 0>;
+		};
+
+		gptimer5: gptimer@0x31001100 {
+			compatible = "adi,sc58x-timer";
+			reg = <0x31001100 0x20>;
+			interrupt-parent = <&gic>;
+			interrupts = <0 73 0>;
+		};
+
+		gptimer6: gptimer@0x31001120 {
+			compatible = "adi,sc58x-timer";
+			reg = <0x31001120 0x20>;
+			interrupt-parent = <&gic>;
+			interrupts = <0 74 0>;
+		};
+
+		gptimer7: gptimer@0x31001140 {
+			compatible = "adi,sc58x-timer";
+			reg = <0x31001140 0x20>;
+			interrupt-parent = <&gic>;
+			interrupts = <0 75 0>;
 		};
 
 		i2c0: twi@0x31001400 {
