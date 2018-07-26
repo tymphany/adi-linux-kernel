@@ -965,4 +965,100 @@ drivers/mmc/host/dw_mmc-adi.c
 <File_License>GPL2</File_License>
 <Comment>ADI Created mmc host driver for sc5xx. Written entirely by ADI</Comment>
 </File120>
+<File121>
+arch/arm/mach-sc58x/corecontrol.c
+<Date_Added>2018/7/24</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created corecontrol driver for sc58x. Written entirely by ADI</Comment>
+</File121>
+<File122>
+arch/arm/mach-sc57x/corecontrol.c
+<Date_Added>2018/7/24</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created corecontrol driver for sc57x. Written entirely by ADI</Comment>
+</File122>
+<File123>
+arch/arm/mach-sc58x/include/mach/icc.h
+<Date_Added>2018/7/24</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created icc header file for sc58x. Written entirely by ADI</Comment>
+</File123>
+<File124>
+arch/arm/mach-sc58x/icc.c
+<Date_Added>2018/7/24</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created icc machine driver for sc58x. Written entirely by ADI</Comment>
+</File124>
+<File125>
+arch/arm/mach-sc57x/include/mach/icc.h
+<Date_Added>2018/7/24</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created icc header file for sc57x. Written entirely by ADI</Comment>
+</File125>
+<File126>
+arch/arm/mach-sc57x/icc.c
+<Date_Added>2018/7/24</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created icc machine driver for sc57x. Written entirely by ADI</Comment>
+</File126>
+<File127>
+drivers/staging/icc/core/protocol.c
+<Date_Added>2018/7/24</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created icc driver protocol for sc5xx. Written entirely by ADI</Comment>
+</File127>
+<File128>
+drivers/staging/icc/include/icc.h
+<Date_Added>2018/7/24</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created icc protocol header file for sc5xx. Written entirely by ADI</Comment>
+</File128>
+<File129>
+drivers/staging/icc/Kconfig
+<Date_Added>2018/7/24</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created icc driver Kconfig. Written entirely by ADI</Comment>
+</File129>
+<File130>
+drivers/staging/icc/Makefile
+<Date_Added>2018/7/24</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created icc driver Makefile. Written entirely by ADI</Comment>
+</File130>
+<File131>
+drivers/staging/Kconfig
+<Date_Added>2018/7/24</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI icc driver portion to staging driver Kconfig</Comment>
+</File131>
+<File132>
+drivers/staging/Makefile
+<Date_Added>2018/7/24</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI icc driver portion to staging driver Makefile</Comment>
+</File132>
 </Linux-kernel-v4.16.0>
