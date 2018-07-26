@@ -211,6 +211,15 @@
 			status = "disabled";
 		};
 
+        icc0: icc@0 {
+			compatible = "adi,icc";
+			reg = <0x20080000 0x1000>;
+			interrupt-parent = <&gic>;
+			interrupts = <0 251 1>;
+			peerinfo = <1 97>, <2 98>;
+			status = "disabled";
+		};
+
 		pinctrl0: pinctrl@0 {
 			compatible = "adi,adi2-pinctrl";
 			#address-cells = <1>;

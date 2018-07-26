@@ -154,6 +154,15 @@
 			status = "disabled";
 		};
 
+        icc0: icc@0 {
+			compatible = "adi,icc";
+			reg = <0x20000000 0x1000>;
+			interrupt-parent = <&gic>;
+			interrupts = <0 206 1>;
+			peerinfo = <1 71>, <2 72>;
+			status = "disabled";
+		};
+
 		spi0: spi@0x3102E000 {
 			#address-cells = <1>;
 			#size-cells = <0>;

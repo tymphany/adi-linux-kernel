@@ -127,3 +127,7 @@
 	pinctrl-0 = <&mmc0_default>;
 	status = "okay";
 };
+
+&icc0 {
+	status = "okay";
+};
