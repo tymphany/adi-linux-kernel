@@ -70,7 +70,11 @@ static struct map_desc sc57x_io_desc[] __initdata __maybe_unused = {
 		.virtual	=  IO_ADDRESS(SYS_SRAM_BASE),
 		.pfn		= __phys_to_pfn(SYS_SRAM_BASE),
 		.length		= SYS_SRAM_SIZE,
+#ifdef CONFIG_ICC
+		.type		= MT_MEMORY_RWX_NONCACHED,
+#else
 		.type		= MT_MEMORY_RWX,
+#endif
 	},
 };
 

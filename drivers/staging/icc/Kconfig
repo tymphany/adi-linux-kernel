@@ -1,0 +1,23 @@
+#
+# Intercore communication protocol and impelementation
+#
+
+menuconfig ICC_DRIVER
+	bool "icc driver"
+	depends on !SMP && !BFIN_L2_DCACHEABLE
+	help
+	  the icc driver is a device driver that control the DSP devices,
+	  and bridges the the program runing on DSPs and linux user applications
+if ICC_DRIVER
+config	ICC
+	bool "icc protocol"
+	default Y
+	help
+	  ICC protocol, a shared memory based protocol for communication between
+	  linux core and DSP core
+config ICC_DEBUG
+	bool "icc debug"
+	default N
+	help
+	  ICC verbose debug messages
+endif
