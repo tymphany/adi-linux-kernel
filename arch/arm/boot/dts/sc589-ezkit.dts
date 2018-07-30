@@ -157,3 +157,7 @@
 	supports-highspeed;
 	status = "okay";
 };
+
+&icc0 {
+	status = "okay";
+};

@@ -119,3 +119,7 @@
 	mode = <3>; /* OTG port */
 	status = "okay";
 };
+
+&icc0 {
+	status = "okay";
+};
