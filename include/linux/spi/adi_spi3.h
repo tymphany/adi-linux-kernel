@@ -1,7 +1,7 @@
 /*
  * Analog Devices SPI3 controller driver
  *
- * Copyright (c) 2014 Analog Devices Inc.
+ * Copyright (c) 2014 - 2018 Analog Devices Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -233,12 +233,9 @@ struct adi_spi_regs {
 	u32 tfifo;
 };
 
-#define MAX_CTRL_CS          8  /* cs in spi controller */
-
 /* device.platform_data for SSP controller devices */
 struct adi_spi3_master {
 	u16 num_chipselect;
-	u16 pin_req[7];
 };
 
 /* spi_board_info.controller_data for SPI slave devices,

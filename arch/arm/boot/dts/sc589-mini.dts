@@ -53,6 +53,33 @@
 	};
 };
 
+&spi2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi2_quad>;
+	status = "okay";
+
+	flash: mt25ql512@0 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "micron,mt25ql512", "jedec,spi-nor";
+		spi-max-frequency = <5000000>;
+		reg = <38>;
+
+		partition@0 {
+			label = "uboot (spi)";
+			reg = <0x0 0x80000>;
+		};
+		partition@1 {
+			label = "kernel (spi)";
+			reg = <0x80000 0x580000>;
+		};
+		partition@2 {
+			label = "root file system (spi)";
+			reg = <0x600000 0x3a00000>;
+		};
+	};
+};
+
 &i2c0 {
 	status = "okay";
 };
