@@ -1,7 +1,7 @@
 /*
  * Analog Devices SPI3 controller driver
  *
- * Copyright (c) 2018 Analog Devices Inc.
+ * Copyright (c) 2014 - 2018 Analog Devices Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -30,8 +30,13 @@
 #include <linux/spi/adi_spi3.h>
 #include <linux/types.h>
 
+#ifdef CONFIG_ARCH_HEADER_IN_MACH
 #include <mach/dma.h>
 #include <mach/portmux.h>
+#else
+#include <asm/dma.h>
+#include <asm/portmux.h>
+#endif
 
 enum adi_spi_state {
 	START_STATE,
@@ -100,7 +105,6 @@ struct adi_spi_device {
 	u32 clock;
 	u32 ssel;
 
-	u8 cs;
 	u16 cs_chg_udelay; /* Some devices require > 255usec delay */
 	u32 cs_gpio;
 	u32 tx_dummy_val; /* tx value for rx only transfer */
@@ -152,54 +156,17 @@ static int adi_spi_flush(struct adi_spi_master *drv_data)
 /* Chip select operation functions for cs_change flag */
 static void adi_spi_cs_active(struct adi_spi_master *drv_data, struct adi_spi_device *chip)
 {
-	if (likely(chip->cs < MAX_CTRL_CS)) {
-		u32 reg;
-		reg = ioread32(&drv_data->regs->ssel);
-		reg &= ~chip->ssel;
-		iowrite32(reg, &drv_data->regs->ssel);
-	} else {
-		gpio_set_value(chip->cs_gpio, 0);
-	}
+	gpio_set_value(chip->cs_gpio, 0);
 }
 
 static void adi_spi_cs_deactive(struct adi_spi_master *drv_data,
 				struct adi_spi_device *chip)
 {
-	if (likely(chip->cs < MAX_CTRL_CS)) {
-		u32 reg;
-		reg = ioread32(&drv_data->regs->ssel);
-		reg |= chip->ssel;
-		iowrite32(reg, &drv_data->regs->ssel);
-	} else {
-		gpio_set_value(chip->cs_gpio, 1);
-	}
+	gpio_set_value(chip->cs_gpio, 1);
 
 	/* Move delay here for consistency */
 	if (chip->cs_chg_udelay)
 		udelay(chip->cs_chg_udelay);
-}
-
-/* enable or disable the pin muxed by GPIO and SPI CS to work as SPI CS */
-static inline void adi_spi_cs_enable(struct adi_spi_master *drv_data,
-					struct adi_spi_device *chip)
-{
-	if (chip->cs < MAX_CTRL_CS) {
-		u32 reg;
-		reg = ioread32(&drv_data->regs->ssel);
-		reg |= chip->ssel >> 8;
-		iowrite32(reg, &drv_data->regs->ssel);
-	}
-}
-
-static inline void adi_spi_cs_disable(struct adi_spi_master *drv_data,
-					struct adi_spi_device *chip)
-{
-	if (chip->cs < MAX_CTRL_CS) {
-		u32 reg;
-		reg = ioread32(&drv_data->regs->ssel);
-		reg &= ~(chip->ssel >> 8);
-		iowrite32(reg, &drv_data->regs->ssel);
-	}
 }
 
 /* stop controller and re-config current chip*/
@@ -219,9 +186,6 @@ static void adi_spi_restore_state(struct adi_spi_master *drv_data)
 
 	adi_spi_enable(drv_data);
 	drv_data->tx_num = drv_data->rx_num = 0;
-	/* we always choose tx transfer initiate */
-	iowrite32(SPI_RXCTL_REN, &drv_data->regs->rx_control);
-	iowrite32(SPI_TXCTL_TEN | SPI_TXCTL_TTI, &drv_data->regs->tx_control);
 	adi_spi_cs_active(drv_data, chip);
 }
 
@@ -234,7 +198,6 @@ static inline void dummy_read(struct adi_spi_master *drv_data)
 
 static void adi_spi_u8_write(struct adi_spi_master *drv_data)
 {
-	dummy_read(drv_data);
 	while (drv_data->tx < drv_data->tx_end) {
 		iowrite32(*(u8 *)(drv_data->tx++), &drv_data->regs->tfifo);
 		while (ioread32(&drv_data->regs->status) & SPI_STAT_RFE)
@@ -246,10 +209,11 @@ static void adi_spi_u8_write(struct adi_spi_master *drv_data)
 static void adi_spi_u8_read(struct adi_spi_master *drv_data)
 {
 	u32 tx_val = drv_data->cur_chip->tx_dummy_val;
+	struct spi_transfer *t = drv_data->cur_transfer;
 
-	dummy_read(drv_data);
 	while (drv_data->rx < drv_data->rx_end) {
-		iowrite32(tx_val, &drv_data->regs->tfifo);
+		if (t->rx_nbits != SPI_NBITS_QUAD)
+			iowrite32(tx_val, &drv_data->regs->tfifo);
 		while (ioread32(&drv_data->regs->status) & SPI_STAT_RFE)
 			cpu_relax();
 		*(u8 *)(drv_data->rx++) = ioread32(&drv_data->regs->rfifo);
@@ -258,7 +222,6 @@ static void adi_spi_u8_read(struct adi_spi_master *drv_data)
 
 static void adi_spi_u8_duplex(struct adi_spi_master *drv_data)
 {
-	dummy_read(drv_data);
 	while (drv_data->rx < drv_data->rx_end) {
 		iowrite32(*(u8 *)(drv_data->tx++), &drv_data->regs->tfifo);
 		while (ioread32(&drv_data->regs->status) & SPI_STAT_RFE)
@@ -275,7 +238,6 @@ static const struct adi_spi_transfer_ops adi_spi_transfer_ops_u8 = {
 
 static void adi_spi_u16_write(struct adi_spi_master *drv_data)
 {
-	dummy_read(drv_data);
 	while (drv_data->tx < drv_data->tx_end) {
 		iowrite32(*(u16 *)drv_data->tx, &drv_data->regs->tfifo);
 		drv_data->tx += 2;
@@ -288,10 +250,11 @@ static void adi_spi_u16_write(struct adi_spi_master *drv_data)
 static void adi_spi_u16_read(struct adi_spi_master *drv_data)
 {
 	u32 tx_val = drv_data->cur_chip->tx_dummy_val;
+	struct spi_transfer *t = drv_data->cur_transfer;
 
-	dummy_read(drv_data);
 	while (drv_data->rx < drv_data->rx_end) {
-		iowrite32(tx_val, &drv_data->regs->tfifo);
+		if (t->rx_nbits != SPI_NBITS_QUAD)
+			iowrite32(tx_val, &drv_data->regs->tfifo);
 		while (ioread32(&drv_data->regs->status) & SPI_STAT_RFE)
 			cpu_relax();
 		*(u16 *)drv_data->rx = ioread32(&drv_data->regs->rfifo);
@@ -301,7 +264,6 @@ static void adi_spi_u16_read(struct adi_spi_master *drv_data)
 
 static void adi_spi_u16_duplex(struct adi_spi_master *drv_data)
 {
-	dummy_read(drv_data);
 	while (drv_data->rx < drv_data->rx_end) {
 		iowrite32(*(u16 *)drv_data->tx, &drv_data->regs->tfifo);
 		drv_data->tx += 2;
@@ -320,7 +282,6 @@ static const struct adi_spi_transfer_ops adi_spi_transfer_ops_u16 = {
 
 static void adi_spi_u32_write(struct adi_spi_master *drv_data)
 {
-	dummy_read(drv_data);
 	while (drv_data->tx < drv_data->tx_end) {
 		iowrite32(*(u32 *)drv_data->tx, &drv_data->regs->tfifo);
 		drv_data->tx += 4;
@@ -333,10 +294,11 @@ static void adi_spi_u32_write(struct adi_spi_master *drv_data)
 static void adi_spi_u32_read(struct adi_spi_master *drv_data)
 {
 	u32 tx_val = drv_data->cur_chip->tx_dummy_val;
+	struct spi_transfer *t = drv_data->cur_transfer;
 
-	dummy_read(drv_data);
 	while (drv_data->rx < drv_data->rx_end) {
-		iowrite32(tx_val, &drv_data->regs->tfifo);
+		if (t->rx_nbits != SPI_NBITS_QUAD)
+			iowrite32(tx_val, &drv_data->regs->tfifo);
 		while (ioread32(&drv_data->regs->status) & SPI_STAT_RFE)
 			cpu_relax();
 		*(u32 *)drv_data->rx = ioread32(&drv_data->regs->rfifo);
@@ -346,7 +308,6 @@ static void adi_spi_u32_read(struct adi_spi_master *drv_data)
 
 static void adi_spi_u32_duplex(struct adi_spi_master *drv_data)
 {
-	dummy_read(drv_data);
 	while (drv_data->rx < drv_data->rx_end) {
 		iowrite32(*(u32 *)drv_data->tx, &drv_data->regs->tfifo);
 		drv_data->tx += 4;
@@ -429,6 +390,14 @@ static int adi_spi_setup_transfer(struct adi_spi_master *drv)
 	}
 	cr = ioread32(&drv->regs->control) & ~SPI_CTL_SIZE;
 	cr |= cr_width;
+
+	cr &= ~SPI_CTL_SOSI;
+	cr &= ~SPI_CTL_MIOM;
+	if (t->rx_nbits == SPI_NBITS_QUAD || t->tx_nbits == SPI_NBITS_QUAD)
+		cr |= SPI_CTL_MIO_QUAD;
+	else if (t->rx_nbits == SPI_NBITS_DUAL || t->tx_nbits == SPI_NBITS_DUAL)
+		cr |= SPI_CTL_MIO_DUAL;
+
 	iowrite32(cr, &drv->regs->control);
 
 	/* speed setup */
@@ -516,13 +485,19 @@ static int adi_spi_dma_xfer(struct adi_spi_master *drv_data)
 	dma_config |= DMAFLOW_STOP | RESTART | DI_EN;
 	set_dma_config(drv_data->tx_dma, dma_config);
 	set_dma_config(drv_data->rx_dma, dma_config | WNR);
-	enable_dma(drv_data->tx_dma);
 	enable_dma(drv_data->rx_dma);
 
-	iowrite32(SPI_RXCTL_REN | SPI_RXCTL_RDR_NE,
-			&drv_data->regs->rx_control);
-	iowrite32(SPI_TXCTL_TEN | SPI_TXCTL_TTI | SPI_TXCTL_TDR_NF,
-			&drv_data->regs->tx_control);
+	if (!drv_data->tx && t->rx_nbits == SPI_NBITS_QUAD) {
+		iowrite32(SPI_RXCTL_REN | SPI_RXCTL_RTI | SPI_RXCTL_RDR_NE,
+				&drv_data->regs->rx_control);
+		iowrite32(0, &drv_data->regs->tx_control);
+	} else {
+		enable_dma(drv_data->tx_dma);
+		iowrite32(SPI_RXCTL_REN | SPI_RXCTL_RDR_NE,
+				&drv_data->regs->rx_control);
+		iowrite32(SPI_TXCTL_TEN | SPI_TXCTL_TTI | SPI_TXCTL_TDR_NF,
+				&drv_data->regs->tx_control);
+	}
 
 	return 0;
 }
@@ -530,6 +505,14 @@ static int adi_spi_dma_xfer(struct adi_spi_master *drv_data)
 static int adi_spi_pio_xfer(struct adi_spi_master *drv_data)
 {
 	struct spi_message *msg = drv_data->cur_msg;
+	struct spi_transfer *t = drv_data->cur_transfer;
+
+	dummy_read(drv_data);
+
+	iowrite32(SPI_RXCTL_REN,
+			&drv_data->regs->rx_control);
+	iowrite32(SPI_TXCTL_TEN | SPI_TXCTL_TTI,
+			&drv_data->regs->tx_control);
 
 	if (!drv_data->rx) {
 		/* write only half duplex */
@@ -538,6 +521,12 @@ static int adi_spi_pio_xfer(struct adi_spi_master *drv_data)
 			return -EIO;
 	} else if (!drv_data->tx) {
 		/* read only half duplex */
+		if (t->rx_nbits == SPI_NBITS_QUAD) {
+			iowrite32(SPI_RXCTL_REN | SPI_RXCTL_RTI,
+					&drv_data->regs->rx_control);
+			iowrite32(0, &drv_data->regs->tx_control);
+		}
+
 		drv_data->ops->read(drv_data);
 		if (drv_data->rx != drv_data->rx_end)
 			return -EIO;
@@ -657,25 +646,17 @@ static int adi_spi_setup(struct spi_device *spi)
 			chip->cs_chg_udelay = chip_info->cs_chg_udelay;
 			chip->tx_dummy_val = chip_info->tx_dummy_val;
 			chip->enable_dma = chip_info->enable_dma;
+		} else if (spi->dev.of_node) {
+			if (of_find_property(spi->dev.of_node,
+						"dma-mode", NULL))
+				chip->enable_dma = true;
 		}
-		chip->cs = spi->chip_select;
-
-		if (chip->cs < MAX_CTRL_CS) {
-			chip->ssel = (1 << chip->cs) << 8;
-			ret = peripheral_request(ssel[spi->master->bus_num]
-					[chip->cs-1], dev_name(&spi->dev));
-			if (ret) {
-				dev_err(&spi->dev, "peripheral_request() error\n");
-				goto error;
-			}
-		} else {
-			chip->cs_gpio = chip->cs - MAX_CTRL_CS;
-			ret = gpio_request_one(chip->cs_gpio, GPIOF_OUT_INIT_HIGH,
-						dev_name(&spi->dev));
-			if (ret) {
-				dev_err(&spi->dev, "gpio_request_one() error\n");
-				goto error;
-			}
+		chip->cs_gpio = spi->chip_select;
+		ret = gpio_request_one(chip->cs_gpio, GPIOF_OUT_INIT_HIGH,
+					dev_name(&spi->dev));
+		if (ret) {
+			dev_err(&spi->dev, "gpio_request_one() error\n");
+			goto error;
 		}
 		spi_set_ctldata(spi, chip);
 	}
@@ -695,7 +676,6 @@ static int adi_spi_setup(struct spi_device *spi)
 
 	chip->clock = hz_to_spi_clock(drv_data->sclk, spi->max_speed_hz);
 
-	adi_spi_cs_enable(drv_data, chip);
 	adi_spi_cs_deactive(drv_data, chip);
 
 	return 0;
@@ -711,19 +691,11 @@ error:
 static void adi_spi_cleanup(struct spi_device *spi)
 {
 	struct adi_spi_device *chip = spi_get_ctldata(spi);
-	struct adi_spi_master *drv_data = spi_master_get_devdata(spi->master);
 
 	if (!chip)
 		return;
 
-	if (chip->cs < MAX_CTRL_CS) {
-		peripheral_free(ssel[spi->master->bus_num]
-					[chip->cs-1]);
-		adi_spi_cs_disable(drv_data, chip);
-	} else {
-		gpio_free(chip->cs_gpio);
-	}
-
+	gpio_free(chip->cs_gpio);
 	kfree(chip);
 	spi_set_ctldata(spi, NULL);
 }
@@ -794,7 +766,6 @@ static irqreturn_t spi_irq_err(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-
 #ifdef CONFIG_OF
 static const struct of_device_id adi_spi_of_match[] = {
 	{
@@ -804,7 +775,6 @@ static const struct of_device_id adi_spi_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, adi_spi_of_match);
 #endif
-
 
 static int adi_spi_probe(struct platform_device *pdev)
 {
@@ -891,6 +861,7 @@ static int adi_spi_probe(struct platform_device *pdev)
 	drv_data->tx_dma = tx_dma;
 	drv_data->rx_dma = rx_dma;
 	drv_data->sclk = clk_get_rate(sclk);
+
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	drv_data->regs = devm_ioremap_resource(dev, mem);
 	if (IS_ERR(drv_data->regs)) {
@@ -960,7 +931,6 @@ static int adi_spi_remove(struct platform_device *pdev)
 	struct adi_spi_master *drv_data = spi_master_get_devdata(master);
 
 	adi_spi_disable(drv_data);
-	peripheral_free_list(drv_data->pin_req);
 	free_dma(drv_data->rx_dma);
 	free_dma(drv_data->tx_dma);
 	return 0;
