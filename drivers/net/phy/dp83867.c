@@ -435,16 +435,25 @@ static int dp83867_config_init(struct phy_device *phydev)
 	}
 
 	val = phy_read(phydev, DP83867_CFG3);
-	/* Enable Interrupt output INT_OE in CFG3 register */
-	if (phy_interrupt_is_valid(phydev))
-		val |= DP83867_CFG3_INT_OE;
+	/* Enable Interrupt output INT_OE in CFG3 register
+	 *
+	 * This pin should be configured as Interrupt Output not as Power-Down Input
+	 * on ADI SC5XX boards in order to prevent the signal interference from
+	 * PPI0_FS3 during PPI is running at the same time.
+	 */
+#if (!defined(CONFIG_ARCH_SC58X)) && (!defined(CONFIG_ARCH_SC57X))
+ 	if (phy_interrupt_is_valid(phydev)) {
+#endif
 
 	val |= DP83867_CFG3_ROBUST_AUTO_MDIX;
 	phy_write(phydev, DP83867_CFG3, val);
 
 	if (dp83867->port_mirroring != DP83867_PORT_MIRROING_KEEP)
 		dp83867_config_port_mirroring(phydev);
+#if (!defined(CONFIG_ARCH_SC58X)) && (!defined(CONFIG_ARCH_SC57X))
+ 	}
 
+#endif
 	/* Clock output selection if muxing property is set */
 	if (dp83867->set_clk_output) {
 		u16 mask = DP83867_IO_MUX_CFG_CLK_O_DISABLE;
