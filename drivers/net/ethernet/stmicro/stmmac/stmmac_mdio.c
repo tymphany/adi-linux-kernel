@@ -141,26 +141,6 @@ int stmmac_mdio_reset(struct mii_bus *bus)
 
 #ifdef CONFIG_OF
 	if (priv->device->of_node) {
-#ifdef CONFIG_DP83867_PHY
-		int pwd_gpio, pwd_active_low;
-		if (data->pwd_gpio < 0) {
-			struct device_node *np = priv->device->of_node;
-			if (!np)
-				return 0;
-
-			data->pwd_gpio = of_get_named_gpio(np,
-						"snps,pwd-gpio", 0);
-			data->pwd_active_low = of_property_read_bool(np,
-						"snps,pwd-active-low");
-		}
-		pwd_gpio = data->pwd_gpio;
-		pwd_active_low = data->pwd_active_low;
-
-		if ((pwd_gpio >= 0) && (!gpio_request(pwd_gpio, "mdio-pwd"))) {
-			gpio_direction_output(pwd_gpio, pwd_active_low ? 1 : 0);
-			udelay(200);
-		}
-#endif
 		if (data->reset_gpio < 0) {
 			struct device_node *np = priv->device->of_node;
 
@@ -238,10 +218,8 @@ int stmmac_mdio_register(struct net_device *ndev)
 		memcpy(new_bus->irq, mdio_bus_data->irqs, sizeof(new_bus->irq));
 
 #ifdef CONFIG_OF
-	if (priv->device->of_node) {
+	if (priv->device->of_node)
 		mdio_bus_data->reset_gpio = -1;
-		mdio_bus_data->pwd_gpio = -1;
-	}
 #endif
 
 	new_bus->name = "stmmac";

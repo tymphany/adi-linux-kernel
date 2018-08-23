@@ -1069,4 +1069,12 @@ include/linux/spi/adi_spi3.h
 <File_License>GPL2</File_License>
 <Comment>Added ADI sc5xx SPI support to adi SPI3 controller header file</Comment>
 </File133>
+<File134>
+drivers/net/phy/dp83867.c
+<Date_Added>2018/8/23</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI change to support DP83867 for ADI sc5xx boards</Comment>
+</File134>
 </Linux-kernel-v4.16.0>
