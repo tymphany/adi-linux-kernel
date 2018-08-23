@@ -84,7 +84,6 @@ struct stmmac_mdio_bus_data {
 	bool needs_reset;
 #ifdef CONFIG_OF
 	int reset_gpio, active_low;
-	int pwd_gpio, pwd_active_low;
 	u32 delays[3];
 #endif
 };
