@@ -269,33 +269,6 @@ int stmmac_mdio_reset(struct mii_bus *bus)
 	if (priv->device->of_node) {
 		struct gpio_desc *reset_gpio;
 		u32 delays[3] = { 0, 0, 0 };
-/* DBB
-#ifdef CONFIG_DP83867_PHY
-		int pwd_gpio, pwd_active_low;
-		if (data->pwd_gpio < 0) {
-			struct device_node *np = priv->device->of_node;
-			if (!np)
-				return 0;
-
-			data->pwd_gpio = of_get_named_gpio(np,
-						"snps,pwd-gpio", 0);
-			data->pwd_active_low = of_property_read_bool(np,
-						"snps,pwd-active-low");
-		}
-		pwd_gpio = data->pwd_gpio;
-		pwd_active_low = data->pwd_active_low;
-
-		if ((pwd_gpio >= 0) && (!gpio_request(pwd_gpio, "mdio-pwd"))) {
-			gpio_direction_output(pwd_gpio, pwd_active_low ? 1 : 0);
-			udelay(200);
-		}
-#endif
-		if (data->reset_gpio < 0) {  << SAME RESET GPIO (DBB)
-			struct device_node *np = priv->device->of_node;
-
-			if (!np)
-				return 0;
-*/
 
 		reset_gpio = devm_gpiod_get_optional(priv->device,
 						     "snps,reset",
@@ -359,10 +332,8 @@ int stmmac_mdio_register(struct net_device *ndev)
 <<<<<<< HEAD
 =======
 #ifdef CONFIG_OF
-	if (priv->device->of_node) {
+	if (priv->device->of_node)
 		mdio_bus_data->reset_gpio = -1;
-		mdio_bus_data->pwd_gpio = -1;
-	}
 #endif
 
 >>>>>>> [LINUX-1516] Enable Ethernet for sc58x boards

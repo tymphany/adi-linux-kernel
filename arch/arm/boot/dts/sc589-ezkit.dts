@@ -132,8 +132,6 @@
 };
 
 &emac0 {
-	snps,pwd-gpio = <&gpc 15 0>;
-	snps,pwd-active-low;
 	snps,reset-gpio = <&gpb 14 0>;
 	snps,reset-active-low;
 	snps,reset-delays-us = <0 200 500>;
