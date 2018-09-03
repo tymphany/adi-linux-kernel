@@ -2,7 +2,9 @@
 /*
  * AD7879/AD7889 touchscreen (SPI bus)
  *
- * Copyright (C) 2008-2010 Michael Hennerich, Analog Devices Inc.
+ * Copyright (C) 2018 Analog Devices Inc.
+ *
+ * Licensed under the GPL-2 or later.
  */
 
 #include <linux/input.h>	/* BUS_SPI */
@@ -10,6 +12,7 @@
 #include <linux/spi/spi.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/of_device.h>
 #include <linux/regmap.h>
 
 #include "ad7879.h"
@@ -29,9 +32,34 @@ static const struct regmap_config ad7879_spi_regmap_config = {
 	.write_flag_mask = AD7879_CMD_MAGIC,
 };
 
+#ifdef CONFIG_OF
+#include <linux/gpio.h>
+#include <linux/platform_data/ad7879.h>
+static const struct of_device_id ad7879_spi_dt_ids[] = {
+	{ .compatible = "adi,ad7879", },
+	{ },
+};
+MODULE_DEVICE_TABLE(of, ad7879_spi_dt_ids);
+#endif
+
 static int ad7879_spi_probe(struct spi_device *spi)
 {
 	struct regmap *regmap;
+#ifdef CONFIG_OF
+	const struct of_device_id *match;
+	int irq, ret = 0;
+
+	match = of_match_device(ad7879_spi_dt_ids, &spi->dev);
+	if (!match) {
+		dev_err(&spi->dev, "failed to matching of_match node\n");
+		return -ENODEV;
+	}
+
+	ret = of_property_read_u32(spi->dev.of_node, "gpio",&irq);
+	if(ret)
+	  return ret;
+	spi->irq = gpio_to_irq(irq);
+#endif
 
 	/* don't exceed max specified SPI CLK frequency */
 	if (spi->max_speed_hz > MAX_SPI_FREQ_HZ) {
@@ -45,14 +73,6 @@ static int ad7879_spi_probe(struct spi_device *spi)
 
 	return ad7879_probe(&spi->dev, regmap, spi->irq, BUS_SPI, AD7879_DEVID);
 }
-
-#ifdef CONFIG_OF
-static const struct of_device_id ad7879_spi_dt_ids[] = {
-	{ .compatible = "adi,ad7879", },
-	{ }
-};
-MODULE_DEVICE_TABLE(of, ad7879_spi_dt_ids);
-#endif
 
 static struct spi_driver ad7879_spi_driver = {
 	.driver = {
