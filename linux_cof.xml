@@ -1077,4 +1077,44 @@ drivers/net/phy/dp83867.c
 <File_License>GPL2</File_License>
 <Comment>Added ADI change to support DP83867 for ADI sc5xx boards</Comment>
 </File134>
+<File135>
+arch/arm/mach-sc58x/include/mach/ppi.h
+<Date_Added>2018/8/6</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created ppi header file for sc58x. Written entirely by ADI</Comment>
+</File135>
+<File136>
+drivers/input/touchscreen/ad7879-spi.c
+<Date_Added>2018/8/6</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI dts support to ad7879-spi driver</Comment>
+</File136>
+<File137>
+drivers/video/fbdev/adi-nl8048.c
+<Date_Added>2018/7/24</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created NEC WVGA LCD NL8048HL11-01B driver for sc58x. Written entirely by ADI</Comment>
+</File137>
+<File138>
+drivers/video/fbdev/Kconfig
+<Date_Added>2018/8/6</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI NEC WVGA LCD NL8048HL11-01B driver portion to video fbdev driver Kconfig</Comment>
+</File138>
+<File139>
+drivers/video/fbdev/Makefile
+<Date_Added>2018/8/6</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI NEC WVGA LCD NL8048HL11-01B driver portion to video fbdev driver Makefile</Comment>
+</File139>
 </Linux-kernel-v4.16.0>
