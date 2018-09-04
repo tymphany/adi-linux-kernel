@@ -646,6 +646,19 @@ config FB_BFIN_7393
 	  To compile this driver as a module, choose M here: the
 	  module will be called bfin_adv7393fb.
 
+config FB_ADI_NL8048
+	tristate "NEC NL8048HL WVGA LCD for ADI SC5XX boards"
+	depends on FB && ARCH_SC58X && SPI_MASTER
+	select FB_CFB_FILLRECT
+	select FB_CFB_COPYAREA
+	select FB_CFB_IMAGEBLIT
+	help
+	  This is the framebuffer device for NEC NL8048HL WVGA LCD
+	  attached to adi sc5xx boards.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called adi-nl8048.
+
 choice
 	prompt  "Video mode support"
 	depends on FB_BFIN_7393

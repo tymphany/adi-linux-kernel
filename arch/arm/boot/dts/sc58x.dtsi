@@ -306,6 +306,21 @@
 				};
 			};
 
+			ppi {
+				ppi0_8b: ppi0@0 {
+					adi,group = "ppi0_8bgrp";
+					adi,function = "ppi0";
+				};
+				ppi0_16b: ppi0@1 {
+					adi,group = "ppi0_16bgrp";
+					adi,function = "ppi0";
+				};
+				ppi0_24b: ppi0@2 {
+					adi,group = "ppi0_24bgrp";
+					adi,function = "ppi0";
+				};
+			};
+
 			eth {
 				eth0_default: eth0@0 {
 					adi,group = "eth0grp";

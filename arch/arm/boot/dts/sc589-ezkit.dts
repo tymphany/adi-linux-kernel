@@ -41,6 +41,19 @@
 			adi,cpu-dai = <&i2s0>;
 			adi,codec = <&adau1962>, <&adau1979>;
 		};
+
+		lcd@0 {
+			compatible = "sc58x,lcd";
+			reg = <0x31040000 0xFF>;
+			interrupts = <0 83 0>;
+			dma-channel = <28>;
+			cs-gpio = <39>;
+			spu_securep_id = <95>;
+			pinctrl-names = "default", "ppi_16b", "ppi_24b";
+			pinctrl-0 = <&ppi0_8b>;
+			pinctrl-1 = <&ppi0_16b>;
+			pinctrl-2 = <&ppi0_24b>;
+		};
 	};
 };
 
@@ -59,7 +72,26 @@
 		compatible = "rohm,dh2228fv";
 		spi-max-frequency = <5000000>;
 		reg = <44>;
-		};
+	};
+
+	ad7879_touchscreen {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "adi,ad7879";
+		spi-max-frequency = <5000000>;
+		reg = <32>;
+		gpio = <88>;
+		gpio-controller;
+		spi-cpha;
+		spi-cpol;
+		touchscreen-max-pressure = <10000>;
+		adi,resistance-plate-x = <620>;
+		adi,first-conversion-delay = /bits/ 8 <3>;
+		adi,acquisition-time = /bits/ 8 <1>;
+		adi,median-filter-size = /bits/ 8 <2>;
+		adi,averaging = /bits/ 8 <1>;
+		adi,conversion-interval = /bits/ 8 <255>;
+	};
 };
 
 &spi2 {
