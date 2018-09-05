@@ -1117,4 +1117,28 @@ drivers/video/fbdev/Makefile
 <File_License>GPL2</File_License>
 <Comment>Added ADI NEC WVGA LCD NL8048HL11-01B driver portion to video fbdev driver Makefile</Comment>
 </File139>
+</File140>
+drivers/char/Kconfig
+<Date_Added>2018/8/27</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>sliu7</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to linkport driver Kconfig</Comment>
+</File140>
+<File141>
+drivers/char/Makefile
+<Date_Added>2018/8/27</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>sliu7</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to linkport driver Makefile</Comment>
+</File141>
+<File142>
+drivers/char/adi_lp.c
+<Date_Added>2018/8/27</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>sliu7</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created linkport driver for sc5xx. Written entirely by ADI</Comment>
+</File142>
 </Linux-kernel-v4.16.0>

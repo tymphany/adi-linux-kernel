@@ -289,14 +289,14 @@ static const unsigned short smc0_mux[] = {
 };
 
 static const unsigned short lp0_mux[] = {
-	P_LP0_CLK, P_LP0_ACK, P_LP0_D0, P_LP0_D1, P_LP0_D2,
-	P_LP0_D3, P_LP0_D4, P_LP0_D5, P_LP0_D6, P_LP0_D7,
+	P_LP0_D0, P_LP0_D1, P_LP0_D2, P_LP0_D3, P_LP0_D4,
+	P_LP0_D5, P_LP0_D6, P_LP0_D7, P_LP0_CLK, P_LP0_ACK,
 	0
 };
 
 static const unsigned short lp1_mux[] = {
-	P_LP1_CLK, P_LP1_ACK, P_LP1_D0, P_LP1_D1, P_LP1_D2,
-	P_LP1_D3, P_LP1_D4, P_LP1_D5, P_LP1_D6, P_LP1_D7,
+	P_LP1_D0, P_LP1_D1, P_LP1_D2, P_LP1_D3, P_LP1_D4,
+	P_LP1_D5, P_LP1_D6, P_LP1_D7, P_LP1_CLK, P_LP1_ACK,
 	0
 };
 
