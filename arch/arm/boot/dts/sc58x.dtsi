@@ -342,6 +342,17 @@
 					adi,function = "mmc0";
 				};
 			};
+
+			linkport {
+				lp0_default: lp0@0 {
+					adi,group = "lp0grp";
+					adi,function = "lp0";
+				};
+				lp1_default: lp1@0 {
+					adi,group = "lp1grp";
+					adi,function = "lp1";
+				};
+			};
 		};
 
 		mmc0: mmc@0x31010000 {
@@ -352,6 +363,24 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			fifo-depth = <1024>;
+			status = "disabled";
+		};
+
+		lp0: linkport@0 {
+			compatible = "linkport0";
+			interrupt-parent = <&gic>;
+			interrupts = <0 77 0>,
+			             <0 78 0>;
+			clock-div = <1>;
+			status = "disabled";
+		};
+
+		lp1: linkport@1 {
+			compatible = "linkport1";
+			interrupt-parent = <&gic>;
+			interrupts = <0 79 0>,
+			             <0 80 0>;
+			clock-div = <1>;
 			status = "disabled";
 		};
 
