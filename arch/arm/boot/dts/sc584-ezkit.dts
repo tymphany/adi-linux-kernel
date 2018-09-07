@@ -164,6 +164,25 @@
 	status = "okay";
 };
 
+&can0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&can0_default>;
+	phy-name = "tja1055";
+	phy-gpios = <&gpb 8 0>,		/* en PB8 */
+		    <&gpb 2 0x1>;	/* stb PB2, GPIO_ACTIVE_LOW */
+	status = "okay";
+};
+
+&can1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&can1_default>;
+	phy-name = "tja1145";
+	phy-spibus = /bits/ 16 <0>;
+	phy-spiclk = <1000000>;
+	phy-spics = /bits/ 16 <44>;	/* GPIO_PC12 */
+	status = "okay";
+};
+
 &emac0 {
 	snps,reset-gpio = <&gpb 14 0>;
 	snps,reset-active-low;
