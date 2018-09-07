@@ -1141,4 +1141,36 @@ drivers/char/adi_lp.c
 <File_License>GPL2</File_License>
 <Comment>ADI Created linkport driver for sc5xx. Written entirely by ADI</Comment>
 </File142>
+<File143>
+drivers/net/can/Kconfig
+<Date_Added>2018/7/16</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>awu2</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Modify to support sc5xx CAN bus</Comment>
+</File143>
+<File144>
+drivers/net/can/Makefile
+<Date_Added>2018/7/16</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>awu2</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Modify to support sc5xx CAN bus</Comment>
+</File144>
+<File145>
+drivers/net/can/sc5xx_can.c
+<Date_Added>2018/7/16</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>awu2</Added_by>
+<File_License>GPL2</File_License>
+<Comment>driver code for sc5xx CAN bus</Comment>
+</File145>
+<File146>
+drivers/net/can/sc5xx_can.h
+<Date_Added>2018/7/16</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>awu2</Added_by>
+<File_License>GPL2</File_License>
+<Comment>header file for sc5xx CAN bus driver</Comment>
+</File146>
 </Linux-kernel-v4.16.0>

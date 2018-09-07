@@ -31,6 +31,8 @@
 		spi0   = &spi0;
 		spi1   = &spi1;
 		spi2   = &spi2;
+		can0 = &can0;
+		can1 = &can1;
 		i2c0 = &i2c0;
 		i2c1 = &i2c1;
 		i2c2 = &i2c2;
@@ -95,6 +97,26 @@
 			interrupts = <0 114 0>,
 			             <0 115 0>,
 				     <0 116 0>;
+		};
+
+		can0: can@0x31000200 {
+			compatible = "adi,can";
+			reg = <0x31000200 0x5FF>;
+			interrupt-parent = <&gic>;
+			interrupts = <0 84 0>,
+				     <0 85 0>,
+				     <0 86 0>;
+			status = "disabled";
+		};
+
+		can1: can@0x31000a00 {
+			compatible = "adi,can";
+			reg = <0x31000a00 0x5FF>;
+			interrupt-parent = <&gic>;
+			interrupts = <0 87 0>,
+				     <0 88 0>,
+				     <0 89 0>;
+			status = "disabled";
 		};
 
 		gptimer0: gptimer@0x31001060 {
@@ -303,6 +325,17 @@
 				spi2_quad: spi2@1 {
 					adi,group = "spi2quadgrp";
 					adi,function = "spi2";
+				};
+			};
+
+			can {
+				can0_default: can0@0 {
+					adi,group = "can0grp";
+					adi,function = "can0";
+				};
+				can1_default: can1@0 {
+					adi,group = "can1grp";
+					adi,function = "can1";
 				};
 			};
 
