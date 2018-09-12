@@ -51,6 +51,13 @@
 	};
 };
 
+&uart0 {
+	pinctrl-names = "default", "hwflow";
+	pinctrl-0 = <&uart0_default>;
+	pinctrl-1 = <&uart0_hwflow>;
+	status = "okay";
+};
+
 &spi0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&spi0_default>;
