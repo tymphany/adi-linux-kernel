@@ -3,6 +3,21 @@
  * adv7842 - Analog Devices ADV7842 video decoder driver
  *
  * Copyright 2013 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018 Analog Devices Inc.
+ *
+ * This program is free software; you may redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+ * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
  */
 
 /*
@@ -603,7 +618,7 @@ static const struct adv7842_format_info adv7842_formats[] = {
 	  ADV7842_OP_MODE_SEL_SDR_422 | ADV7842_OP_FORMAT_SEL_12BIT },
 	{ MEDIA_BUS_FMT_YVYU12_2X12, ADV7842_OP_CH_SEL_RGB, false, true,
 	  ADV7842_OP_MODE_SEL_SDR_422 | ADV7842_OP_FORMAT_SEL_12BIT },
-	{ MEDIA_BUS_FMT_UYVY8_1X16, ADV7842_OP_CH_SEL_RBG, false, false,
+	{ MEDIA_BUS_FMT_UYVY8_1X16, ADV7842_OP_CH_SEL_RGB, false, false,
 	  ADV7842_OP_MODE_SEL_SDR_422_2X | ADV7842_OP_FORMAT_SEL_8BIT },
 	{ MEDIA_BUS_FMT_VYUY8_1X16, ADV7842_OP_CH_SEL_RBG, false, true,
 	  ADV7842_OP_MODE_SEL_SDR_422_2X | ADV7842_OP_FORMAT_SEL_8BIT },
@@ -3069,8 +3084,6 @@ static int adv7842_core_init(struct v4l2_subdev *sd)
 	} else {
 		/* HPA manual */
 		hdmi_write(sd, 0x69, 0xa3);
-		/* HPA disable on port A and B */
-		io_write_and_or(sd, 0x20, 0xcf, 0x00);
 	}
 
 	/* LLC */
@@ -3529,6 +3542,17 @@ static int adv7842_probe(struct i2c_client *client,
 		err = hdl->error;
 		goto err_hdl;
 	}
+	if (pdata->i2c_ex) {
+		struct i2c_client *i2c_ex;
+		i2c_ex = i2c_new_dummy(client->adapter, pdata->i2c_ex);
+		/* enable 24-bit mode and sport */
+		adv_smbus_write_byte_data(i2c_ex, 0x14, 0xfa);
+		adv_smbus_write_byte_data(i2c_ex, 0x15, 0xff);
+		adv_smbus_write_byte_data(i2c_ex, 0x0, 0x0);
+		adv_smbus_write_byte_data(i2c_ex, 0x1, 0x0);
+		i2c_unregister_device(i2c_ex);
+	}
+
 	if (adv7842_s_detect_tx_5v_ctrl(sd)) {
 		err = -ENODEV;
 		goto err_hdl;

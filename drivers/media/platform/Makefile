@@ -58,6 +58,8 @@ obj-y					+= stm32/
 
 obj-$(CONFIG_VIDEO_SECO_CEC)		+= seco-cec/
 
+obj-y                                   += adi/
+
 obj-y					+= davinci/
 
 obj-$(CONFIG_VIDEO_SH_VOU)		+= sh_vou.o
