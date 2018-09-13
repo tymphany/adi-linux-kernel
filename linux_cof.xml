@@ -1117,7 +1117,7 @@ drivers/video/fbdev/Makefile
 <File_License>GPL2</File_License>
 <Comment>Added ADI NEC WVGA LCD NL8048HL11-01B driver portion to video fbdev driver Makefile</Comment>
 </File139>
-</File140>
+<File140>
 drivers/char/Kconfig
 <Date_Added>2018/8/27</Date_Added>
 <File_Origin>adi_modified</File_Origin>
@@ -1173,4 +1173,100 @@ drivers/net/can/sc5xx_can.h
 <File_License>GPL2</File_License>
 <Comment>header file for sc5xx CAN bus driver</Comment>
 </File146>
+<File147>
+arch/arm/mach-sc57x/include/mach/ppi.h
+<Date_Added>2018/8/27</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created ppi header file for sc57x. Written entirely by ADI</Comment>
+</File147>
+<File148>
+arch/arm/mach-sc58x/include/mach/ppi.h
+<Date_Added>2018/8/27</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created ppi header file for sc58x. Written entirely by ADI</Comment>
+</File148>
+<File149>
+drivers/media/i2c/adv7842.c
+<Date_Added>2018/8/27</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to get adv7842 working on ADI capture function</Comment>
+</File149>
+<File150>
+drivers/media/platform/Kconfig
+<Date_Added>2018/8/27</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to rename blackfin to adi</Comment>
+</File150>
+<File151>
+drivers/media/platform/Makefile
+<Date_Added>2018/8/27</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to rename blackfin to adi</Comment>
+</File151>
+<File152>
+drivers/media/platform/adi/Kconfig
+<Date_Added>2018/8/27</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created to support ADI video capture function. Written entirely by ADI</Comment>
+</File152>
+<File153>
+drivers/media/platform/adi/Makefile
+<Date_Added>2018/8/27</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created to support ADI video capture function. Written entirely by ADI</Comment>
+</File153>
+<File154>
+drivers/media/platform/adi/adi_capture.c
+<Date_Added>2018/8/27</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created ADI video capture function driver file. Written entirely by ADI</Comment>
+</File154>
+<File155>
+drivers/media/platform/adi/ppi.c
+<Date_Added>2018/8/27</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created ADI ppi driver file. Written entirely by ADI</Comment>
+</File155>
+<File156>
+include/media/adi/adi_capture.h
+<Date_Added>2018/8/27</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to rename blackfin to adi</Comment>
+</File156>
+<File157>
+include/media/adi/ppi.h
+<Date_Added>2018/8/27</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to ppi header file</Comment>
+</File157>
+<File158>
+include/media/i2c/adv7842.h
+<Date_Added>2018/8/27</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to adv7842 header file</Comment>
+</File158>
 </Linux-kernel-v4.16.0>
