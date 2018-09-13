@@ -209,6 +209,8 @@ struct adv7842_platform_data {
 	u8 i2c_infoframe;
 	u8 i2c_cec;
 	u8 i2c_avlink;
+	/* I/O expander on ADI adv7842 ez-extender board */
+	u8 i2c_ex;
 };
 
 #define V4L2_CID_ADV_RX_ANALOG_SAMPLING_PHASE	(V4L2_CID_DV_CLASS_BASE + 0x1000)
@@ -222,6 +224,6 @@ struct adv7842_platform_data {
 #define ADV7842_EDID_PORT_A   0
 #define ADV7842_EDID_PORT_B   1
 #define ADV7842_EDID_PORT_VGA 2
-#define ADV7842_PAD_SOURCE    3
+#define ADV7842_PAD_SOURCE    0
 
 #endif

@@ -224,7 +224,7 @@
 			status = "disabled";
 		};
 
-        icc0: icc@0 {
+		icc0: icc@0 {
 			compatible = "adi,icc";
 			reg = <0x20000000 0x1000>;
 			interrupt-parent = <&gic>;
@@ -365,6 +365,17 @@
 				};
 			};
 
+			ppi {
+				ppi0_8b: ppi0@0 {
+					adi,group = "ppi0_8bgrp";
+					adi,function = "ppi0";
+				};
+				ppi0_16b: ppi0@1 {
+					adi,group = "ppi0_16bgrp";
+					adi,function = "ppi0";
+				};
+			};
+
 			linkport {
 				lp0_default: lp0@0 {
 					adi,group = "lp0grp";
@@ -385,6 +396,18 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			fifo-depth = <1024>;
+			status = "disabled";
+		};
+
+		video_decoder: cap@0x3102D000 {
+			compatible = "adi,cap";
+			card-name = "SC57X";
+			type = <2>;
+			dma-channel = <28>;
+			interrupts = <0 83 0>;
+			reg = <0x3102D000 0xfff>;
+			spu_securep_id = <68>;
+			i2c_bus_id = <0>;
 			status = "disabled";
 		};
 
