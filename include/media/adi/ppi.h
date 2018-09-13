@@ -1,7 +1,7 @@
 /*
  * Analog Devices PPI header file
  *
- * Copyright (c) 2011 Analog Devices Inc.
+ * Copyright (c) 2011 - 2018 Analog Devices Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,8 +17,12 @@
 #define _PPI_H_
 
 #include <linux/interrupt.h>
+#if defined(CONFIG_ARM)
+#include <mach/ppi.h>
+#elif defined(CONFIG_BLACKFIN)
 #include <asm/blackfin.h>
 #include <asm/bfin_ppi.h>
+#endif
 
 /* EPPI */
 #ifdef EPPI_EN
@@ -29,13 +33,18 @@
 #endif
 
 /* EPPI3 */
-#ifdef EPPI0_CTL2
+#ifdef EPPI_CTL_EN
 #define PORT_EN EPPI_CTL_EN
 #define PORT_DIR EPPI_CTL_DIR
 #define PACK_EN EPPI_CTL_PACKEN
+#define BLANKGEN EPPI_CTL_BLANKGEN
 #define DMA32 0
 #define DLEN_8 EPPI_CTL_DLEN08
 #define DLEN_16 EPPI_CTL_DLEN16
+#endif
+
+#ifndef BLANKGEN
+#define BLANKGEN 0
 #endif
 
 struct ppi_if;
@@ -49,6 +58,8 @@ struct ppi_params {
 	u32 frame;              /* total lines per frame */
 	u32 hsync;              /* HSYNC length in pixels */
 	u32 vsync;              /* VSYNC length in lines */
+	u32 active_lines;       /* active lines per field */
+	u32 blank_lines;        /* vertical blanking lines */
 	int bpp;                /* bits per pixel */
 	int dlen;               /* data length for ppi in bits */
 	u32 ppi_control;        /* ppi configuration */
@@ -76,8 +87,10 @@ struct ppi_info {
 	int irq_err;
 	void __iomem *base;
 	const unsigned short *pin_req;
+	int spu;
 };
 
+/* ppi interface */
 struct ppi_if {
 	struct device *dev;
 	unsigned long ppi_control;
