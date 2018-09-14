@@ -1,7 +1,7 @@
 /*
  * ppi.c Analog Devices Parallel Peripheral Interface driver
  *
- * Copyright (c) 2011 Analog Devices Inc.
+ * Copyright (c) 2011 - 2018 Analog Devices Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,14 +16,21 @@
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/platform_device.h>
+#include <linux/io.h>
 
+#ifdef CONFIG_ARCH_HEADER_IN_MACH
+#include <mach/portmux.h>
+#include <mach/dma.h>
+#else
 #include <asm/bfin_ppi.h>
 #include <asm/blackfin.h>
-#include <asm/cacheflush.h>
 #include <asm/dma.h>
 #include <asm/portmux.h>
+#endif
 
-#include <media/blackfin/ppi.h>
+#include <asm/cacheflush.h>
+#include <mach/cpu.h>
+#include <media/adi/ppi.h>
 
 static int ppi_attach_irq(struct ppi_if *ppi, irq_handler_t handler);
 static void ppi_detach_irq(struct ppi_if *ppi);
@@ -49,38 +56,38 @@ static irqreturn_t ppi_irq_err(int irq, void *dev_id)
 	switch (info->type) {
 	case PPI_TYPE_PPI:
 	{
-		struct bfin_ppi_regs *reg = info->base;
+		struct adi_ppi_regs *reg = info->base;
 		unsigned short status;
 
 		/* register on bf561 is cleared when read
 		 * others are W1C
 		 */
-		status = bfin_read16(&reg->status);
+		status = readw(&reg->status);
 		if (status & 0x3000)
 			ppi->err = true;
-		bfin_write16(&reg->status, 0xff00);
+		writew(0xff00, &reg->status);
 		break;
 	}
 	case PPI_TYPE_EPPI:
 	{
-		struct bfin_eppi_regs *reg = info->base;
+		struct adi_eppi_regs *reg = info->base;
 		unsigned short status;
 
-		status = bfin_read16(&reg->status);
+		status = readw(&reg->status);
 		if (status & 0x2)
 			ppi->err = true;
-		bfin_write16(&reg->status, 0xffff);
+		writew(0xffff, &reg->status);
 		break;
 	}
 	case PPI_TYPE_EPPI3:
 	{
-		struct bfin_eppi3_regs *reg = info->base;
+		struct adi_eppi3_regs *reg = info->base;
 		unsigned long stat;
 
-		stat = bfin_read32(&reg->stat);
+		stat = readl(&reg->stat);
 		if (stat & 0x2)
 			ppi->err = true;
-		bfin_write32(&reg->stat, 0xc0ff);
+		writel(0xc0ff, &reg->stat);
 		break;
 	}
 	default:
@@ -134,27 +141,27 @@ static int ppi_start(struct ppi_if *ppi)
 	switch (info->type) {
 	case PPI_TYPE_PPI:
 	{
-		struct bfin_ppi_regs *reg = info->base;
-		bfin_write16(&reg->control, ppi->ppi_control);
+		struct adi_ppi_regs *reg = info->base;
+		writew(ppi->ppi_control, &reg->control);
 		break;
 	}
 	case PPI_TYPE_EPPI:
 	{
-		struct bfin_eppi_regs *reg = info->base;
-		bfin_write32(&reg->control, ppi->ppi_control);
+		struct adi_eppi_regs *reg = info->base;
+		writel(ppi->ppi_control, &reg->control);
 		break;
 	}
 	case PPI_TYPE_EPPI3:
 	{
-		struct bfin_eppi3_regs *reg = info->base;
-		bfin_write32(&reg->ctl, ppi->ppi_control);
+		struct adi_eppi3_regs *reg = info->base;
+		writel(ppi->ppi_control, &reg->ctl);
 		break;
 	}
+
 	default:
 		return -EINVAL;
 	}
 
-	SSYNC();
 	return 0;
 }
 
@@ -167,22 +174,23 @@ static int ppi_stop(struct ppi_if *ppi)
 	switch (info->type) {
 	case PPI_TYPE_PPI:
 	{
-		struct bfin_ppi_regs *reg = info->base;
-		bfin_write16(&reg->control, ppi->ppi_control);
+		struct adi_ppi_regs *reg = info->base;
+		writew(ppi->ppi_control, &reg->control);
 		break;
 	}
 	case PPI_TYPE_EPPI:
 	{
-		struct bfin_eppi_regs *reg = info->base;
-		bfin_write32(&reg->control, ppi->ppi_control);
+		struct adi_eppi_regs *reg = info->base;
+		writel(ppi->ppi_control, &reg->control);
 		break;
 	}
 	case PPI_TYPE_EPPI3:
 	{
-		struct bfin_eppi3_regs *reg = info->base;
-		bfin_write32(&reg->ctl, ppi->ppi_control);
+		struct adi_eppi3_regs *reg = info->base;
+		writel(ppi->ppi_control, &reg->ctl);
 		break;
 	}
+
 	default:
 		return -EINVAL;
 	}
@@ -191,13 +199,14 @@ static int ppi_stop(struct ppi_if *ppi)
 	clear_dma_irqstat(info->dma_ch);
 	disable_dma(info->dma_ch);
 
-	SSYNC();
 	return 0;
 }
 
 static int ppi_set_params(struct ppi_if *ppi, struct ppi_params *params)
 {
 	const struct ppi_info *info = ppi->info;
+	unsigned int wd_size = 0;
+	unsigned int wd_shift = 0;
 	int dma32 = 0;
 	int dma_config, bytes_per_line;
 	int hcount, hdelay, samples_per_line;
@@ -210,14 +219,11 @@ static int ppi_set_params(struct ppi_if *ppi, struct ppi_params *params)
 	if (params->dlen > 24 || params->dlen <= 0)
 		return -EINVAL;
 	pctrl = devm_pinctrl_get(ppi->dev);
-	if (IS_ERR(pctrl))
-		return PTR_ERR(pctrl);
 	pstate = pinctrl_lookup_state(pctrl,
 				      pin_state[(params->dlen + 7) / 8 - 1]);
 	if (pinctrl_select_state(pctrl, pstate))
 		return -EINVAL;
 #endif
-
 	bytes_per_line = params->width * params->bpp / 8;
 	/* convert parameters unit from pixels to samples */
 	hcount = params->width * params->bpp / params->dlen;
@@ -235,61 +241,84 @@ static int ppi_set_params(struct ppi_if *ppi, struct ppi_params *params)
 	switch (info->type) {
 	case PPI_TYPE_PPI:
 	{
-		struct bfin_ppi_regs *reg = info->base;
+		struct adi_ppi_regs *reg = info->base;
 
-		if (params->ppi_control & DMA32)
+		if (params->ppi_control & DMA32) {
 			dma32 = 1;
+			wd_size = 2;
+			wd_shift = 2;
+		}
 
-		bfin_write16(&reg->control, ppi->ppi_control);
-		bfin_write16(&reg->count, samples_per_line - 1);
-		bfin_write16(&reg->frame, params->frame);
+		writew(ppi->ppi_control, &reg->control);
+		writew(samples_per_line - 1, &reg->count);
+		writew(params->frame, &reg->frame);
 		break;
 	}
 	case PPI_TYPE_EPPI:
 	{
-		struct bfin_eppi_regs *reg = info->base;
+		struct adi_eppi_regs *reg = info->base;
 
 		if ((params->ppi_control & PACK_EN)
-			|| (params->ppi_control & 0x38000) > DLEN_16)
+			|| (params->ppi_control & 0x38000) > DLEN_16) {
 			dma32 = 1;
+			wd_size = 2;
+			wd_shift = 2;
+		}
 
-		bfin_write32(&reg->control, ppi->ppi_control);
-		bfin_write16(&reg->line, samples_per_line);
-		bfin_write16(&reg->frame, params->frame);
-		bfin_write16(&reg->hdelay, hdelay);
-		bfin_write16(&reg->vdelay, params->vdelay);
-		bfin_write16(&reg->hcount, hcount);
-		bfin_write16(&reg->vcount, params->height);
+		writel(ppi->ppi_control, &reg->control);
+		writew(samples_per_line, &reg->line);
+		writew(params->frame, &reg->frame);
+		writew(hdelay, &reg->hdelay);
+		writew(params->vdelay, &reg->vdelay);
+		writew(hcount, &reg->hcount);
+		writew(params->height, &reg->vcount);
 		break;
 	}
 	case PPI_TYPE_EPPI3:
 	{
-		struct bfin_eppi3_regs *reg = info->base;
+		struct adi_eppi3_regs *reg = info->base;
 
 		if ((params->ppi_control & PACK_EN)
-			|| (params->ppi_control & 0x70000) > DLEN_16)
+			|| (params->ppi_control & 0x70000) > DLEN_16) {
 			dma32 = 1;
+			wd_size = 5;
+			wd_shift = 8;
 
-		bfin_write32(&reg->ctl, ppi->ppi_control);
-		bfin_write32(&reg->line, samples_per_line);
-		bfin_write32(&reg->frame, params->frame);
-		bfin_write32(&reg->hdly, hdelay);
-		bfin_write32(&reg->vdly, params->vdelay);
-		bfin_write32(&reg->hcnt, hcount);
-		bfin_write32(&reg->vcnt, params->height);
+			while ((bytes_per_line % (1 << wd_size)) != 0
+				&& wd_size >= 0)
+				--wd_size;
+		}
+
+		writel(ppi->ppi_control, &reg->ctl);
+		writel(samples_per_line, &reg->line);
+		writel(params->frame, &reg->frame);
+		writel(hdelay, &reg->hdly);
+		writel(params->vdelay, &reg->vdly);
+		writel(hcount, &reg->hcnt);
+		writel(params->height, &reg->vcnt);
 		if (params->int_mask)
-			bfin_write32(&reg->imsk, params->int_mask & 0xFF);
+			writel(params->int_mask & 0xFF, &reg->imsk);
 		if (ppi->ppi_control & PORT_DIR) {
-			u32 hsync_width, vsync_width, vsync_period;
+			if (ppi->ppi_control & BLANKGEN) {
+				u32 blank_sample;
 
-			hsync_width = params->hsync
-					* params->bpp / params->dlen;
-			vsync_width = params->vsync * samples_per_line;
-			vsync_period = samples_per_line * params->frame;
-			bfin_write32(&reg->fs1_wlhb, hsync_width);
-			bfin_write32(&reg->fs1_paspl, samples_per_line);
-			bfin_write32(&reg->fs2_wlvb, vsync_width);
-			bfin_write32(&reg->fs2_palpf, vsync_period);
+				blank_sample = samples_per_line - hcount - 8;
+				writel(blank_sample, &reg->fs1_wlhb);
+				writel(hcount, &reg->fs1_paspl);
+				writel(params->blank_lines, &reg->fs2_wlvb);
+				writel(params->active_lines, &reg->fs2_palpf);
+			} else {
+				u32 hsync_width, vsync_width, vsync_period;
+
+				hsync_width = params->hsync
+						* params->bpp / params->dlen;
+				vsync_width = params->vsync * samples_per_line;
+				vsync_period = samples_per_line * params->frame;
+				writel(hsync_width, &reg->fs1_wlhb);
+				writel(samples_per_line, &reg->fs1_paspl);
+				writel(vsync_width, &reg->fs2_wlvb);
+				writel(vsync_period, &reg->fs2_palpf);
+			}
 		}
 		break;
 	}
@@ -298,10 +327,10 @@ static int ppi_set_params(struct ppi_if *ppi, struct ppi_params *params)
 	}
 
 	if (dma32) {
-		dma_config |= WDSIZE_32 | PSIZE_32;
-		set_dma_x_count(info->dma_ch, bytes_per_line >> 2);
-		set_dma_x_modify(info->dma_ch, 4);
-		set_dma_y_modify(info->dma_ch, 4);
+		dma_config |= (wd_size << wd_shift) | PSIZE_32;
+		set_dma_x_count(info->dma_ch, bytes_per_line >> wd_size);
+		set_dma_x_modify(info->dma_ch, 1 << wd_size);
+		set_dma_y_modify(info->dma_ch, 1 << wd_size);
 	} else {
 		dma_config |= WDSIZE_16 | PSIZE_16;
 		set_dma_x_count(info->dma_ch, bytes_per_line >> 1);
@@ -311,7 +340,6 @@ static int ppi_set_params(struct ppi_if *ppi, struct ppi_params *params)
 	set_dma_y_count(info->dma_ch, params->height);
 	set_dma_config(info->dma_ch, dma_config);
 
-	SSYNC();
 	return 0;
 }
 
@@ -325,21 +353,24 @@ struct ppi_if *ppi_create_instance(struct platform_device *pdev,
 {
 	struct ppi_if *ppi;
 
+#ifndef CONFIG_PINCTRL
 	if (!info || !info->pin_req)
 		return NULL;
+#endif
 
-#ifndef CONFIG_PINCTRL
 	if (peripheral_request_list(info->pin_req, KBUILD_MODNAME)) {
 		dev_err(&pdev->dev, "request peripheral failed\n");
 		return NULL;
 	}
-#endif
 
 	ppi = kzalloc(sizeof(*ppi), GFP_KERNEL);
 	if (!ppi) {
 		peripheral_free_list(info->pin_req);
 		return NULL;
 	}
+#ifdef CONFIG_ARCH_SC58X
+	set_spu_securep_msec(info->spu, true);
+#endif
 	ppi->ops = &ppi_ops;
 	ppi->info = info;
 	ppi->dev = &pdev->dev;
