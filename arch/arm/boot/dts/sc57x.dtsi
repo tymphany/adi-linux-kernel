@@ -80,13 +80,33 @@
 			compatible = "arm,adi-uart4";
 			reg = <0x31003000 0x40>;
 			dma-channel = <20>, <21>;
-			pinctrl-names = "default", "hwflow";
-			pinctrl-0 = <&uart0_default>;
-			pinctrl-1 = <&uart0_hwflow>;
 			interrupt-parent = <&gic>;
 			interrupts = <0 106 0>,
 			             <0 107 0>,
 			             <0 108 0>;
+			status = "disabled";
+		};
+
+		uart1: uart@0x31003400 {
+			compatible = "arm,adi-uart4";
+			reg = <0x31003400 0x40>;
+			dma-channel = <34>, <35>;
+			interrupt-parent = <&gic>;
+			interrupts = <0 109 0>,
+			             <0 110 0>,
+			             <0 111 0>;
+			status = "disabled";
+		};
+
+		uart2: uart@0x31003800 {
+			compatible = "arm,adi-uart4";
+			reg = <0x31003800 0x40>;
+			dma-channel = <37>, <38>;
+			interrupt-parent = <&gic>;
+			interrupts = <0 112 0>,
+			             <0 113 0>,
+			             <0 114 0>;
+			status = "disabled";
 		};
 
 		i2c0: twi@0x31001400 {
@@ -282,6 +302,22 @@
 				uart0_hwflow: uart0@1 {
 					adi,group = "uart0_hwflowgrp";
 					adi,function = "uart0";
+				};
+				uart1_default: uart1@0 {
+					adi,group = "uart1grp";
+					adi,function = "uart1";
+				};
+				uart1_hwflow: uart1@1 {
+					adi,group = "uart1_hwflowgrp";
+					adi,function = "uart1";
+				};
+				uart2_default: uart2@0 {
+					adi,group = "uart2grp";
+					adi,function = "uart2";
+				};
+				uart2_hwflow: uart2@1 {
+					adi,group = "uart2_hwflowgrp";
+					adi,function = "uart2";
 				};
 			};
 
