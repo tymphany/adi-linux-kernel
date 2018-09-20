@@ -10,7 +10,19 @@ config VIDEO_ADI_CAPTURE
 	  To compile this driver as a module, choose M here: the
 	  module will be called adi_capture.
 
+config VIDEO_ADI_DISPLAY
+	tristate "ADI SC5XX  Video Display Driver"
+	depends on VIDEO_V4L2 && (ARCH_SC58X || ARCH_SC57X) && I2C
+	depends on HAS_DMA
+	select VIDEOBUF2_DMA_CONTIG
+	help
+	  V4L2 bridge driver for ADI SC5XX video display device.
+	  Choose PPI or EPPI as its interface.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called adi_display.
+
 config VIDEO_ADI_PPI
 	tristate
-	depends on VIDEO_ADI_CAPTURE
-	default VIDEO_ADI_CAPTURE
+	depends on VIDEO_ADI_CAPTURE || VIDEO_ADI_DISPLAY
+	default VIDEO_ADI_CAPTURE || VIDEO_ADI_DISPLAY
