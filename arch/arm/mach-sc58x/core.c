@@ -248,12 +248,85 @@ static struct adi_capture_config adi_capture_data = {
 #endif
 #endif
 
+#if IS_ENABLED(CONFIG_VIDEO_ADI_DISPLAY)
+#include <linux/videodev2.h>
+#include <media/adi/adi_display.h>
+#include <media/adi/ppi.h>
+
+#if IS_ENABLED(CONFIG_VIDEO_ADV7343)
+#include <media/i2c/adv7343.h>
+
+static struct v4l2_output adv7343_outputs[] = {
+	{
+		.index = 0,
+		.name = "Composite",
+		.type = V4L2_OUTPUT_TYPE_ANALOG,
+		.std = V4L2_STD_ALL,
+		.capabilities = V4L2_OUT_CAP_STD,
+	},
+	{
+		.index = 1,
+		.name = "S-Video",
+		.type = V4L2_OUTPUT_TYPE_ANALOG,
+		.std = V4L2_STD_ALL,
+		.capabilities = V4L2_OUT_CAP_STD,
+	},
+	{
+		.index = 2,
+		.name = "Component",
+		.type = V4L2_OUTPUT_TYPE_ANALOG,
+		.std = V4L2_STD_ALL,
+		.capabilities = V4L2_OUT_CAP_STD,
+	},
+};
+
+static struct disp_route adv7343_routes[] = {
+	{
+		.output = ADV7343_COMPOSITE_ID,
+	},
+	{
+		.output = ADV7343_SVIDEO_ID,
+	},
+	{
+		.output = ADV7343_COMPONENT_ID,
+	},
+};
+
+static struct adv7343_platform_data adv7343_data = {
+	.mode_config = {
+		.sleep_mode = false,
+		.pll_control = false,
+		.dac = {1, 1, 1, 1, 1, 1},
+	},
+	.sd_config = {
+		.sd_dac_out = {0},
+	},
+};
+
+static struct adi_display_config adi_display_data = {
+	.outputs = adv7343_outputs,
+	.num_outputs = ARRAY_SIZE(adv7343_outputs),
+	.routes = adv7343_routes,
+	.board_info = {
+		.type = "adv7343",
+		.addr = 0x2b,
+		.platform_data = (void *)&adv7343_data,
+	},
+	.ppi_control = (PACK_EN | DLEN_8 | EPPI_CTL_FS1LO_FS2LO
+			| EPPI_CTL_POLC3 | EPPI_CTL_BLANKGEN | EPPI_CTL_SYNC2
+		| EPPI_CTL_NON656 | EPPI_CTL_DIR),
+};
+#endif
+#endif
 #ifdef CONFIG_OF
 static const struct of_dev_auxdata sc58x_auxdata_lookup[] __initconst = {
 	OF_DEV_AUXDATA("adi,adi2-pinctrl", 0, "pinctrl-adi2.0", NULL),
 	OF_DEV_AUXDATA("arm,adi-uart4", UART0_REVID, "adi-uart4.0", NULL),
 	OF_DEV_AUXDATA("arm,adi-watchdog", REG_WDOG0_CTL, "adi-watchdog.0", NULL),
 	OF_DEV_AUXDATA("adi,spi3", 0, "adi-spi3.2", NULL),
+#if IS_ENABLED(CONFIG_VIDEO_ADI_DISPLAY)
+	OF_DEV_AUXDATA("adi,disp", 0x31040000, "adi_display.0", &adi_display_data),
+#endif
 #if IS_ENABLED(CONFIG_VIDEO_ADI_CAPTURE)
 	OF_DEV_AUXDATA("adi,cap", 0x31040000, "adi_capture.0", &adi_capture_data),
 #endif
