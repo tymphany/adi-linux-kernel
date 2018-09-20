@@ -4,6 +4,7 @@
  * The encoder hardware does not support SECAM.
  *
  * Copyright (C) 2009 Texas Instruments Incorporated - http://www.ti.com/
+ * Copyright (C) 2018 Analog Devices Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -44,6 +45,7 @@ MODULE_PARM_DESC(debug, "Debug level 0-1");
 
 struct adv7343_state {
 	struct v4l2_subdev sd;
+	struct media_pad pad;
 	struct v4l2_ctrl_handler hdl;
 	const struct adv7343_platform_data *pdata;
 	u8 reg00;
@@ -54,6 +56,11 @@ struct adv7343_state {
 	u8 reg82;
 	u32 output;
 	v4l2_std_id std;
+	u32 fmt_code;
+	u32 colorspace;
+	u32 ycbcr_enc;
+	u32 quantization;
+	u32 xfer_func;
 };
 
 static inline struct adv7343_state *to_state(struct v4l2_subdev *sd)
@@ -336,6 +343,14 @@ static int adv7343_s_std_output(struct v4l2_subdev *sd, v4l2_std_id std)
 	return err;
 }
 
+static int adv7343_g_std_output(struct v4l2_subdev *sd, v4l2_std_id *std)
+{
+	struct adv7343_state *state = to_state(sd);
+
+	*std = state->std;
+	return 0;
+}
+
 static int adv7343_s_routing(struct v4l2_subdev *sd,
 		u32 input, u32 output, u32 config)
 {
@@ -352,13 +367,103 @@ static int adv7343_s_routing(struct v4l2_subdev *sd,
 	return err;
 }
 
+static int adv7343_enum_mbus_code(struct v4l2_subdev *sd,
+				  struct v4l2_subdev_pad_config *cfg,
+				  struct v4l2_subdev_mbus_code_enum *code)
+{
+	if (code->pad != 0)
+		return -EINVAL;
+
+	switch (code->index) {
+	case 0:
+		code->code = MEDIA_BUS_FMT_UYVY8_2X8;
+		break;
+	default:
+		return -EINVAL;
+	}
+	return 0;
+}
+
+static void adv7343_fill_format(struct adv7343_state *state,
+				struct v4l2_mbus_framefmt *format)
+{
+	format->code = MEDIA_BUS_FMT_UYVY8_2X8;
+	format->colorspace = V4L2_COLORSPACE_SMPTE170M;
+	if (state->std & V4L2_STD_525_60) {
+		format->field = V4L2_FIELD_SEQ_TB;
+		format->width = 720;
+		format->height = 487;
+	} else {
+		format->field = V4L2_FIELD_SEQ_BT;
+		format->width = 720;
+		format->height = 576;
+	}
+}
+
+static int adv7343_get_fmt(struct v4l2_subdev *sd,
+			   struct v4l2_subdev_pad_config *cfg,
+			   struct v4l2_subdev_format *format)
+{
+	struct adv7343_state *state = to_state(sd);
+
+	if (format->pad != 0)
+		return -EINVAL;
+
+	memset(&format->format, 0, sizeof(format->format));
+	adv7343_fill_format(state, &format->format);
+
+	if (format->which == V4L2_SUBDEV_FORMAT_TRY) {
+		struct v4l2_mbus_framefmt *fmt;
+
+		fmt = v4l2_subdev_get_try_format(sd, cfg, format->pad);
+		format->format.code = fmt->code;
+		format->format.colorspace = fmt->colorspace;
+		format->format.ycbcr_enc = fmt->ycbcr_enc;
+		format->format.quantization = fmt->quantization;
+		format->format.xfer_func = fmt->xfer_func;
+	} else {
+		format->format.code = state->fmt_code;
+		format->format.colorspace = state->colorspace;
+		format->format.ycbcr_enc = state->ycbcr_enc;
+		format->format.quantization = state->quantization;
+		format->format.xfer_func = state->xfer_func;
+	}
+
+	return 0;
+}
+
+static int adv7343_set_fmt(struct v4l2_subdev *sd,
+			   struct v4l2_subdev_pad_config *cfg,
+			   struct v4l2_subdev_format *format)
+{
+	struct adv7343_state *state = to_state(sd);
+
+	adv7343_fill_format(state, &format->format);
+
+	state->fmt_code = format->format.code;
+	state->colorspace = format->format.colorspace;
+	state->ycbcr_enc = format->format.ycbcr_enc;
+	state->quantization = format->format.quantization;
+	state->xfer_func = format->format.xfer_func;
+
+	return 0;
+}
+
 static const struct v4l2_subdev_video_ops adv7343_video_ops = {
 	.s_std_output	= adv7343_s_std_output,
+	.g_std_output	= adv7343_g_std_output,
 	.s_routing	= adv7343_s_routing,
+};
+
+static const struct v4l2_subdev_pad_ops adv7343_pad_ops = {
+	.enum_mbus_code = adv7343_enum_mbus_code,
+	.get_fmt	= adv7343_get_fmt,
+	.set_fmt	= adv7343_set_fmt,
 };
 
 static const struct v4l2_subdev_ops adv7343_ops = {
 	.core	= &adv7343_core_ops,
+	.pad	= &adv7343_pad_ops,
 	.video	= &adv7343_video_ops,
 };
 

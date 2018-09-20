@@ -203,7 +203,14 @@
 	status = "okay";
 };
 
-&video_decoder{
+&video_decoder {
+	pinctrl-names = "8bit", "16bit";
+	pinctrl-0 = <&ppi0_8b>;
+	pinctrl-1 = <&ppi0_16b>;
+	status = "okay";
+};
+
+&video_encoder {
 	pinctrl-names = "8bit", "16bit";
 	pinctrl-0 = <&ppi0_8b>;
 	pinctrl-1 = <&ppi0_16b>;
