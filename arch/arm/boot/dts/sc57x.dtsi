@@ -411,6 +411,18 @@
 			status = "disabled";
 		};
 
+		video_encoder: disp@0x3102D000 {
+			compatible = "adi,disp";
+			card-name = "SC57X";
+			type = <2>;
+			dma-channel = <28>;
+			interrupts = <0 83 0>;
+			reg = <0x3102D000 0xfff>;
+			spu_securep_id = <68>;
+			i2c_bus_id = <0>;
+			status = "disabled";
+		};
+
 		lp0: linkport@0 {
 			compatible = "linkport0";
 			interrupt-parent = <&gic>;
