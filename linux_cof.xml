@@ -1293,4 +1293,12 @@ include/media/adi/adi_display.h
 <File_License>GPL2</File_License>
 <Comment>ADI Created ADI Display header file. Written entirely by ADI</Comment>
 </File161>
+<File162>
+drivers/pinctrl/pinctrl-mcp23s08.c
+<Date_Added>2018/11/6</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Modified to fix failed to change states of GPIOs from MCP23017</Comment>
+</File162>
 </Linux-kernel-v4.16.0>
