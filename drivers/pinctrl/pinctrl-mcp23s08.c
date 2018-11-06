@@ -665,6 +665,7 @@ static int mcp23s08_probe_one(struct mcp23s08 *mcp, struct device *dev,
 	bool open_drain = false;
 	struct regmap_config *one_regmap_config = NULL;
 	int raw_chip_address = (addr & ~0x40) >> 1;
+	const struct regmap_config *regmap_config = NULL;
 
 	mutex_init(&mcp->lock);
 
@@ -684,6 +685,14 @@ static int mcp23s08_probe_one(struct mcp23s08 *mcp, struct device *dev,
 	switch (type) {
 #ifdef CONFIG_SPI_MASTER
 	case MCP_TYPE_S08:
+		mcp->regmap = devm_regmap_init(dev, &mcp23sxx_spi_regmap, mcp,
+					       &mcp23x08_regmap);
+		mcp->reg_shift = 0;
+		mcp->chip.ngpio = 8;
+		mcp->chip.label = "mcp23s08";
+		regmap_config = &mcp23x08_regmap;
+		break;
+
 	case MCP_TYPE_S17:
 		switch (type) {
 		case MCP_TYPE_S08:
@@ -710,7 +719,11 @@ static int mcp23s08_probe_one(struct mcp23s08 *mcp, struct device *dev,
 
 		one_regmap_config->name = devm_kasprintf(dev, GFP_KERNEL, "%d", raw_chip_address);
 		mcp->regmap = devm_regmap_init(dev, &mcp23sxx_spi_regmap, mcp,
-					       one_regmap_config);
+					       &mcp23x17_regmap);
+		mcp->reg_shift = 1;
+		mcp->chip.ngpio = 16;
+		mcp->chip.label = "mcp23s17";
+		regmap_config = &mcp23x17_regmap;
 		break;
 
 	case MCP_TYPE_S18:
@@ -724,6 +737,7 @@ static int mcp23s08_probe_one(struct mcp23s08 *mcp, struct device *dev,
 		mcp->reg_shift = 1;
 		mcp->chip.ngpio = 16;
 		mcp->chip.label = "mcp23s18";
+		regmap_config = &mcp23x17_regmap;
 		break;
 #endif /* CONFIG_SPI_MASTER */
 
@@ -733,6 +747,7 @@ static int mcp23s08_probe_one(struct mcp23s08 *mcp, struct device *dev,
 		mcp->reg_shift = 0;
 		mcp->chip.ngpio = 8;
 		mcp->chip.label = "mcp23008";
+		regmap_config = &mcp23x08_regmap;
 		break;
 
 	case MCP_TYPE_017:
@@ -740,6 +755,7 @@ static int mcp23s08_probe_one(struct mcp23s08 *mcp, struct device *dev,
 		mcp->reg_shift = 1;
 		mcp->chip.ngpio = 16;
 		mcp->chip.label = "mcp23017";
+		regmap_config = &mcp23x17_regmap;
 		break;
 
 	case MCP_TYPE_018:
@@ -747,6 +763,7 @@ static int mcp23s08_probe_one(struct mcp23s08 *mcp, struct device *dev,
 		mcp->reg_shift = 1;
 		mcp->chip.ngpio = 16;
 		mcp->chip.label = "mcp23018";
+		regmap_config = &mcp23x17_regmap;
 		break;
 #endif /* CONFIG_I2C */
 
@@ -757,6 +774,16 @@ static int mcp23s08_probe_one(struct mcp23s08 *mcp, struct device *dev,
 
 	if (IS_ERR(mcp->regmap))
 		return PTR_ERR(mcp->regmap);
+	/* Reset the registers as the POR/RST default value */
+	if (regmap_config) {
+		int i;
+		for (i = 0; i < regmap_config->num_reg_defaults; i++) {
+			ret = mcp_write(mcp, regmap_config->reg_defaults[i].reg >> 1,
+									regmap_config->reg_defaults[i].def);
+			if (ret < 0)
+				goto fail;
+		}
+	}
 
 	mcp->chip.base = base;
 	mcp->chip.can_sleep = true;
