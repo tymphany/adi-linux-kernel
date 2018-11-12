@@ -57,4 +57,13 @@ struct gpio_pint_regs {
 	u32 __pad0[2];
 };
 
+#ifdef CONFIG_MACH_SC58X_DT
+int softconfig_of_set_active_pin_output(struct device *dev,
+				struct device_node *np, const char *propname, int index,
+				int *pin, int *active_flag, bool active);
+
+int softconfig_of_set_group_active_pins_output(struct device *dev,
+				struct device_node *np, const char *propname, bool active);
+#endif
+
 #endif /* __ARCH_GPIO_H__ */

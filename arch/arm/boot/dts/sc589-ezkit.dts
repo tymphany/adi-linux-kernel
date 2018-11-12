@@ -9,6 +9,7 @@
 
 /dts-v1/;
 
+#include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/net/ti-dp83867.h>
 #include "sc58x.dtsi"
 
@@ -25,6 +26,31 @@
 	};
 
 	scb {
+		softconfig_default {
+			boot-pins = <&ssw0 0 GPIO_ACTIVE_LOW>,	/* EEPROM_EN */
+			            <&ssw0 1 GPIO_ACTIVE_LOW>,	/* UART0_FLOW_EN */
+			            /* should enable UART0_EN by default in bootloader */
+			            <&ssw0 3 GPIO_ACTIVE_LOW>,	/* ETH0_EN */
+			            <&ssw0 4 GPIO_ACTIVE_LOW>,	/* ETH1_EN */
+			            <&ssw0 5 GPIO_ACTIVE_LOW>,	/* MLB3_EN */
+			            <&ssw0 6 GPIO_ACTIVE_LOW>,	/* CAN0_EN */
+			            <&ssw0 7 GPIO_ACTIVE_LOW>,	/* CAN1_EN */
+			            <&ssw0 8 GPIO_ACTIVE_LOW>,	/* ADAU1962_EN */
+			            <&ssw0 9 GPIO_ACTIVE_LOW>,	/* ADAU1979_EN */
+			            <&ssw0 11 GPIO_ACTIVE_LOW>,	/* SD_WP_EN */
+			            <&ssw0 12 GPIO_ACTIVE_LOW>,	/* SP2IFLASH_CS_EN */
+			            <&ssw0 13 GPIO_ACTIVE_LOW>,	/* SPI2D2_D3_EN */
+			            <&ssw0 14 GPIO_ACTIVE_LOW>,	/* SPDIF_OPTICAL_EN */
+			            <&ssw0 15 GPIO_ACTIVE_LOW>,	/* SPDIF_DIGITAL_EN */
+			            <&ssw1 0 GPIO_ACTIVE_LOW>,	/* PUSHBUTTON1_EN */
+			            <&ssw1 1 GPIO_ACTIVE_LOW>,	/* PUSHBUTTON2_EN */
+			            <&ssw1 2 GPIO_ACTIVE_LOW>,	/* LED10_EN */
+			            <&ssw1 3 GPIO_ACTIVE_LOW>,	/* LED11_EN */
+			            <&ssw1 4 GPIO_ACTIVE_LOW>;	/* LED12_EN */
+			reboot-pins = <&ssw0 12 GPIO_ACTIVE_LOW>,	/* SP2IFLASH_CS_EN */
+			              <&ssw0 13 GPIO_ACTIVE_LOW>;	/* SPI2D2_D3_EN */
+		};
+
 		button0: button@0 {
 			compatible = "adi,button-led";
 			button_gpio = <80>;
