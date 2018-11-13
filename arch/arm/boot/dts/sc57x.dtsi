@@ -266,6 +266,24 @@
 			status = "disabled";
 		};
 
+		crc0: crc@0x310A5000 {
+			compatible = "adi,hmac-crc";
+			reg = <0x310A5000 0xFF>;
+			interrupts = <0 154 0>;
+			dma_channel = <8>;
+			crypto_crc_poly = <0x5c5c5c5c>;
+			status = "disabled";
+		};
+
+		crc1: crc@0x310A6000 {
+			compatible = "adi,hmac-crc";
+			reg = <0x310A6000 0xFF>;
+			interrupts = <0 155 0>;
+			dma_channel = <18>;
+			crypto_crc_poly = <0x5c5c5c5c>;
+			status = "disabled";
+		};
+
 		can0: can@0x31000200 {
 			compatible = "adi,can";
 			reg = <0x31000200 0x5FF>;

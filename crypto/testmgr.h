@@ -30771,7 +30771,10 @@ static const struct hash_testvec crc32c_tv_template[] = {
 	}
 };
 
-static const struct hash_testvec xxhash64_tv_template[] = {
+/*
+ * ADI CRC test vectors
+ */
+static const struct hash_testvec adi_crc_tv_template[] = {
 	{
 		.psize = 0,
 		.digest = "\x99\xe9\xd8\x51\x37\xdb\x46\xef",
