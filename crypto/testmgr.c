@@ -3073,7 +3073,7 @@ static const struct alg_test_desc alg_test_descs[] = {
 		.alg = "hmac(crc32)",
 		.test = alg_test_hash,
 		.suite = {
-			.hash = __VECS(bfin_crc_tv_template)
+			.hash = __VECS(adi_crc_tv_template)
 		}
 	}, {
 		.alg = "hmac(md5)",

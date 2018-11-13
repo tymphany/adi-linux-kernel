@@ -35046,9 +35046,9 @@ static const struct hash_testvec crc32c_tv_template[] = {
 };
 
 /*
- * Blakcifn CRC test vectors
+ * ADI CRC test vectors
  */
-static const struct hash_testvec bfin_crc_tv_template[] = {
+static const struct hash_testvec adi_crc_tv_template[] = {
 	{
 		.psize = 0,
 		.digest = "\x00\x00\x00\x00",
