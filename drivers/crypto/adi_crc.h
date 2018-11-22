@@ -1,13 +1,13 @@
 /*
- * bfin_crc.h - interface to Blackfin CRC controllers
+ * adi_crc.h - interface to ADI SC5XX CRC controllers
  *
- * Copyright 2012 Analog Devices Inc.
+ * Copyright 2012 - 2018 Analog Devices Inc.
  *
  * Licensed under the GPL-2 or later.
  */
 
-#ifndef __BFIN_CRC_H__
-#define __BFIN_CRC_H__
+#ifndef __ADI_CRC_H__
+#define __ADI_CRC_H__
 
 /* Function driver which use hardware crc must initialize the structure */
 struct crc_info {

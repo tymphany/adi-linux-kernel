@@ -1301,4 +1301,52 @@ drivers/pinctrl/pinctrl-mcp23s08.c
 <File_License>GPL2</File_License>
 <Comment>ADI Modified to fix failed to change states of GPIOs from MCP23017</Comment>
 </File162>
+<File163>
+crypto/testmgr.c
+<Date_Added>2018/10/30</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI CRC algorithm test vector to crypto test framework</Comment>
+</File163>
+<File164>
+crypto/testmgr.h
+<Date_Added>2018/10/30</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI CRC algorithm test vector to crypto test framework</Comment>
+</File164>
+<File165>
+drivers/crypto/Kconfig
+<Date_Added>2018/10/30</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to support ADI SC5XX CRC driver</Comment>
+</File165>
+<File166>
+drivers/crypto/Makefile
+<Date_Added>2018/10/30</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to support ADI SC5XX CRC driver</Comment>
+</File166>
+<File167>
+drivers/crypto/adi_crc.c
+<Date_Added>2018/10/30</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created ADI SC5XX CRC driver file. Written entirely by ADI</Comment>
+</File167>
+<File168>
+drivers/crypto/adi_crc.h
+<Date_Added>2018/10/30</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>jchen11</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created ADI SC5XX CRC driver header file. Written entirely by ADI</Comment>
+</File168>
 </Linux-kernel-v4.16.0>
