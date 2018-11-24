@@ -231,7 +231,7 @@
 #define P_MSI0_CLK          (P_DEFINED | P_IDENT(GPIO_PF4) | P_FUNCT(0))
 #define P_MSI0_CDb          (P_DEFINED | P_IDENT(GPIO_PC12) | P_FUNCT(1))
 
-/* Rotary Encoder */
+/* GP Counter Port Mux */
 #define P_CNT_CZM           (P_DEFINED | P_IDENT(GPIO_PD7) | P_FUNCT(1))
 #define P_CNT_CUD           (P_DEFINED | P_IDENT(GPIO_PE13) | P_FUNCT(2))
 #define P_CNT_CDG           (P_DEFINED | P_IDENT(GPIO_PD8) | P_FUNCT(1))

@@ -1373,4 +1373,44 @@ drivers/net/ethernet/stmicro/stmmac/dwmac-adi.c
 <File_License>GPL2</File_License>
 <Comment>ADI Created EMAC driver for sc5xx. Written entirely by ADI</Comment>
 </File171>
+<File172>
+drivers/input/misc/Kconfig
+<Date_Added>2018/11/6</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>sliu7</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to adi_rotary driver Kconfig</Comment>
+</File172>
+<File173>
+drivers/input/misc/Makefile
+<Date_Added>2018/11/6</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>sliu7</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to adi_rotary driver Makefile</Comment>
+</File173>
+<File174>
+drivers/input/misc/adi_rotary.c
+<Date_Added>2018/11/6</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>sliu7</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created adi_rotary driver file. Written entirely by ADI</Comment>
+</File174>
+<File175>
+include/linux/platform_data/adi_rotary.h
+<Date_Added>2018/11/6</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>sliu7</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to adi_rotary header file</Comment>
+</File175>
+<File176>
+include/dt-bindings/input/adi_gp_counter.h
+<Date_Added>2018/11/6</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>sliu7</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created gp counter header file for sc5xx. Written entirely by ADI</Comment>
+</File176>
 </Linux-kernel-v4.16.0>

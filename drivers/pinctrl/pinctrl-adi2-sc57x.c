@@ -214,7 +214,7 @@ static const unsigned mmc0_pins[] = {
 	GPIO_PF2, GPIO_PF3, GPIO_PF7, GPIO_PF4, GPIO_PC12,
 };
 
-static const unsigned rotary0_pins[] = {
+static const unsigned cnt0_pins[] = {
 	GPIO_PD7, GPIO_PE13, GPIO_PD8,
 };
 
@@ -337,7 +337,7 @@ static const unsigned short mmc0_mux[] = {
 	0
 };
 
-static const unsigned short rotary0_mux[] = {
+static const unsigned short cnt0_mux[] = {
 	P_CNT_CZM, P_CNT_CUD, P_CNT_CDG,
 	0
 };
@@ -363,7 +363,7 @@ static const struct adi_pin_group adi_pin_groups[] = {
 	ADI_PIN_GROUP("ppi0_8bgrp", ppi0_8b_pins, ppi0_8b_mux),
 	ADI_PIN_GROUP("ppi0_16bgrp", ppi0_16b_pins, ppi0_16b_mux),
 	ADI_PIN_GROUP("mmc0grp", mmc0_pins, mmc0_mux),
-	ADI_PIN_GROUP("rotary0grp", rotary0_pins, rotary0_mux),
+	ADI_PIN_GROUP("cnt0grp", cnt0_pins, cnt0_mux),
 };
 
 static const char * const uart0grp[] = { "uart0grp",
@@ -383,7 +383,7 @@ static const char * const ppi0grp[] = { "ppi0_8bgrp", "ppi0_16bgrp" };
 static const char * const lp0grp[] = { "lp0grp" };
 static const char * const lp1grp[] = { "lp1grp" };
 static const char * const mmc0grp[] = { "mmc0grp" };
-static const char * const rotary0grp[] = { "rotary0grp" };
+static const char * const cnt0grp[] = { "cnt0grp" };
 
 static const struct adi_pmx_func adi_pmx_functions[] = {
 	ADI_PMX_FUNCTION("uart0", uart0grp),
@@ -400,7 +400,7 @@ static const struct adi_pmx_func adi_pmx_functions[] = {
 	ADI_PMX_FUNCTION("eth0", eth0grp),
 	ADI_PMX_FUNCTION("mmc0", mmc0grp),
 	ADI_PMX_FUNCTION("ppi0", ppi0grp),
-	ADI_PMX_FUNCTION("rotary0", rotary0grp),
+	ADI_PMX_FUNCTION("cnt0", cnt0grp),
 };
 
 static const struct adi_pinctrl_soc_data adi_sc57x_soc = {

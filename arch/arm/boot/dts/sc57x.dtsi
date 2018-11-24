@@ -7,6 +7,8 @@
  *
  */
 
+#include <dt-bindings/input/adi_gp_counter.h>
+
 / {
 	model = "ADI sc57x";
 	compatible = "adi,sc57x";
@@ -394,6 +396,13 @@
 				};
 			};
 
+			cnt {
+				cnt0_default: cnt0@0 {
+					adi,group = "cnt0grp";
+					adi,function = "cnt0";
+				};
+			};
+
 			linkport {
 				lp0_default: lp0@0 {
 					adi,group = "lp0grp";
@@ -438,6 +447,15 @@
 			reg = <0x3102D000 0xfff>;
 			spu_securep_id = <68>;
 			i2c_bus_id = <0>;
+			status = "disabled";
+		};
+
+		gp_counter: cnt@0x3100B000 {
+			compatible = "adi,gp_counter";
+			reg = <0x3100B000 0xFF>;
+			interrupts = <0 118 0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
 			status = "disabled";
 		};
 

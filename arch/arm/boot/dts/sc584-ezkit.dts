@@ -9,6 +9,7 @@
 
 /dts-v1/;
 
+#include <dt-bindings/input/input.h>
 #include <dt-bindings/gpio/gpio.h>
 #include "sc58x.dtsi"
 
@@ -265,6 +266,24 @@
 
 &icc0 {
 	status = "okay";
+};
+
+&gp_counter {
+	pinctrl-names = "default";
+	pinctrl-0 = <&cnt0_default>;
+	enable-pin = <&ssw1 10 GPIO_ACTIVE_LOW>;
+	status = "okay";
+	rotary_abs_code = <ABS_WHEEL>;		/* ABS_WHEEL */
+	rotary_button_key = <KEY_ENTER>;	/* KEY_ENTER */
+	debounce = /bits/ 16 <10>;			/* Debounce Prescale 0-17 */
+	debounce_en = /bits/ 16 <1>;		/* Debounce Enable */
+	cnt_mode = /bits/ 16 <QUAD_ENC>;	/* Counter Operating Mode: QUADENC */
+	boundary_mode = /bits/ 16 <BD_COMP>;/* Boundary Register Mod: COMP */
+	boundary_ranges =  <(-256) 256>;	/* Boundary upper/lower ranges */
+	czm_zero_cnt_en = /bits/ 16 <1>;	/* CZM Pin Zeroes Counter Enable */
+	invert_czm = /bits/ 16 <1>;			/* Default value of CZM Pin Polarity */
+	invert_cud = /bits/ 16 <0>;			/* Default value of CUD Pin Polarity */
+	invert_cdg = /bits/ 16 <0>;			/* Default value of CDG Pin Polarity */
 };
 
 &lp0 {

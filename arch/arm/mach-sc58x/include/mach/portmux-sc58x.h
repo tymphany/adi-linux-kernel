@@ -247,4 +247,9 @@
 #define P_MSI0_CLK          (P_DEFINED | P_IDENT(GPIO_PF11) | P_FUNCT(0))
 #define P_MSI0_CDb          (P_DEFINED | P_IDENT(GPIO_PF12) | P_FUNCT(0))
 
+/* GP Counter Port Mux */
+#define P_CNT_CZM           (P_DEFINED | P_IDENT(GPIO_PB11) | P_FUNCT(4))
+#define P_CNT_CUD           (P_DEFINED | P_IDENT(GPIO_PB12) | P_FUNCT(4))
+#define P_CNT_CDG           (P_DEFINED | P_IDENT(GPIO_PB14) | P_FUNCT(4))
+
 #endif				/* _PORTMUX_H_ */
