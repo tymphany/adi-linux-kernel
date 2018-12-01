@@ -23,6 +23,7 @@
 #include <linux/can/error.h>
 #include "sc5xx_can.h"
 #include <mach/portmux.h>
+#include <mach/gpio.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_address.h>
@@ -42,6 +43,8 @@ struct sc5xx_can_priv {
 	int rx_irq;
 	int tx_irq;
 	int err_irq;
+	unsigned int enable_pin;
+	unsigned int enable_pin_active_low;
 	unsigned short *pin_list;
 	struct spi_device *spi;
 };
@@ -625,9 +628,10 @@ static int sc5xx_can_probe(struct platform_device *pdev)
 	if (!np)
 		return -ENODEV;
 
-	const struct of_device_id *match;
-
-	match = of_match_device(of_match_ptr(adi_can_of_match), &pdev->dev);
+	if (!of_match_device(of_match_ptr(adi_can_of_match), &pdev->dev)) {
+		dev_err(&pdev->dev, "failed to matching of_match node\n");
+		return -ENODEV;
+	}
 
 	pdata = (unsigned short *)pdev->dev.platform_data;
 
@@ -672,7 +676,7 @@ static int sc5xx_can_probe(struct platform_device *pdev)
 
 	clk_source = devm_clk_get(&pdev->dev, "can");
 	if (IS_ERR(clk_source)) {
-		dev_err(dev, "can not get can clock\n");
+		dev_err(&pdev->dev, "can not get can clock\n");
 		return PTR_ERR(clk_source);
 	}
 	priv->can.clock.freq = clk_get_rate(clk_source);
@@ -696,6 +700,13 @@ static int sc5xx_can_probe(struct platform_device *pdev)
 		"(&reg_base=%p, rx_irq=%d, tx_irq=%d, err_irq=%d, sclk=%d)\n",
 		DRV_NAME, priv->membase, priv->rx_irq,
 		priv->tx_irq, priv->err_irq, priv->can.clock.freq);
+
+	if (likely(of_count_phandle_with_args(np, "enable-pin", NULL) > 0)) {
+		if (softconfig_of_set_active_pin_output(&pdev->dev,
+						        np, "enable-pin", 0, &priv->enable_pin,
+						        &priv->enable_pin_active_low, true))
+			goto exit_candev_free;
+	}
 
 	if (of_property_match_string(np, "phy-name", "tja1055") >= 0) {
 		struct gpio_desc *en_gpio, *stb_gpio;
@@ -756,6 +767,9 @@ static int sc5xx_can_remove(struct platform_device *pdev)
 	release_mem_region(res->start, resource_size(res));
 	peripheral_free_list(priv->pin_list);
 	free_candev(dev);
+	if (priv->enable_pin && gpio_is_valid(priv->enable_pin))
+		gpio_direction_output(priv->enable_pin,
+						priv->enable_pin_active_low ? 1 : 0);
 
 	return 0;
 }

@@ -166,6 +166,17 @@ config DWMAC_SUN8I
 	  This selects Allwinner SoC glue layer support for the
 	  stmmac device driver. This driver is used for H3/A83T/A64
 	  EMAC ethernet controller.
+
+config DWMAC_ADI
+	tristate "ADI DWMAC support"
+	default ARCH_SC58X || ARCH_SC57X
+	depends on OF && (ARCH_SC58X || ARCH_SC57X || COMPILE_TEST)
+	---help---
+	  Support for ethernet controller on SC5XX SOCs.
+
+	  This selects SC5XX SoC glue layer support for the stmmac
+	  device driver. This driver is used on for the SC5XX series
+	  SOCs EMAC ethernet controller.
 endif
 
 config STMMAC_PCI

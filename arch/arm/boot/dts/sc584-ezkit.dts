@@ -58,16 +58,22 @@
 
 		button0: button@0 {
 			compatible = "adi,button-led";
+			en-pins = <&ssw1 2 GPIO_ACTIVE_LOW>,	/* PUSHBUTTON1_EN */
+			          <&ssw1 3 GPIO_ACTIVE_LOW>;	/* LEDS_EN */
 			button_gpio = <15>;
 			led_gpio = <65>;
 		};
 		button1: button@1 {
 			compatible = "adi,button-led";
+			en-pins = <&ssw1 1 GPIO_ACTIVE_LOW>,	/* PUSHBUTTON2_EN */
+			          <&ssw1 3 GPIO_ACTIVE_LOW>;	/* LEDS_EN */
 			button_gpio = <16>;
 			led_gpio = <66>;
 		};
 		button2: button@2 {
 			compatible = "adi,button-led";
+			en-pins = <&ssw1 0 GPIO_ACTIVE_LOW>,	/* PUSHBUTTON3_EN */
+			          <&ssw1 3 GPIO_ACTIVE_LOW>;	/* LEDS_EN */
 			button_gpio = <47>;
 			led_gpio = <67>;
 		};
@@ -94,6 +100,8 @@
 };
 
 &uart0 {
+	enable-pin = <&ssw0 2 GPIO_ACTIVE_LOW>;		/* UART0_EN */
+	hwflow-en-pin = <&ssw0 1 GPIO_ACTIVE_LOW>;	/* UART0_FLOW_EN */
 	pinctrl-names = "default", "hwflow";
 	pinctrl-0 = <&uart0_default>;
 	pinctrl-1 = <&uart0_hwflow>;
@@ -142,6 +150,8 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 		compatible = "winbond,w25q32";
+		en-pins = <&ssw0 12 GPIO_ACTIVE_LOW>,	/* SP2IFLASH_CS_EN */
+		          <&ssw0 13 GPIO_ACTIVE_LOW>;	/* SPI2D2_D3_EN */
 		spi-max-frequency = <5000000>;
 		reg = <38>;
 		spi-cpol;
@@ -181,11 +191,13 @@
 	adau1979: adau1979@0x11 {
 		compatible = "adi,adau1977";
 		reg = <0x11>;
+		enable-pin = <&ssw0 9 GPIO_ACTIVE_LOW>;	/* ADAU1979_EN */
 		reset-gpio = <&gpa 14 0>;
 	};
 	adau1962: adau1962@0x4 {
 		compatible = "adi,adau1962";
 		reg = <0x4>;
+		enable-pin = <&ssw0 8 GPIO_ACTIVE_LOW>;	/* ADAU1962_EN */
 		reset-gpio = <&gpa 14 0>;
 	};
 };
@@ -211,6 +223,7 @@
 };
 
 &can0 {
+	enable-pin = <&ssw0 6 GPIO_ACTIVE_LOW>;	/* CAN0_EN */
 	pinctrl-names = "default";
 	pinctrl-0 = <&can0_default>;
 	phy-name = "tja1055";
@@ -220,6 +233,7 @@
 };
 
 &can1 {
+	enable-pin = <&ssw0 7 GPIO_ACTIVE_LOW>;	/* CAN1_EN */
 	pinctrl-names = "default";
 	pinctrl-0 = <&can1_default>;
 	phy-name = "tja1145";
@@ -230,6 +244,7 @@
 };
 
 &emac0 {
+	enable-pin = <&ssw0 3 GPIO_ACTIVE_LOW>;	/* ETH0_EN */
 	snps,reset-gpio = <&gpb 14 0>;
 	snps,reset-active-low;
 	snps,reset-delays-us = <0 200 500>;
