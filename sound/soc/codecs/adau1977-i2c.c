@@ -31,6 +31,7 @@ static int adau1977_i2c_probe(struct i2c_client *client,
 static int adau1977_i2c_remove(struct i2c_client *client)
 {
 	snd_soc_unregister_codec(&client->dev);
+	adau1977_remove(&client->dev);
 	return 0;
 }
 

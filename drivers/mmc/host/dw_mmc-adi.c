@@ -21,9 +21,10 @@
 #include <linux/pm.h>
 #include <mach/portmux.h>
 #include <mach/cpu.h>
+#include <mach/gpio.h>
 
-#include "dw_mmc-pltfm.h"
 #include "dw_mmc.h"
+#include "dw_mmc-pltfm.h"
 
 static int dwmmc_adi_priv_init(struct dw_mci *host)
 {
@@ -75,13 +76,23 @@ static int dwmmc_adi_probe(struct platform_device *pdev)
 		return -1;
 
 	drv_data = match->data;
+	if (softconfig_of_set_group_active_pins_output(&pdev->dev,
+					pdev->dev.of_node, "wp-en-pin", true))
+		return -1;
 
 	return dw_mci_pltfm_register(pdev, drv_data);
 }
 
+static int dwmmc_adi_remove(struct platform_device *pdev)
+{
+	softconfig_of_set_group_active_pins_output(&pdev->dev,
+					pdev->dev.of_node, "wp-en-pin", false);
+	return dw_mci_pltfm_remove(pdev);
+}
+
 static struct platform_driver dwmmc_adi_pltfm_driver = {
 	.probe		= dwmmc_adi_probe,
-	.remove		= dw_mci_pltfm_remove,
+	.remove		= dwmmc_adi_remove,
 	.driver		= {
 		.name			= "dwmmc_adi",
 		.of_match_table = dwmmc_adi_match,

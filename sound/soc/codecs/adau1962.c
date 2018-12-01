@@ -32,6 +32,7 @@
 #include <sound/soc.h>
 #include <sound/tlv.h>
 
+#include <mach/gpio.h>
 #include "adau1962.h"
 
 #define ADAU1962_REG_PLL_CLK_CTRL0		0x00
@@ -98,6 +99,8 @@ struct adau1962 {
 	bool right_j;
 	unsigned int sysclk;
 	enum adau1962_sysclk_src sysclk_src;
+	unsigned int enable_pin;
+	unsigned int enable_pin_active_low;
 	int reset_gpio;
 
 	struct snd_pcm_hw_constraint_list constraints;
@@ -773,6 +776,16 @@ int adau1962_probe(struct device *dev, struct regmap *regmap,
 	adau1962->constraints.count = ARRAY_SIZE(adau1962_rates);
 
 	if (dev->of_node) {
+		if (likely(of_count_phandle_with_args(dev->of_node,
+							"enable-pin", NULL) > 0)) {
+			if (softconfig_of_set_active_pin_output(dev,
+							dev->of_node, "enable-pin", 0,
+							&adau1962->enable_pin,
+							&adau1962->enable_pin_active_low,
+							true))
+				return -EINVAL;
+		}
+
 		adau1962->reset_gpio =
 				of_get_named_gpio(dev->of_node, "reset-gpio", 0);
 		if (!gpio_is_valid(adau1962->reset_gpio)) {
@@ -812,6 +825,16 @@ int adau1962_probe(struct device *dev, struct regmap *regmap,
 			&adau1962_dai, 1);
 }
 EXPORT_SYMBOL_GPL(adau1962_probe);
+
+void adau1962_remove(struct device *dev)
+{
+	struct adau1962 *adau1962 = dev_get_drvdata(dev);
+
+	if (adau1962->enable_pin && gpio_is_valid(adau1962->enable_pin))
+		gpio_direction_output(adau1962->enable_pin,
+					adau1962->enable_pin_active_low ? 1 : 0);
+}
+EXPORT_SYMBOL_GPL(adau1962_remove);
 
 static bool adau1962_register_volatile(struct device *dev, unsigned int reg)
 {

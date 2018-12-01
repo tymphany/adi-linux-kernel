@@ -26,6 +26,7 @@
 #include <sound/soc.h>
 #include <sound/tlv.h>
 
+#include <mach/gpio.h>
 #include "adau1977.h"
 
 #define ADAU1977_REG_POWER		0x00
@@ -114,6 +115,8 @@ struct adau1977 {
 	bool right_j;
 	unsigned int sysclk;
 	enum adau1977_sysclk_src sysclk_src;
+	unsigned int enable_pin;
+	unsigned int enable_pin_active_low;
 	int reset_gpio;
 	enum adau1977_type type;
 
@@ -933,6 +936,16 @@ int adau1977_probe(struct device *dev, struct regmap *regmap,
 	}
 
 	if (dev->of_node) {
+		if (likely(of_count_phandle_with_args(dev->of_node,
+							"enable-pin", NULL) > 0)) {
+			if (softconfig_of_set_active_pin_output(dev,
+							dev->of_node, "enable-pin", 0,
+							&adau1977->enable_pin,
+							&adau1977->enable_pin_active_low,
+							true))
+				return -EINVAL;
+		}
+
 		adau1977->reset_gpio =
 				of_get_named_gpio(dev->of_node, "reset-gpio", 0);
 		if (!gpio_is_valid(adau1977->reset_gpio)) {
@@ -997,6 +1010,16 @@ err_poweroff:
 
 }
 EXPORT_SYMBOL_GPL(adau1977_probe);
+
+void adau1977_remove(struct device *dev)
+{
+	struct adau1977 *adau1977 = dev_get_drvdata(dev);
+
+	if (adau1977->enable_pin && gpio_is_valid(adau1977->enable_pin))
+		gpio_direction_output(adau1977->enable_pin,
+					adau1977->enable_pin_active_low ? 1 : 0);
+}
+EXPORT_SYMBOL_GPL(adau1977_remove);
 
 static bool adau1977_register_volatile(struct device *dev, unsigned int reg)
 {
