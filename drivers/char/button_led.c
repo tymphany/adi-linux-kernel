@@ -24,6 +24,7 @@
 #include <linux/types.h>
 
 #include <mach/portmux.h>
+#include <mach/gpio.h>
 
 #define DRIVER_NAME "button-led"
 
@@ -54,9 +55,11 @@ static irqreturn_t button_interrupt_handler(int irq, void *dev_id)
 {
 	struct button_led *gpio_dev = dev_id;
 
-	gpio_set_value(gpio_dev->led, !gpio_dev->led_on);
-
-	gpio_dev->led_on = !gpio_dev->led_on;
+	if (gpio_is_valid(gpio_dev->led)) {
+		gpio_dev->led_on = gpio_get_value(gpio_dev->led);
+		gpio_set_value(gpio_dev->led, !gpio_dev->led_on);
+	} else
+		return IRQ_NONE;
 
 	return IRQ_HANDLED;
 }
@@ -89,6 +92,10 @@ static int button_led_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "No led_gpio specified\n");
 			return -ENOENT;
 		}
+		ret = softconfig_of_set_group_active_pins_output(&pdev->dev, node,
+						"en-pins", true);
+		if (ret)
+			return ret;
 	}
 #else
 	dev_err(&pdev->dev, "No button-led driver specified\n");
@@ -128,6 +135,7 @@ static int button_led_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Cannot request irq\n");
 		goto out;
 	}
+	platform_set_drvdata(pdev, gpio_dev);
 	return 0;
 
 out:
@@ -144,6 +152,8 @@ static int button_led_remove(struct platform_device *pdev)
 {
 	struct button_led *gpio_dev = platform_get_drvdata(pdev);
 
+	softconfig_of_set_group_active_pins_output(&pdev->dev,
+						        pdev->dev.of_node, "en-pins", false);
 	misc_deregister(&gpio_dev->mdev);
 	return 0;
 }

@@ -273,7 +273,7 @@
 		};
 
 		emac0: ethernet@0x3100C000 {
-			compatible = "snps,dwmac", "snps,dwmac-3.710";
+			compatible = "adi,dwmac", "snps,dwmac-3.710", "snps,dwmac";
 			reg = <0x3100C000 0x2000>;
 			interrupt-parent = <&gic>;
 			interrupts = <0 148 0>;
@@ -288,7 +288,7 @@
 		};
 
 		emac1: ethernet@0x3100E000 {
-			compatible = "snps,dwmac", "snps,dwmac-3.710";
+			compatible = "adi,dwmac", "snps,dwmac-3.710", "snps,dwmac";
 			reg = <0x3100E000 0x2000>;
 			interrupt-parent = <&gic>;
 			interrupts = <0 149 0>;
@@ -620,6 +620,7 @@
 			compatible = "usb-nop-xceiv";
 			reg = <0x310c1390 0x10>;
 			reg-names = "phy";
+			#phy-cells = <0>;
 			status = "disabled";
 		};
 
@@ -644,6 +645,7 @@
 			compatible = "usb-nop-xceiv";
 			reg = <0x310c2390 0x10>;
 			reg-names = "phy";
+			#phy-cells = <0>;
 			status = "disabled";
 		};
 
