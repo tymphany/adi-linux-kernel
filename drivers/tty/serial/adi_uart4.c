@@ -31,6 +31,7 @@
 #include <mach/hardware.h>
 #include <mach/portmux.h>
 #include <mach/dma.h>
+#include <mach/gpio.h>
 #include "adi_uart4.h"
 #ifdef CONFIG_ARCH_SC58X
 #include <mach/sc58x.h>
@@ -84,6 +85,10 @@ struct adi_uart4_serial_port {
 	unsigned int hwflow_mode;
 	unsigned int cts_pin;
 	unsigned int rts_pin;
+	unsigned int enable_pin;
+	unsigned int enable_pin_active_low;
+	unsigned int hwflow_en_pin;
+	unsigned int hwflow_en_pin_active_low;
 	bool hwflow_en;
 };
 
@@ -1221,6 +1226,31 @@ static int adi_uart4_serial_probe(struct platform_device *pdev)
 			if (ret)
 				uart->hwflow_mode = ADI_UART_NO_HWFLOW;
 		}
+
+		if (pdev->dev.of_node) {
+			if (likely(of_count_phandle_with_args(pdev->dev.of_node,
+							"enable-pin", NULL) > 0)) {
+				ret = softconfig_of_set_active_pin_output(&pdev->dev,
+							pdev->dev.of_node, "enable-pin", 0,
+							&uart->enable_pin, &uart->enable_pin_active_low,
+							true);
+				if (ret)
+					goto out_error_unmap;
+			}
+
+			if (uart->hwflow_mode == ADI_UART_HWFLOW_PERI &&
+						likely(of_count_phandle_with_args(pdev->dev.of_node,
+							"hwflow-en-pin", NULL) > 0)) {
+				ret = softconfig_of_set_active_pin_output(&pdev->dev,
+							pdev->dev.of_node, "hwflow-en-pin", 0,
+							&uart->hwflow_en_pin,
+							&uart->hwflow_en_pin_active_low, true);
+				if (ret) {
+					uart->hwflow_mode = ADI_UART_NO_HWFLOW;
+					goto out_error_unmap;
+				}
+			}
+		}
 	}
 
 	uart = adi_uart4_serial_ports[uartid];
@@ -1251,6 +1281,12 @@ static int adi_uart4_serial_remove(struct platform_device *pdev)
 	if (uart) {
 		uart_remove_one_port(&adi_uart4_serial_reg, &uart->port);
 		iounmap(uart->port.membase);
+		if (uart->hwflow_en_pin && gpio_is_valid(uart->hwflow_en_pin))
+			gpio_direction_output(uart->hwflow_en_pin,
+						        uart->hwflow_en_pin_active_low ? 1 : 0);
+		if (uart->enable_pin)
+			gpio_direction_output(uart->enable_pin,
+						        uart->enable_pin_active_low ? 1 : 0);
 		kfree(uart);
 		adi_uart4_serial_ports[uart->port.line] = NULL;
 	}
