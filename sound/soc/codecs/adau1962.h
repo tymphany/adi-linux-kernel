@@ -23,6 +23,8 @@ struct device;
 int adau1962_probe(struct device *dev, struct regmap *regmap,
 	void (*switch_mode)(struct device *dev));
 
+void adau1962_remove(struct device *dev);
+
 extern const struct regmap_config adau1962_regmap_config;
 
 enum adau1962_clk_id {

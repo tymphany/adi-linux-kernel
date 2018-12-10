@@ -19,6 +19,7 @@
 #include <linux/errno.h>
 #include <linux/module.h>
 #include <linux/device.h>
+#include <mach/gpio.h>
 
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/partitions.h>
@@ -294,6 +295,12 @@ static int m25p_probe(struct spi_device *spi)
 	else
 		flash_name = spi->modalias;
 
+#if defined (CONFIG_ARCH_SC58X) || defined (CONFIG_ARCH_SC57X)
+		ret = softconfig_of_set_group_active_pins_output(nor->dev,
+					        spi_nor_get_flash_node(nor), "en-pins", true);
+		if (ret)
+			return ret;
+#endif
 	ret = spi_nor_scan(nor, flash_name, &hwcaps);
 	if (ret)
 		return ret;
@@ -306,9 +313,14 @@ static int m25p_probe(struct spi_device *spi)
 static int m25p_remove(struct spi_device *spi)
 {
 	struct m25p	*flash = spi_get_drvdata(spi);
+	struct spi_nor *nor = &flash->spi_nor;
 
-	spi_nor_restore(&flash->spi_nor);
+	spi_nor_restore(nor);
 
+#if defined (CONFIG_ARCH_SC58X) || defined (CONFIG_ARCH_SC57X)
+	softconfig_of_set_group_active_pins_output(nor->dev,
+				        spi_nor_get_flash_node(nor), "en-pins", false);
+#endif
 	/* Clean up MTD stuff. */
 	return mtd_device_unregister(&flash->spi_nor.mtd);
 }
