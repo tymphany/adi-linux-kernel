@@ -1,60 +1,50 @@
 /*
- * board initialization should put one of these structures into platform_data
- * and place the bfin-rotary onto platform_bus named "bfin-rotary".
+ * ADI GP counter register configuration and bitmasks, this can be used for the
+ * adi_rotary input device.
  *
- * Copyright 2008-2010 Analog Devices Inc.
+ * Copyright 2008-2018 Analog Devices Inc.
  *
  * Licensed under the GPL-2 or later.
  */
 
-#ifndef _BFIN_ROTARY_H
-#define _BFIN_ROTARY_H
+#ifndef _ADI_ROTARY_H
+#define _ADI_ROTARY_H
 
-/* mode bitmasks */
-#define ROT_QUAD_ENC	CNTMODE_QUADENC	/* quadrature/grey code encoder mode */
-#define ROT_BIN_ENC	CNTMODE_BINENC	/* binary encoder mode */
-#define ROT_UD_CNT	CNTMODE_UDCNT	/* rotary counter mode */
-#define ROT_DIR_CNT	CNTMODE_DIRCNT	/* direction counter mode */
+/* Counter Operating Mode List */
+#define QUAD_ENC		0x0				/* Quadrature/grey Code Encoder Mode */
+#define BIN_ENC			0x1				/* Binary Encoder Mode */
+#define UD_CNT			0x2				/* Rotary Counter Mode */
+#define DIR_CNT			0x4				/* Direction Counter Mode */
+#define DIR_TIM			0x5				/* Direction Time Mode */
 
-#define ROT_DEBE	DEBE		/* Debounce Enable */
+/* Boundary Register Mode List */
+#define	BD_COMP			0x0				/* Boundary Compare Mode */
+#define BD_ZERO			0x1				/* Boundary Zeroes Mode */
+#define BD_CAPT			0x2				/* Boundary Capture Mode */
+#define BD_AEXT			0x3				/* Boundary Auto-extend Mode */
 
-#define ROT_CDGINV	CDGINV		/* CDG Pin Polarity Invert */
-#define ROT_CUDINV	CUDINV		/* CUD Pin Polarity Invert */
-#define ROT_CZMINV	CZMINV		/* CZM Pin Polarity Invert */
+#define DEB_EN			0x1				/* Debounce Enable */
 
-struct bfin_rotary_platform_data {
-	/* set rotary UP KEY_### or BTN_### in case you prefer
-	 * bfin-rotary to send EV_KEY otherwise set 0
-	 */
-	unsigned int rotary_up_key;
-	/* set rotary DOWN KEY_### or BTN_### in case you prefer
-	 * bfin-rotary to send EV_KEY otherwise set 0
-	 */
-	unsigned int rotary_down_key;
-	/* set rotary BUTTON KEY_### or BTN_### */
-	unsigned int rotary_button_key;
-	/* set rotary Relative Axis REL_### in case you prefer
-	 * bfin-rotary to send EV_REL otherwise set 0
-	 */
-	unsigned int rotary_rel_code;
-	unsigned short debounce;	/* 0..17 */
-	unsigned short mode;
-	unsigned short pm_wakeup;
-	unsigned short *pin_list;
-};
+/* CZM/CUD/CDG Pin Polarity Value */
+#define PIN_CDGINV		0x1				/* CDG Pin Polarity Invert */
+#define PIN_CUDINV		0x1				/* CUD Pin Polarity Invert */
+#define PIN_CZMINV		0x1				/* CZM Pin Polarity Invert */
+
+#define CNT_MAXIMUM_UPPER_RANGE  0x7fffffff	/* Counter Max Value +2147483647 */
+#define CNT_MINIMUM_LOWER_RANGE	 0x80000000	/* Counter Min Value -2147483648 */
 
 /* CNT_CONFIG bitmasks */
-#define CNTE		(1 << 0)	/* Counter Enable */
-#define DEBE		(1 << 1)	/* Debounce Enable */
-#define CDGINV		(1 << 4)	/* CDG Pin Polarity Invert */
-#define CUDINV		(1 << 5)	/* CUD Pin Polarity Invert */
-#define CZMINV		(1 << 6)	/* CZM Pin Polarity Invert */
+#define CNTE		(1 << 0)					/* Counter Enable */
+#define DEBE		(1 << 1)					/* Debounce Enable */
+#define CDGINV		(1 << 4)					/* CDG Pin Polarity Invert */
+#define CUDINV		(1 << 5)					/* CUD Pin Polarity Invert */
+#define CZMINV		(1 << 6)					/* CZM Pin Polarity Invert */
 #define CNTMODE_SHIFT	8
-#define CNTMODE		(0x7 << CNTMODE_SHIFT)	/* Counter Operating Mode */
-#define ZMZC		(1 << 1)	/* CZM Zeroes Counter Enable */
+#define CNTMODE		(0x7 << CNTMODE_SHIFT)		/* Counter Operating Mode */
+#define ZMZC		(1 << 11)					/* CZM Zeroes Counter Enable */
 #define BNDMODE_SHIFT	12
-#define BNDMODE		(0x3 << BNDMODE_SHIFT)	/* Boundary register Mode */
-#define INPDIS		(1 << 15)	/* CUG and CDG Input Disable */
+#define BNDMODE		(0x3 << BNDMODE_SHIFT)		/* Boundary register Mode */
+#define INPDIS		(1 << 15)					/* CUG and CDG Input Disable */
 
 #define CNTMODE_QUADENC	(0 << CNTMODE_SHIFT)	/* quadrature encoder mode */
 #define CNTMODE_BINENC	(1 << CNTMODE_SHIFT)	/* binary encoder mode */
@@ -63,7 +53,7 @@ struct bfin_rotary_platform_data {
 #define CNTMODE_DIRTMR	(5 << CNTMODE_SHIFT)	/* direction timer mode */
 
 #define BNDMODE_COMP	(0 << BNDMODE_SHIFT)	/* boundary compare mode */
-#define BNDMODE_ZERO	(1 << BNDMODE_SHIFT)	/* boundary compare and zero mode */
+#define BNDMODE_ZERO	(1 << BNDMODE_SHIFT)	/* boundary zero mode */
 #define BNDMODE_CAPT	(2 << BNDMODE_SHIFT)	/* boundary capture mode */
 #define BNDMODE_AEXT	(3 << BNDMODE_SHIFT)	/* boundary auto-extend mode */
 
@@ -94,7 +84,7 @@ struct bfin_rotary_platform_data {
 #define CZMZII		(1 << 10)	/* CZM Zeroes Counter Interrupt Identifier */
 
 /* CNT_COMMAND bitmasks */
-#define W1LCNT		0xf		/* Load Counter Register */
+#define W1LCNT		0xf			/* Load Counter Register */
 #define W1LMIN		0xf0		/* Load Min Register */
 #define W1LMAX		0xf00		/* Load Max Register */
 #define W1ZMONCE	(1 << 12)	/* Enable CZM Clear Counter Once */
@@ -112,6 +102,6 @@ struct bfin_rotary_platform_data {
 #define W1LMAX_MIN	(1 << 10)	/* write 1 to load CNT_MAX from CNT_MIN */
 
 /* CNT_DEBOUNCE bitmasks */
-#define DPRESCALE	0xf		/* Load Counter Register */
+#define DPRESCALE	0xf			/* Load Counter Register */
 
 #endif
