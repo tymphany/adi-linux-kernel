@@ -300,3 +300,7 @@
 	pinctrl-0 = <&lp1_default>;
 	status = "okay";
 };
+
+&sram_mmap {
+	status = "okay";
+};

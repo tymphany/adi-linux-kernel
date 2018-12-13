@@ -77,14 +77,6 @@ config ARCH_HEADER_IN_MACH
 	  Define the architecture specific head file path for
 	  ADI genenric peripheral drivers.
 
-config ARCH_SRAM_ALLOC
-	bool "Allocation API for sc57x onchip SRAM"
-	depends on !ICC
-	select GENERIC_ALLOCATOR
-	default n
-	help
-	  Enable the allocation and free API for sc57x on chip SRAM.
-
 config MACH_SC57X_DT
 	bool "Support sc57x platforms from device tree"
 	default y

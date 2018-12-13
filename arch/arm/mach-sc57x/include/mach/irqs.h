@@ -16,7 +16,7 @@
 #define IRQ_TMU0_ALERT		    (IRQ_GIC_START + 8)	     /* TMU0 Fault Alert */
 #define IRQ_TAPC0_KEYFAIL	    (IRQ_GIC_START + 9)	     /* Test/User Key Fail Interrupt */
 #define IRQ_L2CTL0_ECC_ERR	    (IRQ_GIC_START + 10)	     /* L2 ECC Error */
-#define IRQ_L2CTL0_ECC_WARN	    (IRQ_GIC_START + 11)	     /* L2 ECC Waring */
+#define IRQ_L2CTL0_ECC_WARN	    (IRQ_GIC_START + 11)	     /* L2 ECC Warning */
 #define IRQ_L2CTL0_EVT          (IRQ_GIC_START + 12)		/* Scrub/Initialization Done */
 #define IRQ_MEC0_EEIRQ0         (IRQ_GIC_START + 13)		/* ECC Error Interrupt Request */
 #define IRQ_MEC1_EEIRQ0         (IRQ_GIC_START + 14)		/* ECC Error Interrupt Request */

@@ -72,11 +72,46 @@
 		cache-level = <2>;
 	};
 
+	sram0: sram-icc@20000000 { /* ICC SRAM 4KB */
+		compatible = "mmio-sram";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		reg = <0x20000000 0x1000>;
+		ranges = <0 0x20000000 0x1000>;
+	};
+
+	sram1: sram-reserved@20004000 {
+		compatible = "mmio-sram";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		reg = <0x20004000 0x3B000>;
+		ranges = <0 0x20004000 0x3B000>;
+	};
+
 	scb {
 		compatible = "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges;
+
+		sram-controller@20080000 {
+			compatible = "adi,sram-controller";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			adi,sram = <&sram0>,
+					<&sram1>;
+
+			sram-ecc-err@31080000 {
+				compatible = "adi,sram-ecc-err";
+				reg = <0x31080000 0x100>;
+			};
+		};
+
+		sram_mmap: sram-mmap@0 { /* mmap from sram1 pool*/
+			compatible = "adi,sram-mmap";
+			adi,sram = <&sram1>;
+			status = "disabled";
+		};
 
 		uart0: uart@0x31003000 {
 			compatible = "arm,adi-uart4";

@@ -1413,4 +1413,68 @@ include/dt-bindings/input/adi_gp_counter.h
 <File_License>GPL2</File_License>
 <Comment>ADI Created gp counter header file for sc5xx. Written entirely by ADI</Comment>
 </File176>
+<File177>
+drivers/misc/adi/sram_mmap.c
+<Date_Added>2018/11/5</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created Sram mmap misc driver for ADI processor on-chip memory. Written entirely by ADI</Comment>
+</File177>
+<File178>
+drivers/misc/adi/sram.c
+<Date_Added>2018/11/5</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created SRAM allocator for ADI processor on-chip memory. Written entirely by ADI</Comment>
+</File178>
+<File179>
+drivers/misc/adi/Kconfig
+<Date_Added>2018/11/5</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created to support ADI sram mmap misc driver. Written entirely by ADI</Comment>
+</File179>
+<File180>
+drivers/misc/adi/Makefile
+<Date_Added>2018/11/5</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created ADI sram mmap misc driver makefile. Written entirely by ADI</Comment>
+</File180>
+<File181>
+drivers/misc/Kconfig
+<Date_Added>2018/11/5</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI sram misc driver support to misc driver Kconfig.</Comment>
+</File181>
+<File182>
+drivers/misc/Makefile
+<Date_Added>2018/11/5</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI sram misc driver support to misc driver Makefile</Comment>
+</File182>
+<File183>
+arch/arm/mach-sc58x/include/mach/sram.h
+<Date_Added>2018/11/5</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created sram header file for sc58x. Written entirely by ADI</Comment>
+</File183>
+<File184>
+arch/arm/mach-sc57x/include/mach/sram.h
+<Date_Added>2018/11/5</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>ADI Created sram header file for sc57x. Written entirely by ADI</Comment>
+</File184>
 </Linux-kernel-v4.16.0>
