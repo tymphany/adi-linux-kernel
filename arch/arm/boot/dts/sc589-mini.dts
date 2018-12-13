@@ -155,3 +155,7 @@
 	supports-highspeed;
 	status = "okay";
 };
+
+&sram_mmap {
+	status = "okay";
+};
