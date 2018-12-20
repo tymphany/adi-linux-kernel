@@ -317,7 +317,49 @@ static struct adi_display_config adi_display_data = {
 		| EPPI_CTL_NON656 | EPPI_CTL_DIR),
 };
 #endif
+
+#if IS_ENABLED(CONFIG_VIDEO_ADV7511)
+#include <media/i2c/adv7511.h>
+
+static struct v4l2_output adv7511_outputs[] = {
+	{
+		.index = 0,
+		.name = "HDMI",
+		.type = V4L2_INPUT_TYPE_CAMERA,
+		.capabilities = V4L2_OUT_CAP_CUSTOM_TIMINGS,
+	},
+};
+
+static struct disp_route adv7511_routes[] = {
+	{
+		.output = ADV7511_PORT_HDMI_ID,
+	},
+};
+
+static struct adv7511_platform_data adv7511_data = {
+	.i2c_edid = 0x7e,
+	.i2c_cec = 0x78,
+	.i2c_pktmem = 0x70,
+	.cec_clk = 12000000,
+};
+
+static struct adi_display_config adi_display_data = {
+	.outputs = adv7511_outputs,
+	.num_outputs = ARRAY_SIZE(adv7511_outputs),
+	.routes = adv7511_routes,
+	.board_info = {
+		.type = "adv7511",
+		.addr = 0x39,
+		.platform_data = (void *)&adv7511_data,
+	},
+	.ppi_control = (EPPI_CTL_SPLTWRD | PACK_EN | DLEN_16
+			| EPPI_CTL_FS1LO_FS2LO | EPPI_CTL_POLC3
+			| EPPI_CTL_IFSGEN | EPPI_CTL_SYNC2
+			| EPPI_CTL_NON656 | EPPI_CTL_DIR),
+};
 #endif
+#endif
+
 #ifdef CONFIG_OF
 static const struct of_dev_auxdata sc58x_auxdata_lookup[] __initconst = {
 	OF_DEV_AUXDATA("adi,adi2-pinctrl", 0, "pinctrl-adi2.0", NULL),

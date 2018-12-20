@@ -283,7 +283,7 @@ static irqreturn_t adi_disp_isr(int irq, void *dev_id)
 
 	clear_dma_irqstat(ppi->info->dma_ch);
 
-	addr = vb2_dma_contig_plane_dma_addr(&disp->cur_frm->vb.vb2_buf, 0);
+	addr = vb2_dma_contig_plane_dma_addr(vb, 0);
 	ppi->ops->update_addr(ppi, (unsigned long)addr);
 	ppi->ops->start(ppi);
 
@@ -559,7 +559,7 @@ static int adi_disp_s_output(struct file *file, void *priv, unsigned int index)
 
 	route = &config->routes[index];
 	ret = v4l2_subdev_call(disp->sd, video, s_routing,
-				route->output, route->config, 0);
+				0, route->output, route->config);
 	if ((ret < 0) && (ret != -ENOIOCTLCMD)) {
 		v4l2_err(&disp->v4l2_dev, "Failed to set output\n");
 		return ret;
@@ -933,7 +933,7 @@ static int adi_disp_probe(struct platform_device *pdev)
 	 */
 	route = &config->routes[0];
 	ret = v4l2_subdev_call(disp->sd, video, s_routing,
-				route->output, route->output, 0);
+				0, route->output, route->config);
 	if ((ret < 0) && (ret != -ENOIOCTLCMD)) {
 		v4l2_err(&disp->v4l2_dev, "Unable to set output\n");
 		goto err_unreg_sd;
