@@ -2,12 +2,20 @@
 /*
  * Analog Devices ADV7511 HDMI Transmitter Device Driver
  *
- * Copyright 2013 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
- */
-
-/*
- * This file is named adv7511-v4l2.c so it doesn't conflict with the Analog
- * Device ADV7511 (config fragment CONFIG_DRM_I2C_ADV7511).
+ * Copyright (c) 2018 Analog Devices Inc.
+ *
+ * This program is free software; you may redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+ * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
 
 
@@ -122,6 +130,7 @@ struct adv7511_state {
 	unsigned edid_detect_counter;
 	struct workqueue_struct *work_queue;
 	struct delayed_work edid_handler; /* work entry */
+	u32 output; /* Output port type */
 };
 
 static void adv7511_check_monitor_present_status(struct v4l2_subdev *sd);
@@ -130,6 +139,18 @@ static void adv7511_setup(struct v4l2_subdev *sd);
 static int adv7511_s_i2s_clock_freq(struct v4l2_subdev *sd, u32 freq);
 static int adv7511_s_clock_freq(struct v4l2_subdev *sd, u32 freq);
 
+struct adv7511_video_standards {
+	struct v4l2_dv_timings timings;
+	const char *name;
+};
+
+static const struct adv7511_video_standards adv7511_dv_timings[] = {
+	{ V4L2_DV_BT_CEA_1280X720P50, "720p50" },
+	{ V4L2_DV_BT_CEA_1280X720P60, "720p60" },
+	{ V4L2_DV_BT_CEA_1920X1080P50, "1080p50" },
+	{ V4L2_DV_BT_CEA_1920X1080P60, "1080p60" },
+	{ },
+};
 
 static const struct v4l2_dv_timings_cap adv7511_timings_cap = {
 	.type = V4L2_DV_BT_656_1120,
@@ -415,29 +436,33 @@ static int adv7511_s_ctrl(struct v4l2_ctrl *ctrl)
 	struct v4l2_subdev *sd = to_sd(ctrl);
 	struct adv7511_state *state = get_adv7511_state(sd);
 
-	v4l2_dbg(1, debug, sd, "%s: ctrl id: %d, ctrl->val %d\n", __func__, ctrl->id, ctrl->val);
+	v4l2_dbg(1, debug, sd, "%s: ctrl id: 0x%x, ctrl->val %d\n",
+				__func__, ctrl->id, ctrl->val);
 
-	if (state->hdmi_mode_ctrl == ctrl) {
-		/* Set HDMI or DVI-D */
-		adv7511_wr_and_or(sd, 0xaf, 0xfd, ctrl->val == V4L2_DV_TX_MODE_HDMI ? 0x02 : 0x00);
-		return 0;
+	switch (ctrl->id) {
+		case V4L2_CID_DV_TX_MODE:
+			/* Set HDMI or DVI-D */
+			adv7511_wr_and_or(sd, 0xaf, 0xfd,
+							ctrl->val == V4L2_DV_TX_MODE_HDMI ? 0x02 : 0x00);
+			break;
+		case V4L2_CID_DV_TX_RGB_RANGE:
+			adv7511_set_rgb_quantization_mode(sd, ctrl);
+			break;
+		case V4L2_CID_DV_TX_IT_CONTENT_TYPE:
+			if (state->content_type != V4L2_DV_IT_CONTENT_TYPE_NO_ITC)
+			{
+				adv7511_wr_and_or(sd, 0x57, 0x7f, 1 << 7);
+				adv7511_wr_and_or(sd, 0x59, 0xcf, state->content_type << 4);
+			} else {
+				adv7511_wr_and_or(sd, 0x57, 0x7f, 0 << 7);
+				adv7511_wr_and_or(sd, 0x59, 0xcf, V4L2_DV_IT_CONTENT_TYPE_GRAPHICS << 4);
+			}
+			break;
+		default:
+			return -EINVAL;
 	}
-	if (state->rgb_quantization_range_ctrl == ctrl) {
-		adv7511_set_rgb_quantization_mode(sd, ctrl);
-		return 0;
-	}
-	if (state->content_type_ctrl == ctrl) {
-		u8 itc, cn;
 
-		state->content_type = ctrl->val;
-		itc = state->content_type != V4L2_DV_IT_CONTENT_TYPE_NO_ITC;
-		cn = itc ? state->content_type : V4L2_DV_IT_CONTENT_TYPE_GRAPHICS;
-		adv7511_wr_and_or(sd, 0x57, 0x7f, itc << 7);
-		adv7511_wr_and_or(sd, 0x59, 0xcf, cn << 4);
-		return 0;
-	}
-
-	return -EINVAL;
+	return 0;
 }
 
 static const struct v4l2_ctrl_ops adv7511_ctrl_ops = {
@@ -700,7 +725,7 @@ static int adv7511_s_power(struct v4l2_subdev *sd, int on)
 	}
 	if (i == retries) {
 		v4l2_dbg(1, debug, sd, "%s: failed to powerup the adv7511!\n", __func__);
-		adv7511_s_power(sd, 0);
+		adv7511_s_power(sd, false);
 		return false;
 	}
 	if (i > 1)
@@ -1023,10 +1048,50 @@ static int adv7511_s_stream(struct v4l2_subdev *sd, int enable)
 	if (enable) {
 		adv7511_check_monitor_present_status(sd);
 	} else {
-		adv7511_s_power(sd, 0);
+		adv7511_s_power(sd, false);
 		state->have_monitor = false;
 	}
 	return 0;
+}
+
+static int adv7511_find_dv_timings(const struct v4l2_dv_timings *t,
+			 const struct adv7511_video_standards *dt, unsigned clock)
+{
+	int i, ret;
+	for (i = 0; dt[i].timings.bt.width; i++) {
+		if (v4l2_match_dv_timings(t, &dt[i].timings, clock, false)){
+			t = &dt[i].timings;
+			ret = i;
+		}
+		return ret;
+	}
+	return -1;
+}
+
+static void adv7511_set_de_generation(struct v4l2_subdev *sd,
+			u16 reg_35, u16 reg_36, u16 reg_37,
+			u16 reg_38, u16 reg_39, u16 reg_3a)
+{
+	/* DE Generation */
+	adv7511_wr(sd, 0x35, reg_35);
+	adv7511_wr(sd, 0x36, reg_36);
+	adv7511_wr(sd, 0x37, reg_37);
+	adv7511_wr(sd, 0x38, reg_38);
+	adv7511_wr(sd, 0x39, reg_39);
+	adv7511_wr(sd, 0x3a, reg_3a);
+}
+
+static void adv7511_set_sync_adjustment(struct v4l2_subdev *sd,
+			u16 reg_d7, u16 reg_d8, u16 reg_d9,
+			u16 reg_da, u16 reg_db, u16 reg_17)
+{
+	/* Sync Adjustment */
+	adv7511_wr(sd, 0xd7, reg_d7);
+	adv7511_wr(sd, 0xd8, reg_d8);
+	adv7511_wr(sd, 0xd9, reg_d9);
+	adv7511_wr(sd, 0xda, reg_da);
+	adv7511_wr(sd, 0xdb, reg_db);
+	adv7511_wr_and_or(sd, 0x17, 0x9f, reg_17);
 }
 
 static int adv7511_s_dv_timings(struct v4l2_subdev *sd,
@@ -1035,6 +1100,7 @@ static int adv7511_s_dv_timings(struct v4l2_subdev *sd,
 	struct adv7511_state *state = get_adv7511_state(sd);
 	struct v4l2_bt_timings *bt = &timings->bt;
 	u32 fps;
+	u16 index;
 
 	v4l2_dbg(1, debug, sd, "%s:\n", __func__);
 
@@ -1044,10 +1110,34 @@ static int adv7511_s_dv_timings(struct v4l2_subdev *sd,
 
 	/* Fill the optional fields .standards and .flags in struct v4l2_dv_timings
 	   if the format is one of the CEA or DMT timings. */
-	v4l2_find_dv_timings_cap(timings, &adv7511_timings_cap, 0, NULL, NULL);
+	index = adv7511_find_dv_timings(timings, adv7511_dv_timings, 0);
+	if (index < 0)
+		v4l2_err(sd, "%s: no matched dv timings\n", __func__);
+
+	v4l2_dbg(1, debug, sd, "%s: %s\n",
+				__func__, adv7511_dv_timings[index].name);
 
 	/* save timings */
 	state->dv_timings = *timings;
+
+	switch(index) {
+	case 0:		/* 720p50 */
+		adv7511_set_de_generation(sd, 0x40, 0xd9, 0x0a, 0x0, 0x2d, 0x0);
+		adv7511_set_sync_adjustment(sd, 0x6e, 0x02, 0x80, 0x14, 0x05, 0x0);
+		break;
+	case 1:		/*  720p60 */
+		adv7511_set_de_generation(sd, 0x40, 0xd9, 0x0a, 0x0, 0x2d, 0x0);
+		adv7511_set_sync_adjustment(sd, 0x1b, 0x82, 0x80, 0x14, 0x05, 0x0);
+		break;
+	case 2:		/* 1080p50 */
+		adv7511_set_de_generation(sd, 0x2f, 0xe9, 0x0f, 0x0, 0x43, 0x80);
+		adv7511_set_sync_adjustment(sd, 0x84, 0x02, 0xc0, 0x10, 0x05, 0x0);
+		break;
+	case 3:		/* 1080p60 */
+		adv7511_set_de_generation(sd, 0x2f, 0xe9, 0x0f, 0x0, 0x43, 0x80);
+		adv7511_set_sync_adjustment(sd, 0x16, 0x02, 0xc0, 0x10, 0x05, 0x0);
+		break;
+	}
 
 	/* set h/vsync polarities */
 	adv7511_wr_and_or(sd, 0x17, 0x9f,
@@ -1091,22 +1181,24 @@ static int adv7511_g_dv_timings(struct v4l2_subdev *sd,
 	return 0;
 }
 
-static int adv7511_enum_dv_timings(struct v4l2_subdev *sd,
-				   struct v4l2_enum_dv_timings *timings)
+static int adv7511_video_s_routing(struct v4l2_subdev *sd,
+			u32 input, u32 output, u32 config)
 {
-	if (timings->pad != 0)
+	struct adv7511_state *state = get_adv7511_state(sd);
+
+	if (output == state->output)
+		return 0;
+
+	if (output > V4L2_DV_TX_MODE_HDMI) {
+		v4l2_dbg(1, debug, sd,
+					"Invalid output type or output type is not supported:%d\n",
+					output);
 		return -EINVAL;
+	}
 
-	return v4l2_enum_dv_timings_cap(timings, &adv7511_timings_cap, NULL, NULL);
-}
+	state->output = output;
+	v4l2_ctrl_s_ctrl(state->hdmi_mode_ctrl, output);
 
-static int adv7511_dv_timings_cap(struct v4l2_subdev *sd,
-				  struct v4l2_dv_timings_cap *cap)
-{
-	if (cap->pad != 0)
-		return -EINVAL;
-
-	*cap = adv7511_timings_cap;
 	return 0;
 }
 
@@ -1114,6 +1206,7 @@ static const struct v4l2_subdev_video_ops adv7511_video_ops = {
 	.s_stream = adv7511_s_stream,
 	.s_dv_timings = adv7511_s_dv_timings,
 	.g_dv_timings = adv7511_g_dv_timings,
+	.s_routing = adv7511_video_s_routing,
 };
 
 /* ------------------------------ AUDIO OPS ------------------------------ */
@@ -1175,7 +1268,8 @@ static int adv7511_s_i2s_clock_freq(struct v4l2_subdev *sd, u32 freq)
 	return 0;
 }
 
-static int adv7511_s_routing(struct v4l2_subdev *sd, u32 input, u32 output, u32 config)
+static int adv7511_audio_s_routing(struct v4l2_subdev *sd,
+			u32 input, u32 output, u32 config)
 {
 	/* Only 2 channels in use for application */
 	adv7511_wr_and_or(sd, 0x73, 0xf8, 0x1);
@@ -1192,7 +1286,7 @@ static const struct v4l2_subdev_audio_ops adv7511_audio_ops = {
 	.s_stream = adv7511_s_audio_stream,
 	.s_clock_freq = adv7511_s_clock_freq,
 	.s_i2s_clock_freq = adv7511_s_i2s_clock_freq,
-	.s_routing = adv7511_s_routing,
+	.s_routing = adv7511_audio_s_routing,
 };
 
 /* ---------------------------- PAD OPS ------------------------------------- */
@@ -1339,7 +1433,7 @@ static int adv7511_set_fmt(struct v4l2_subdev *sd,
 	switch (format->format.code) {
 	case MEDIA_BUS_FMT_UYVY8_1X16:
 		adv7511_wr_and_or(sd, 0x15, 0xf0, 0x01);
-		adv7511_wr_and_or(sd, 0x16, 0x03, 0xb8);
+		adv7511_wr_and_or(sd, 0x16, 0x03, 0xfc);
 		y = HDMI_COLORSPACE_YUV422;
 		break;
 	case MEDIA_BUS_FMT_YUYV8_1X16:
@@ -1422,13 +1516,35 @@ static int adv7511_set_fmt(struct v4l2_subdev *sd,
 	}
 
 	adv7511_wr_and_or(sd, 0x4a, 0xbf, 0);
+	/* Set Output format */
 	adv7511_wr_and_or(sd, 0x55, 0x9f, y << 5);
+
+	/*  Set Colorimetry */
 	adv7511_wr_and_or(sd, 0x56, 0x3f, c << 6);
 	adv7511_wr_and_or(sd, 0x57, 0x83, (ec << 4) | (q << 2) | (itc << 7));
 	adv7511_wr_and_or(sd, 0x59, 0x0f, (yq << 6) | (cn << 4));
 	adv7511_wr_and_or(sd, 0x4a, 0xff, 1);
 	adv7511_set_rgb_quantization_mode(sd, state->rgb_quantization_range_ctrl);
 
+	return 0;
+}
+
+static int adv7511_enum_dv_timings(struct v4l2_subdev *sd,
+				   struct v4l2_enum_dv_timings *timings)
+{
+	if (timings->pad != 0)
+		return -EINVAL;
+
+	return v4l2_enum_dv_timings_cap(timings, &adv7511_timings_cap, NULL, NULL);
+}
+
+static int adv7511_dv_timings_cap(struct v4l2_subdev *sd,
+				  struct v4l2_dv_timings_cap *cap)
+{
+	if (cap->pad != 0)
+		return -EINVAL;
+
+	*cap = adv7511_timings_cap;
 	return 0;
 }
 
@@ -1524,7 +1640,7 @@ static void adv7511_audio_setup(struct v4l2_subdev *sd)
 
 	adv7511_s_i2s_clock_freq(sd, 48000);
 	adv7511_s_clock_freq(sd, 48000);
-	adv7511_s_routing(sd, 0, 0, 0);
+	adv7511_audio_s_routing(sd, 0, 0, 0);
 }
 
 /* Configure hdmi transmitter. */
@@ -1533,28 +1649,25 @@ static void adv7511_setup(struct v4l2_subdev *sd)
 	struct adv7511_state *state = get_adv7511_state(sd);
 	v4l2_dbg(1, debug, sd, "%s\n", __func__);
 
-	/* Input format: RGB 4:4:4 */
-	adv7511_wr_and_or(sd, 0x15, 0xf0, 0x0);
-	/* Output format: RGB 4:4:4 */
-	adv7511_wr_and_or(sd, 0x16, 0x7f, 0x0);
 	/* 1st order interpolation 4:2:2 -> 4:4:4 up conversion, Aspect ratio: 16:9 */
-	adv7511_wr_and_or(sd, 0x17, 0xf9, 0x06);
+	/* Using Internal DE Generator */
+	adv7511_wr_and_or(sd, 0x17, 0xf8, 0x07);
 	/* Disable pixel repetition */
 	adv7511_wr_and_or(sd, 0x3b, 0x9f, 0x0);
 	/* Disable CSC */
 	adv7511_wr_and_or(sd, 0x18, 0x7f, 0x0);
-	/* Output format: RGB 4:4:4, Active Format Information is valid,
-	 * underscanned */
-	adv7511_wr_and_or(sd, 0x55, 0x9c, 0x12);
+	/* Active Format Information is valid, underscanned */
+	adv7511_wr_and_or(sd, 0x55, 0xec, 0x12);
 	/* AVI Info frame packet enable, Audio Info frame disable */
 	adv7511_wr_and_or(sd, 0x44, 0xe7, 0x10);
-	/* Colorimetry, Active format aspect ratio: same as picure. */
-	adv7511_wr(sd, 0x56, 0xa8);
+	/* Active format aspect ratio: same as picure. */
+	adv7511_wr_and_or(sd, 0x56, 0xc0, 0x28);
 	/* No encryption */
-	adv7511_wr_and_or(sd, 0xaf, 0xed, 0x0);
-
+	adv7511_wr_and_or(sd, 0xaf, 0xef, 0x0);
 	/* Positive clk edge capture for input video clock */
 	adv7511_wr_and_or(sd, 0xba, 0x1f, 0x60);
+	/* Left justified for YCbCr 4:2:2 modes */
+	adv7511_wr(sd, 0x48, 0x10);
 
 	adv7511_audio_setup(sd);
 
@@ -1817,6 +1930,7 @@ static int adv7511_probe(struct i2c_client *client, const struct i2c_device_id *
 	memcpy(&state->pdata, pdata, sizeof(state->pdata));
 	state->fmt_code = MEDIA_BUS_FMT_RGB888_1X24;
 	state->colorspace = V4L2_COLORSPACE_SRGB;
+	state->output = V4L2_DV_TX_MODE_DVI_D;
 
 	sd = &state->sd;
 
@@ -1880,6 +1994,7 @@ static int adv7511_probe(struct i2c_client *client, const struct i2c_device_id *
 		goto err_entity;
 	}
 
+#if IS_ENABLED(CONFIG_VIDEO_ADV7511_CEC)
 	adv7511_wr(sd, 0xe1, state->i2c_cec_addr);
 	if (state->pdata.cec_clk < 3000000 ||
 	    state->pdata.cec_clk > 100000000) {
@@ -1907,6 +2022,7 @@ static int adv7511_probe(struct i2c_client *client, const struct i2c_device_id *
 		err = PTR_ERR(state->i2c_pktmem);
 		goto err_unreg_cec;
 	}
+#endif
 
 	state->work_queue = create_singlethread_workqueue(sd->name);
 	if (state->work_queue == NULL) {
@@ -1930,6 +2046,7 @@ static int adv7511_probe(struct i2c_client *client, const struct i2c_device_id *
 	}
 #endif
 
+	adv7511_s_audio_stream(sd, true);
 	adv7511_set_isr(sd, true);
 	adv7511_check_monitor_present_status(sd);
 
@@ -1939,10 +2056,12 @@ static int adv7511_probe(struct i2c_client *client, const struct i2c_device_id *
 
 err_unreg_pktmem:
 	i2c_unregister_device(state->i2c_pktmem);
+#if IS_ENABLED(CONFIG_VIDEO_ADV7511_CEC)
 err_unreg_cec:
 	i2c_unregister_device(state->i2c_cec);
 err_unreg_edid:
 	i2c_unregister_device(state->i2c_edid);
+#endif
 err_entity:
 	media_entity_cleanup(&sd->entity);
 err_hdl:

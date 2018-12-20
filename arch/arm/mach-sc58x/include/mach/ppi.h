@@ -66,6 +66,7 @@ struct adi_eppi3_regs {
 	u32 fs2_wlvb;
 	u32 fs2_palpf;
 	u32 imsk;
+	u32 padding;
 	u32 oddclip;
 	u32 evenclip;
 	u32 fs1_dly;
