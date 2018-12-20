@@ -306,7 +306,6 @@
 	status = "okay";
 };
 
-
 &video_encoder {
 	pinctrl-names = "8bit", "16bit", "24bit";
 	pinctrl-0 = <&ppi0_8b>;

@@ -12,6 +12,8 @@
 #define ADV7511_MONITOR_DETECT 0
 #define ADV7511_EDID_DETECT 1
 
+#define ADV7511_PORT_HDMI_ID	V4L2_DV_TX_MODE_HDMI
+#define ADV7511_PORT_DVI_D_ID	V4L2_DV_TX_MODE_DVI_D
 
 struct adv7511_monitor_detect {
 	int present;
