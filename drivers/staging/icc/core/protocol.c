@@ -62,27 +62,6 @@ static void wakeup_icc_thread(struct sm_icc_desc *icc_info)
 	wake_up(&adi_icc->icc_rx_wait);
 }
 
-static struct sm_message_queue *icc_get_inqueue(struct sm_msg *msg)
-{
-	struct sm_icc_desc *icc_info = adi_icc->icc_info;
-	struct sm_message_queue *queue;
-	int i;
-	if (!msg)
-		return NULL;
-	for (i = 0; i < adi_icc->peer_count; i++, icc_info++) {
-		queue = icc_info->icc_high_queue;
-		if ((uint32_t)msg > (uint32_t)(queue + 4)) {
-			sm_debug("wrong msg addr %p\n", msg);
-			return NULL;
-		}
-		while ((uint32_t)msg > (uint32_t)queue)
-			queue++;
-		return queue - 1;
-	}
-
-	return NULL;
-}
-
 static struct sm_icc_desc *get_icc_peer(struct sm_msg *msg)
 {
 	struct sm_icc_desc *icc_info = adi_icc->icc_info;
@@ -92,12 +71,30 @@ static struct sm_icc_desc *get_icc_peer(struct sm_msg *msg)
 	for (i = 0; i < adi_icc->peer_count; i++) {
 		if (((uint32_t)icc_info[i].icc_high_queue < msg_addr) &&
 		(msg_addr < (uint32_t)icc_info[i].icc_high_queue + MSGQ_SIZE))
-			break;
+			return &icc_info[i];
 	}
 
-	if (i == adi_icc->peer_count)
-		return NULL;
-	return &icc_info[i];
+	return NULL;
+}
+
+static struct sm_message_queue *icc_get_inqueue(struct sm_msg *msg)
+{
+	struct sm_icc_desc *icc_info;
+	struct sm_message_queue *queue;
+
+	if (!msg)
+	  return NULL;
+
+	icc_info = get_icc_peer(msg);
+	BUG_ON(!icc_info);
+
+	queue = icc_info->icc_high_queue;
+
+	while ((uint32_t)msg > (uint32_t)queue) {
+		queue++;
+	}
+
+	return queue - 1;
 }
 
 static struct sm_message *get_message_from_tx_list_by_payload(
@@ -168,7 +165,8 @@ static int fill_user_buffer_from_message(struct sm_session *session,
 	return 0;
 }
 
-static int sm_get_icc_queue_attribute(uint32_t cpu, uint32_t type, uint32_t *attribute)
+static __maybe_unused int sm_get_icc_queue_attribute(uint32_t cpu,
+			uint32_t type, uint32_t *attribute)
 {
 	if (cpu > adi_icc->peer_count)
 		return -EINVAL;
@@ -180,7 +178,8 @@ static int sm_get_icc_queue_attribute(uint32_t cpu, uint32_t type, uint32_t *att
 	return 0;
 }
 
-static int sm_set_icc_queue_attribute(uint32_t cpu, uint32_t type, uint32_t attribute)
+static  __maybe_unused int sm_set_icc_queue_attribute(uint32_t cpu,
+			uint32_t type, uint32_t attribute)
 {
 	if (cpu > adi_icc->peer_count)
 		return -EINVAL;
@@ -390,7 +389,7 @@ static struct sm_session *sm_index_to_session(uint32_t session_idx)
 	return session;
 }
 
-static uint32_t sm_session_to_index(struct sm_session *session)
+static __maybe_unused uint32_t sm_session_to_index(struct sm_session *session)
 {
 	struct sm_session_table *table = adi_icc->sessions_table;
 	if ((session >= &table->sessions[0])
@@ -1144,8 +1143,8 @@ static int sm_connect_session(uint32_t session_idx, uint32_t dst_ep,
 	return 0;
 }
 
-static int sm_disconnect_session(uint32_t dst_ep, uint32_t src_ep,
-					struct sm_session_table *table)
+static __maybe_unused int sm_disconnect_session(uint32_t dst_ep,
+			uint32_t src_ep, struct sm_session_table *table)
 {
 	uint32_t slot = sm_find_session(src_ep, 0, table);
 	if (slot < 0)
@@ -1260,9 +1259,21 @@ static int sm_destroy_session(uint32_t session_idx)
 static int
 icc_open(struct inode *inode, struct file *file)
 {
-	int ret = 0;
-	struct sm_session_table *table = adi_icc->sessions_table;
+	int i = 0, ret = 0;
+	struct miscdevice *miscdev = file->private_data;
+    struct adi_icc *icc = container_of(miscdev, struct adi_icc, mdev);
+	struct sm_session_table *table = icc->sessions_table;
+
+	/* Initialize the icc message queue and the queue attribute */
+	for (i = 0; i < icc->peer_count; i++) {
+		memset(icc->icc_info[i].icc_high_queue, 0, MSGQ_SIZE);
+		memset(icc->icc_info[i].icc_queue_attribute, 0,
+					sizeof(struct sm_message_queue));
+	}
+
 	table->refcnt++;
+	file->private_data = icc;
+
 	return ret;
 }
 
@@ -1343,6 +1354,7 @@ int icc_handle_scalar_cmd(struct sm_msg *msg)
 	scalar1 = msg->length;
 
 	icc_info = get_icc_peer(msg);
+	BUG_ON(!icc_info);
 	src_cpu = icc_info->peer_cpu;
 
 	if (SM_SCALAR_CMD(scalar0) != SM_SCALAR_CMD_HEAD)
@@ -1968,6 +1980,7 @@ int __handle_general_msg(struct sm_msg *msg)
 		break;
 	case SM_QUERY_MSG:
 		icc_info = get_icc_peer(msg);
+		BUG_ON(!icc_info);
 		index = sm_find_session(msg->dst_ep, 0, adi_icc->sessions_table);
 		session = sm_index_to_session(index);
 		if (session) {
@@ -2274,12 +2287,15 @@ static int adi_icc_probe(struct platform_device *pdev)
 				i++, icc_info++) {
 		/* icc_queue[0] is rx queue, icc_queue[1] is tx queue. */
 		icc_info->icc_high_queue = (struct sm_message_queue *)
-						(icc->base + i * MSGQ_SIZE);
-		icc_info->icc_queue = (struct sm_message_queue *)icc_info->icc_high_queue + 2;
+						(icc->base + i * 2 * MSGQ_SIZE);
+		icc_info->icc_queue = (struct sm_message_queue *)
+						icc_info->icc_high_queue + 2;
 		memset(icc_info->icc_high_queue, 0, MSGQ_SIZE);
+
 		icc_info->icc_queue_attribute = (uint32_t *)((uint32_t)
-			icc_info->icc_high_queue + MSGQ_SIZE);
-		memset(icc_info->icc_queue_attribute, 0, 4 * ICC_QUEUE_ATTR_MAX);
+			icc->base + 3 * MSGQ_SIZE + i * 2 * sizeof(struct sm_message_queue));
+		memset(icc_info->icc_queue_attribute, 0, sizeof(struct sm_message_queue));
+
 		init_waitqueue_head(&icc_info->iccq_tx_wait);
 		icc_info->iccq_thread = kthread_run(message_queue_thread,
 					icc_info, "iccqd");
@@ -2299,7 +2315,7 @@ static int adi_icc_probe(struct platform_device *pdev)
 
 	icc->icc_dump = proc_create("icc_dump", 644, NULL, &icc_proc_fops);
 
-	dev_set_drvdata(&pdev->dev, icc);
+	platform_set_drvdata(pdev, icc);
 	adi_icc = icc;
 
 /*
@@ -2319,7 +2335,6 @@ static int adi_icc_remove(struct platform_device *pdev)
 	int i;
 
 	adi_icc = NULL;
-	dev_set_drvdata(&pdev->dev, NULL);
 
 	if (icc) {
 		misc_deregister(&icc->mdev);
@@ -2341,7 +2356,7 @@ static const struct of_device_id adi_icc_dt_ids[] = {
 	{},
 };
 
-MODULE_DEVICE_TABLE(of, adi_wdt_dt_ids);
+MODULE_DEVICE_TABLE(of, adi_icc_dt_ids);
 #endif
 
 static struct platform_driver adi_icc_driver = {
