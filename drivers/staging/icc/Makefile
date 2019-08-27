@@ -1,7 +1,7 @@
-obj-$(CONFIG_ICC) += icc.o
+obj-$(CONFIG_ICC) := icc.o
+PWD := core/
 
-core := core/protocol.o
-
-icc-objs := $(core)
+icc-$(CONFIG_CORE_CONTROL) := $(PWD)core_control.o
+icc-$(CONFIG_ICC_PROTOCOL) += $(PWD)protocol.o
 
 ccflags-y += -Idrivers/staging/icc/include
