@@ -270,6 +270,14 @@
 			status = "disabled";
 		};
 
+		core_ctrl0: core_ctrl@0 {
+			compatible = "adi,core_ctrl";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			reg = <0x3108C000 0x80>; /* RCU0 control reg base */
+			adi,icc_mem = <&icc0>;
+		};
+
 		spi0: spi@0x3102E000 {
 			#address-cells = <1>;
 			#size-cells = <0>;

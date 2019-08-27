@@ -347,6 +347,14 @@
 			status = "disabled";
 		};
 
+		core_ctrl0: core_ctrl@0 {
+			compatible = "adi,core_ctrl";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			reg = <0x3108B000 0x80>; /* RCU0 control reg base */
+			adi,icc_mem = <&icc0>;
+		};
+
 		crc0: crc@0x31001200 {
 			compatible = "adi,hmac-crc";
 			reg = <0x31001200 0xFF>;

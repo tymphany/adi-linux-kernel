@@ -6,6 +6,7 @@
 #include <linux/gpio.h>
 #include <mach/hardware.h>
 #include <mach/sc58x.h>
+#include <mach/icc.h>
 #include <asm/io.h>
 
 void platform_send_ipi_cpu(unsigned int cpu, int irq)
