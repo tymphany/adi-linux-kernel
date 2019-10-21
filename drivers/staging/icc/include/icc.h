@@ -280,10 +280,6 @@ struct icc_peri_resource {
 	uint16_t resource_id;
 };
 
-void platform_send_ipi(cpumask_t callmap, int irq);
-void platform_send_ipi_cpu(unsigned int cpu, int irq);
-void platform_clear_ipi(unsigned int cpu, int irq);
-int platform_res_manage_request_irq(uint16_t subid, unsigned int cpu);
 extern struct icc_peri_resource icc_peri_array[];
 #endif
 
