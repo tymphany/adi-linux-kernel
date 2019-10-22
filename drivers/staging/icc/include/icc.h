@@ -283,18 +283,12 @@ struct icc_peri_resource {
 extern struct icc_peri_resource icc_peri_array[];
 #endif
 
-#if defined(__ADSPBLACKFIN__)
-#define CMD_COREB_START             _IO('b', 0)
-#define CMD_COREB_STOP              _IO('b', 1)
-#define CMD_COREB_RESET             _IO('b', 2)
-#elif defined(__ADSPSC5xx__)
 #define CCTRL_CORE1                 1
 #define CCTRL_CORE2                 2
 #define CMD_CORE_START              _IO('b', 0)
 #define CMD_CORE_STOP               _IO('b', 1)
 #define CMD_SET_SVECT1              _IO('m', 17)
 #define CMD_SET_SVECT2              _IO('m', 18)
-#endif
 #define CMD_SM_SEND                 _IO('m', 3)
 #define CMD_SM_CREATE               _IO('m', 4)
 #define CMD_SM_CONNECT              _IO('m', 5)
