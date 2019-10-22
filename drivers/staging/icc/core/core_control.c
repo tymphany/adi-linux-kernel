@@ -23,10 +23,8 @@
 #include <asm/io.h>
 #include <icc.h>
 
-#if defined(__ADSPSC5xx__)
 #define VALID_CORE_MIN			1
 #define VALID_CORE_MAX			2
-#endif
 
 struct core_control {
 	struct miscdevice mdev;
