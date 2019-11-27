@@ -48,6 +48,20 @@ static int sc5xx_adau1962_hw_params(struct snd_pcm_substream *substream,
 		slots = 16;
 		rx_mask = 0x1;
 		break;
+	case 4: /* TDM mode */
+		fmt =	SND_SOC_DAIFMT_DSP_A |
+			SND_SOC_DAIFMT_IB_NF |
+			SND_SOC_DAIFMT_CBM_CFM;
+		slots = 4;
+		rx_mask = 0xf;
+		break;
+	case 8: /* TDM mode */
+		fmt =	SND_SOC_DAIFMT_DSP_A |
+			SND_SOC_DAIFMT_IB_NF |
+			SND_SOC_DAIFMT_CBM_CFM;
+		slots = 8;
+		rx_mask = 0xff;
+		break;
 	default:
 		return -EINVAL;
 	}
@@ -87,7 +101,10 @@ static int sc5xx_adau1979_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	unsigned int fmt;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	int ret, slots = 0;
+	unsigned int slot_width = 0;
+	unsigned int fmt, rx_mask = 0;
 
 	switch (params_channels(params)) {
 	case 2: /* Stereo I2S mode */
@@ -99,11 +116,41 @@ static int sc5xx_adau1979_hw_params(struct snd_pcm_substream *substream,
 		fmt =	SND_SOC_DAIFMT_DSP_A |
 			SND_SOC_DAIFMT_IB_NF |
 			SND_SOC_DAIFMT_CBM_CFM;
+		slots = 16;
+		rx_mask = 0x1;
+		break;
+	case 4: /* TDM mode */
+		fmt =	SND_SOC_DAIFMT_DSP_A |
+			SND_SOC_DAIFMT_IB_NF |
+			SND_SOC_DAIFMT_CBM_CFM;
+		slots = 4;
+		rx_mask = 0xf;
 		break;
 	default:
 		return -EINVAL;
 	}
-	return snd_soc_runtime_set_dai_fmt(rtd, fmt);
+
+	switch (params_width(params)) {
+	case 16:
+		slot_width = 16;
+		break;
+	case 24:
+		slot_width = 24;
+		break;
+	case 32:
+		slot_width = 32;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	ret = snd_soc_runtime_set_dai_fmt(rtd, fmt);
+	if (ret)
+		return ret;
+
+	ret = snd_soc_dai_set_tdm_slot(codec_dai, 0, rx_mask,
+					slots, slot_width);
+	return ret;
 }
 
 static const struct snd_soc_ops adau1979_ops = {

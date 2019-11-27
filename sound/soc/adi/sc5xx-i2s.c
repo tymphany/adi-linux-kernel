@@ -43,7 +43,9 @@ static int sc5xx_dai_set_dai_fmt(struct snd_soc_dai *cpu_dai,
 		break;
 	case SND_SOC_DAIFMT_DSP_A:
 		param.spctl |= SPORT_CTL_FSR;
-		param.spmctl |= SPORT_MCTL_MCE;
+		param.spmctl |= SPORT_MCTL_MCE | SPORT_MCTL_MCPDE
+			| (0x10 & SPORT_MCTL_MFD);
+		param.spcs0 = 0xff;
 		break;
 	case SND_SOC_DAIFMT_LEFT_J:
 		param.spctl |= SPORT_CTL_OPMODE | SPORT_CTL_LFS
@@ -100,6 +102,12 @@ static int sc5xx_dai_hw_params(struct snd_pcm_substream *substream,
 		sport->wdsize = 4;
 		break;
 	}
+
+	/* set window size in SPORT_MCTL register */
+	param.spmctl &= ~SPORT_MCTL_WSIZE;
+	if (param.spmctl && SPORT_MCTL_MCE)
+		param.spmctl |= (((params_channels(params) - 1) << 8)
+					& SPORT_MCTL_WSIZE);
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		ret = sport_set_tx_params(sport, &param);
@@ -173,13 +181,13 @@ static struct snd_soc_dai_driver sc5xx_i2s_dai = {
 	.resume = sc5xx_dai_resume,
 	.playback = {
 		.channels_min = 1,
-		.channels_max = 2,
+		.channels_max = 8,
 		.rates = SC5XX_DAI_RATES,
 		.formats = SC5XX_DAI_FORMATS,
 	},
 	.capture = {
 		.channels_min = 1,
-		.channels_max = 2,
+		.channels_max = 4,
 		.rates = SC5XX_DAI_RATES,
 		.formats = SC5XX_DAI_FORMATS,
 	},
