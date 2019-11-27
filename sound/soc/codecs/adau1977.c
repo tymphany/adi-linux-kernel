@@ -507,6 +507,20 @@ static int adau1977_set_tdm_slot(struct snd_soc_dai *dai, unsigned int tx_mask,
 		/* 0 = No fixed slot width */
 		adau1977->slot_width = 0;
 		adau1977->max_master_fs = 192000;
+
+		/*  Reset TDM registers to default value for I2S mode */
+		ret = regmap_write(adau1977->regmap, ADAU1977_REG_CMAP12, 0x10);
+		if (ret)
+			return ret;
+
+		ret = regmap_write(adau1977->regmap, ADAU1977_REG_CMAP34, 0x32);
+		if (ret)
+			return ret;
+
+		ret = regmap_write(adau1977->regmap, ADAU1977_REG_SAI_OVERTEMP, 0xf0);
+		if (ret)
+			return ret;
+
 		return regmap_update_bits(adau1977->regmap,
 			ADAU1977_REG_SAI_CTRL0, ADAU1977_SAI_CTRL0_SAI_MASK,
 			ADAU1977_SAI_CTRL0_SAI_I2S);
@@ -719,10 +733,6 @@ static int adau1977_startup(struct snd_pcm_substream *substream,
 	if (adau1977->master)
 		snd_pcm_hw_constraint_minmax(substream->runtime,
 			SNDRV_PCM_HW_PARAM_RATE, 8000, adau1977->max_master_fs);
-
-	if (formats != 0)
-		snd_pcm_hw_constraint_mask64(substream->runtime,
-			SNDRV_PCM_HW_PARAM_FORMAT, formats);
 
 	return 0;
 }

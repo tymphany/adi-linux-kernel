@@ -452,7 +452,7 @@ static int adau1962_set_tdm_slot(struct snd_soc_dai *dai, unsigned int tx_mask,
 	unsigned int rx_mask, int slots, int width)
 {
 	struct adau1962 *adau1962 = snd_soc_codec_get_drvdata(dai->codec);
-	unsigned int ctrl0, ctrl1;
+	unsigned int ctrl0, ctrl1, ctrl2;
 	int ret;
 
 	if (slots == 0) {
@@ -492,10 +492,12 @@ static int adau1962_set_tdm_slot(struct snd_soc_dai *dai, unsigned int tx_mask,
 	switch (width) {
 	case 16:
 		ctrl1 = ADAU1962_DAC_CTRL1_BCLKRATE_16;
+		ctrl2 = ADAU1962_DAC_CTRL2_SLOT_WIDTH_16;
 		break;
 	case 24:
 	case 32:
 		ctrl1 = ADAU1962_DAC_CTRL1_BCLKRATE_32;
+		ctrl2 = ADAU1962_DAC_CTRL2_SLOT_WIDTH_32;
 		break;
 	default:
 		return -EINVAL;
@@ -505,6 +507,13 @@ static int adau1962_set_tdm_slot(struct snd_soc_dai *dai, unsigned int tx_mask,
 		ADAU1962_REG_DAC_CTRL1,
 		ADAU1962_DAC_CTRL1_BCLKRATE_MASK,
 		ctrl1);
+	if (ret < 0)
+		return ret;
+
+	ret = regmap_update_bits(adau1962->regmap,
+		ADAU1962_REG_DAC_CTRL2,
+		ADAU1962_DAC_CTRL2_SLOT_WIDTH_MASK,
+		ctrl2);
 	if (ret < 0)
 		return ret;
 
