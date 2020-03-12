@@ -200,7 +200,7 @@ int blkdev_report_zones(struct block_device *bdev,
 		/* Get header in the first page */
 		ofst = 0;
 		if (!nr_rep) {
-			hdr = (struct blk_zone_report_hdr *) addr;
+			hdr = addr;
 			nr_rep = hdr->nr_zones;
 			ofst = sizeof(struct blk_zone_report_hdr);
 		}
@@ -296,7 +296,7 @@ int blkdev_reset_zones(struct block_device *bdev,
 }
 EXPORT_SYMBOL_GPL(blkdev_reset_zones);
 
-/**
+/*
  * BLKREPORTZONE ioctl processing.
  * Called from blkdev_ioctl.
  */
@@ -328,7 +328,11 @@ int blkdev_report_zones_ioctl(struct block_device *bdev, fmode_t mode,
 	if (!rep.nr_zones)
 		return -EINVAL;
 
-	zones = kcalloc(rep.nr_zones, sizeof(struct blk_zone), GFP_KERNEL);
+	if (rep.nr_zones > INT_MAX / sizeof(struct blk_zone))
+		return -ERANGE;
+
+	zones = kvmalloc_array(rep.nr_zones, sizeof(struct blk_zone),
+			       GFP_KERNEL | __GFP_ZERO);
 	if (!zones)
 		return -ENOMEM;
 
@@ -350,12 +354,12 @@ int blkdev_report_zones_ioctl(struct block_device *bdev, fmode_t mode,
 	}
 
  out:
-	kfree(zones);
+	kvfree(zones);
 
 	return ret;
 }
 
-/**
+/*
  * BLKRESETZONE ioctl processing.
  * Called from blkdev_ioctl.
  */

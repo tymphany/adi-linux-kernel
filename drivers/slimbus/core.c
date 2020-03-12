@@ -114,6 +114,8 @@ static int slim_add_device(struct slim_controller *ctrl,
 	sbdev->dev.release = slim_dev_release;
 	sbdev->dev.driver = NULL;
 	sbdev->ctrl = ctrl;
+	INIT_LIST_HEAD(&sbdev->stream_list);
+	spin_lock_init(&sbdev->stream_list_lock);
 
 	if (node)
 		sbdev->dev.of_node = of_node_get(node);
@@ -141,7 +143,7 @@ static struct slim_device *slim_alloc_device(struct slim_controller *ctrl,
 	sbdev->e_addr = *eaddr;
 	ret = slim_add_device(ctrl, sbdev, node);
 	if (ret) {
-		kfree(sbdev);
+		put_device(&sbdev->dev);
 		return NULL;
 	}
 
@@ -355,6 +357,45 @@ struct slim_device *slim_get_device(struct slim_controller *ctrl,
 	return sbdev;
 }
 EXPORT_SYMBOL_GPL(slim_get_device);
+
+static int of_slim_match_dev(struct device *dev, void *data)
+{
+	struct device_node *np = data;
+	struct slim_device *sbdev = to_slim_device(dev);
+
+	return (sbdev->dev.of_node == np);
+}
+
+static struct slim_device *of_find_slim_device(struct slim_controller *ctrl,
+					       struct device_node *np)
+{
+	struct slim_device *sbdev;
+	struct device *dev;
+
+	dev = device_find_child(ctrl->dev, np, of_slim_match_dev);
+	if (dev) {
+		sbdev = to_slim_device(dev);
+		return sbdev;
+	}
+
+	return NULL;
+}
+
+/**
+ * of_slim_get_device() - get handle to a device using dt node.
+ *
+ * @ctrl: Controller on which this device will be added/queried
+ * @np: node pointer to device
+ *
+ * Return: pointer to a device if it has already reported. Creates a new
+ * device and returns pointer to it if the device has not yet enumerated.
+ */
+struct slim_device *of_slim_get_device(struct slim_controller *ctrl,
+				       struct device_node *np)
+{
+	return of_find_slim_device(ctrl, np);
+}
+EXPORT_SYMBOL_GPL(of_slim_get_device);
 
 static int slim_device_alloc_laddr(struct slim_device *sbdev,
 				   bool report_present)

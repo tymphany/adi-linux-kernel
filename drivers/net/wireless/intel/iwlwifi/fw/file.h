@@ -8,6 +8,7 @@
  * Copyright(c) 2008 - 2014 Intel Corporation. All rights reserved.
  * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
  * Copyright(c) 2016 - 2017 Intel Deutschland GmbH
+ * Copyright(c) 2018 Intel Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -35,6 +36,7 @@
  * Copyright(c) 2005 - 2014 Intel Corporation. All rights reserved.
  * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
  * Copyright(c) 2016 - 2017 Intel Deutschland GmbH
+ * Copyright(c) 2018 Intel Corporation
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -143,6 +145,10 @@ enum iwl_ucode_tlv_type {
 	IWL_UCODE_TLV_FW_DBG_TRIGGER	= 40,
 	IWL_UCODE_TLV_FW_GSCAN_CAPA	= 50,
 	IWL_UCODE_TLV_FW_MEM_SEG	= 51,
+	IWL_UCODE_TLV_IML		= 52,
+
+	/* TLVs 0x1000-0x2000 are for internal driver usage */
+	IWL_UCODE_TLV_FW_DBG_DUMP_LST	= 0x1000,
 };
 
 struct iwl_ucode_tlv {
@@ -250,6 +256,8 @@ typedef unsigned int __bitwise iwl_ucode_tlv_api_t;
  *	indicating low latency direction.
  * @IWL_UCODE_TLV_API_DEPRECATE_TTAK: RX status flag TTAK ok (bit 7) is
  *	deprecated.
+ * @IWL_UCODE_TLV_API_ADAPTIVE_DWELL_V2: This ucode supports version 8
+ *	of scan request: SCAN_REQUEST_CMD_UMAC_API_S_VER_8
  *
  * @NUM_IWL_UCODE_TLV_API: number of bits used
  */
@@ -265,10 +273,12 @@ enum iwl_ucode_tlv_api {
 	IWL_UCODE_TLV_API_NAN2_VER2		= (__force iwl_ucode_tlv_api_t)31,
 	/* API Set 1 */
 	IWL_UCODE_TLV_API_ADAPTIVE_DWELL	= (__force iwl_ucode_tlv_api_t)32,
+	IWL_UCODE_TLV_API_OCE			= (__force iwl_ucode_tlv_api_t)33,
 	IWL_UCODE_TLV_API_NEW_BEACON_TEMPLATE	= (__force iwl_ucode_tlv_api_t)34,
 	IWL_UCODE_TLV_API_NEW_RX_STATS		= (__force iwl_ucode_tlv_api_t)35,
 	IWL_UCODE_TLV_API_QUOTA_LOW_LATENCY	= (__force iwl_ucode_tlv_api_t)38,
 	IWL_UCODE_TLV_API_DEPRECATE_TTAK	= (__force iwl_ucode_tlv_api_t)41,
+	IWL_UCODE_TLV_API_ADAPTIVE_DWELL_V2	= (__force iwl_ucode_tlv_api_t)42,
 
 	NUM_IWL_UCODE_TLV_API
 #ifdef __CHECKER__
@@ -311,7 +321,7 @@ typedef unsigned int __bitwise iwl_ucode_tlv_capa_t;
  *	IWL_UCODE_TLV_API_WIFI_MCC_UPDATE. When either is set, multi-source LAR
  *	is supported.
  * @IWL_UCODE_TLV_CAPA_BT_COEX_RRC: supports BT Coex RRC
- * @IWL_UCODE_TLV_CAPA_GSCAN_SUPPORT: supports gscan
+ * @IWL_UCODE_TLV_CAPA_GSCAN_SUPPORT: supports gscan (no longer used)
  * @IWL_UCODE_TLV_CAPA_STA_PM_NOTIF: firmware will send STA PM notification
  * @IWL_UCODE_TLV_CAPA_TLC_OFFLOAD: firmware implements rate scaling algorithm
  * @IWL_UCODE_TLV_CAPA_DYNAMIC_QUOTA: firmware implements quota related
@@ -617,6 +627,14 @@ enum iwl_fw_dbg_trigger_mode {
 };
 
 /**
+ * enum iwl_fw_dbg_trigger_flags - the flags supported by wrt triggers
+ * @IWL_FW_DBG_FORCE_RESTART: force a firmware restart
+ */
+enum iwl_fw_dbg_trigger_flags {
+	IWL_FW_DBG_FORCE_RESTART = BIT(0),
+};
+
+/**
  * enum iwl_fw_dbg_trigger_vif_type - define the VIF type for a trigger
  * @IWL_FW_DBG_CONF_VIF_ANY: any vif type
  * @IWL_FW_DBG_CONF_VIF_IBSS: IBSS mode
@@ -652,6 +670,7 @@ enum iwl_fw_dbg_trigger_vif_type {
  * @occurrences: number of occurrences. 0 means the trigger will never fire.
  * @trig_dis_ms: the time, in milliseconds, after an occurrence of this
  *	trigger in which another occurrence should be ignored.
+ * @flags: &enum iwl_fw_dbg_trigger_flags
  */
 struct iwl_fw_dbg_trigger_tlv {
 	__le32 id;
@@ -662,7 +681,8 @@ struct iwl_fw_dbg_trigger_tlv {
 	u8 start_conf_id;
 	__le16 occurrences;
 	__le16 trig_dis_ms;
-	__le16 reserved[3];
+	u8 flags;
+	u8 reserved[5];
 
 	u8 data[0];
 } __packed;
@@ -870,41 +890,6 @@ struct iwl_fw_dbg_conf_tlv {
 	u8 reserved;
 	u8 num_of_hcmds;
 	struct iwl_fw_dbg_conf_hcmd hcmd;
-} __packed;
-
-/**
- * struct iwl_fw_gscan_capabilities - gscan capabilities supported by FW
- * @max_scan_cache_size: total space allocated for scan results (in bytes).
- * @max_scan_buckets: maximum number of channel buckets.
- * @max_ap_cache_per_scan: maximum number of APs that can be stored per scan.
- * @max_rssi_sample_size: number of RSSI samples used for averaging RSSI.
- * @max_scan_reporting_threshold: max possible report threshold. in percentage.
- * @max_hotlist_aps: maximum number of entries for hotlist APs.
- * @max_significant_change_aps: maximum number of entries for significant
- *	change APs.
- * @max_bssid_history_entries: number of BSSID/RSSI entries that the device can
- *	hold.
- * @max_hotlist_ssids: maximum number of entries for hotlist SSIDs.
- * @max_number_epno_networks: max number of epno entries.
- * @max_number_epno_networks_by_ssid: max number of epno entries if ssid is
- *	specified.
- * @max_number_of_white_listed_ssid: max number of white listed SSIDs.
- * @max_number_of_black_listed_ssid: max number of black listed SSIDs.
- */
-struct iwl_fw_gscan_capabilities {
-	__le32 max_scan_cache_size;
-	__le32 max_scan_buckets;
-	__le32 max_ap_cache_per_scan;
-	__le32 max_rssi_sample_size;
-	__le32 max_scan_reporting_threshold;
-	__le32 max_hotlist_aps;
-	__le32 max_significant_change_aps;
-	__le32 max_bssid_history_entries;
-	__le32 max_hotlist_ssids;
-	__le32 max_number_epno_networks;
-	__le32 max_number_epno_networks_by_ssid;
-	__le32 max_number_of_white_listed_ssid;
-	__le32 max_number_of_black_listed_ssid;
 } __packed;
 
 #endif  /* __iwl_fw_file_h__ */

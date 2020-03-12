@@ -299,8 +299,8 @@ static int adau1977_lookup_mcs(struct adau1977 *adau1977, unsigned int rate,
 static int adau1977_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params, struct snd_soc_dai *dai)
 {
-	struct snd_soc_codec *codec = dai->codec;
-	struct adau1977 *adau1977 = snd_soc_codec_get_drvdata(codec);
+	struct snd_soc_component *component = dai->component;
+	struct adau1977 *adau1977 = snd_soc_component_get_drvdata(component);
 	unsigned int rate = params_rate(params);
 	unsigned int slot_width;
 	unsigned int ctrl0, ctrl0_mask;
@@ -472,10 +472,10 @@ err_disable_avdd:
 	return ret;
 }
 
-static int adau1977_set_bias_level(struct snd_soc_codec *codec,
+static int adau1977_set_bias_level(struct snd_soc_component *component,
 	enum snd_soc_bias_level level)
 {
-	struct adau1977 *adau1977 = snd_soc_codec_get_drvdata(codec);
+	struct adau1977 *adau1977 = snd_soc_component_get_drvdata(component);
 	int ret = 0;
 
 	switch (level) {
@@ -484,7 +484,7 @@ static int adau1977_set_bias_level(struct snd_soc_codec *codec,
 	case SND_SOC_BIAS_PREPARE:
 		break;
 	case SND_SOC_BIAS_STANDBY:
-		if (snd_soc_codec_get_bias_level(codec) == SND_SOC_BIAS_OFF)
+		if (snd_soc_component_get_bias_level(component) == SND_SOC_BIAS_OFF)
 			ret = adau1977_power_enable(adau1977);
 		break;
 	case SND_SOC_BIAS_OFF:
@@ -498,7 +498,7 @@ static int adau1977_set_bias_level(struct snd_soc_codec *codec,
 static int adau1977_set_tdm_slot(struct snd_soc_dai *dai, unsigned int tx_mask,
 	unsigned int rx_mask, int slots, int width)
 {
-	struct adau1977 *adau1977 = snd_soc_codec_get_drvdata(dai->codec);
+	struct adau1977 *adau1977 = snd_soc_component_get_drvdata(dai->component);
 	unsigned int ctrl0, ctrl1, drv;
 	unsigned int slot[4];
 	unsigned int i;
@@ -618,7 +618,7 @@ static int adau1977_set_tdm_slot(struct snd_soc_dai *dai, unsigned int tx_mask,
 
 static int adau1977_mute(struct snd_soc_dai *dai, int mute, int stream)
 {
-	struct adau1977 *adau1977 = snd_soc_codec_get_drvdata(dai->codec);
+	struct adau1977 *adau1977 = snd_soc_component_get_drvdata(dai->component);
 	unsigned int val;
 
 	if (mute)
@@ -632,7 +632,7 @@ static int adau1977_mute(struct snd_soc_dai *dai, int mute, int stream)
 
 static int adau1977_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 {
-	struct adau1977 *adau1977 = snd_soc_codec_get_drvdata(dai->codec);
+	struct adau1977 *adau1977 = snd_soc_component_get_drvdata(dai->component);
 	unsigned int ctrl0 = 0, ctrl1 = 0, block_power = 0;
 	bool invert_lrclk;
 	int ret;
@@ -719,7 +719,18 @@ static int adau1977_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 static int adau1977_startup(struct snd_pcm_substream *substream,
 	struct snd_soc_dai *dai)
 {
+<<<<<<< HEAD
 	struct adau1977 *adau1977 = snd_soc_codec_get_drvdata(dai->codec);
+=======
+	struct adau1977 *adau1977 = snd_soc_component_get_drvdata(dai->component);
+	u64 formats = 0;
+
+	if (adau1977->slot_width == 16)
+		formats = SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S16_BE;
+	else if (adau1977->right_j || adau1977->slot_width == 24)
+		formats = SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S16_BE |
+			SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S24_BE;
+>>>>>>> v4.19
 
 	snd_pcm_hw_constraint_list(substream->runtime, 0,
 		SNDRV_PCM_HW_PARAM_RATE, &adau1977->constraints);
@@ -733,7 +744,7 @@ static int adau1977_startup(struct snd_pcm_substream *substream,
 
 static int adau1977_set_tristate(struct snd_soc_dai *dai, int tristate)
 {
-	struct adau1977 *adau1977 = snd_soc_codec_get_drvdata(dai->codec);
+	struct adau1977 *adau1977 = snd_soc_component_get_drvdata(dai->component);
 	unsigned int val;
 
 	if (tristate)
@@ -794,10 +805,10 @@ static bool adau1977_check_sysclk(unsigned int mclk, unsigned int base_freq)
 	return true;
 }
 
-static int adau1977_set_sysclk(struct snd_soc_codec *codec,
+static int adau1977_set_sysclk(struct snd_soc_component *component,
 	int clk_id, int source, unsigned int freq, int dir)
 {
-	struct adau1977 *adau1977 = snd_soc_codec_get_drvdata(codec);
+	struct adau1977 *adau1977 = snd_soc_component_get_drvdata(component);
 	unsigned int mask = 0;
 	unsigned int clk_src;
 	unsigned int ret;
@@ -848,10 +859,10 @@ static int adau1977_set_sysclk(struct snd_soc_codec *codec,
 	return 0;
 }
 
-static int adau1977_codec_probe(struct snd_soc_codec *codec)
+static int adau1977_component_probe(struct snd_soc_component *component)
 {
-	struct snd_soc_dapm_context *dapm = snd_soc_codec_get_dapm(codec);
-	struct adau1977 *adau1977 = snd_soc_codec_get_drvdata(codec);
+	struct snd_soc_dapm_context *dapm = snd_soc_component_get_dapm(component);
+	struct adau1977 *adau1977 = snd_soc_component_get_drvdata(component);
 	int ret;
 
 	switch (adau1977->type) {
@@ -869,20 +880,19 @@ static int adau1977_codec_probe(struct snd_soc_codec *codec)
 	return 0;
 }
 
-static const struct snd_soc_codec_driver adau1977_codec_driver = {
-	.probe = adau1977_codec_probe,
-	.set_bias_level = adau1977_set_bias_level,
-	.set_sysclk = adau1977_set_sysclk,
-	.idle_bias_off = true,
-
-	.component_driver = {
-		.controls		= adau1977_snd_controls,
-		.num_controls		= ARRAY_SIZE(adau1977_snd_controls),
-		.dapm_widgets		= adau1977_dapm_widgets,
-		.num_dapm_widgets	= ARRAY_SIZE(adau1977_dapm_widgets),
-		.dapm_routes		= adau1977_dapm_routes,
-		.num_dapm_routes	= ARRAY_SIZE(adau1977_dapm_routes),
-	},
+static const struct snd_soc_component_driver adau1977_component_driver = {
+	.probe			= adau1977_component_probe,
+	.set_bias_level		= adau1977_set_bias_level,
+	.set_sysclk		= adau1977_set_sysclk,
+	.controls		= adau1977_snd_controls,
+	.num_controls		= ARRAY_SIZE(adau1977_snd_controls),
+	.dapm_widgets		= adau1977_dapm_widgets,
+	.num_dapm_widgets	= ARRAY_SIZE(adau1977_dapm_widgets),
+	.dapm_routes		= adau1977_dapm_routes,
+	.num_dapm_routes	= ARRAY_SIZE(adau1977_dapm_routes),
+	.use_pmdown_time	= 1,
+	.endianness		= 1,
+	.non_legacy_dai_naming	= 1,
 };
 
 static int adau1977_setup_micbias(struct adau1977 *adau1977)
@@ -1004,7 +1014,7 @@ int adau1977_probe(struct device *dev, struct regmap *regmap,
 	if (ret)
 		return ret;
 
-	return snd_soc_register_codec(dev, &adau1977_codec_driver,
+	return devm_snd_soc_register_component(dev, &adau1977_component_driver,
 			&adau1977_dai, 1);
 
 err_poweroff:

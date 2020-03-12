@@ -13,7 +13,7 @@
     (c) 2005-2006 Nickolay V. Shmyrev <nshmyrev@yandex.ru>
 
     Fixes to be fully V4L2 compliant by
-    (c) 2006 Mauro Carvalho Chehab <mchehab@infradead.org>
+    (c) 2006 Mauro Carvalho Chehab <mchehab@kernel.org>
 
     Cropping and overscan support
     Copyright (C) 2005, 2006 Michael H. Schimek <mschimek@gmx.at>
@@ -3344,10 +3344,10 @@ static __poll_t radio_poll(struct file *file, poll_table *wait)
 	radio_enable(btv);
 	cmd.instance = file;
 	cmd.event_list = wait;
-	cmd.result = res;
+	cmd.poll_mask = res;
 	bttv_call_all(btv, core, ioctl, SAA6588_CMD_POLL, &cmd);
 
-	return cmd.result;
+	return cmd.poll_mask;
 }
 
 static const struct v4l2_file_operations radio_fops =
@@ -3511,7 +3511,7 @@ static void bttv_irq_debug_low_latency(struct bttv *btv, u32 rc)
 	}
 	pr_notice("%d: Uhm. Looks like we have unusual high IRQ latencies\n",
 		  btv->c.nr);
-	pr_notice("%d: Lets try to catch the culpit red-handed ...\n",
+	pr_notice("%d: Lets try to catch the culprit red-handed ...\n",
 		  btv->c.nr);
 	dump_stack();
 }

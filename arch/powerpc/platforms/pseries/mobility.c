@@ -17,6 +17,7 @@
 #include <linux/device.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
+#include <linux/stringify.h>
 
 #include <asm/machdep.h>
 #include <asm/rtas.h>
@@ -347,6 +348,9 @@ void post_mobility_fixup(void)
 	if (rc)
 		printk(KERN_ERR "Post-mobility device tree update "
 			"failed: %d\n", rc);
+
+	/* Possibly switch to a new RFI flush type */
+	pseries_setup_rfi_flush();
 
 	return;
 }

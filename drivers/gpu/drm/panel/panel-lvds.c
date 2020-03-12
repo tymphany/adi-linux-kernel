@@ -1,5 +1,5 @@
 /*
- * rcar_du_crtc.c  --  R-Car Display Unit CRTCs
+ * Generic LVDS panel driver
  *
  * Copyright (C) 2016 Laurent Pinchart
  * Copyright (C) 2016 Renesas Electronics Corporation
@@ -282,7 +282,6 @@ static int panel_lvds_remove(struct platform_device *pdev)
 {
 	struct panel_lvds *lvds = dev_get_drvdata(&pdev->dev);
 
-	drm_panel_detach(&lvds->panel);
 	drm_panel_remove(&lvds->panel);
 
 	panel_lvds_disable(&lvds->panel);

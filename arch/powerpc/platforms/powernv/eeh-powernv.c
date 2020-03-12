@@ -223,6 +223,14 @@ int pnv_eeh_post_init(void)
 	eeh_probe_devices();
 	eeh_addr_cache_build();
 
+	if (eeh_has_flag(EEH_POSTPONED_PROBE)) {
+		eeh_clear_flag(EEH_POSTPONED_PROBE);
+		if (eeh_enabled())
+			pr_info("EEH: PCI Enhanced I/O Error Handling Enabled\n");
+		else
+			pr_info("EEH: No capable adapters found\n");
+	}
+
 	/* Register OPAL event notifier */
 	eeh_event_irq = opal_event_request(ilog2(OPAL_EVENT_PCI_ERROR));
 	if (eeh_event_irq < 0) {
@@ -384,8 +392,10 @@ static void *pnv_eeh_probe(struct pci_dn *pdn, void *data)
 		return NULL;
 
 	/* Skip if we haven't probed yet */
-	if (phb->ioda.pe_rmap[config_addr] == IODA_INVALID_PE)
+	if (phb->ioda.pe_rmap[config_addr] == IODA_INVALID_PE) {
+		eeh_add_flag(EEH_POSTPONED_PROBE);
 		return NULL;
+	}
 
 	/* Initialize eeh device */
 	edev->class_code = pdn->class_code;
@@ -1425,11 +1435,8 @@ static int pnv_eeh_get_pe(struct pci_controller *hose,
 	dev_pe = dev_pe->parent;
 	while (dev_pe && !(dev_pe->type & EEH_PE_PHB)) {
 		int ret;
-		int active_flags = (EEH_STATE_MMIO_ACTIVE |
-				    EEH_STATE_DMA_ACTIVE);
-
 		ret = eeh_ops->get_state(dev_pe, NULL);
-		if (ret <= 0 || (ret & active_flags) == active_flags) {
+		if (ret <= 0 || eeh_state_active(ret)) {
 			dev_pe = dev_pe->parent;
 			continue;
 		}
@@ -1463,7 +1470,6 @@ static int pnv_eeh_next_error(struct eeh_pe **pe)
 	struct eeh_pe *phb_pe, *parent_pe;
 	__be64 frozen_pe_no;
 	__be16 err_type, severity;
-	int active_flags = (EEH_STATE_MMIO_ACTIVE | EEH_STATE_DMA_ACTIVE);
 	long rc;
 	int state, ret = EEH_NEXT_ERR_NONE;
 
@@ -1626,8 +1632,7 @@ static int pnv_eeh_next_error(struct eeh_pe **pe)
 
 				/* Frozen parent PE ? */
 				state = eeh_ops->get_state(parent_pe, NULL);
-				if (state > 0 &&
-				    (state & active_flags) != active_flags)
+				if (state > 0 && !eeh_state_active(state))
 					*pe = parent_pe;
 
 				/* Next parent level */

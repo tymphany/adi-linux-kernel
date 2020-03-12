@@ -256,6 +256,9 @@ static inline unsigned long of_read_ulong(const __be32 *cell, int size)
 #define OF_IS_DYNAMIC(x) test_bit(OF_DYNAMIC, &x->_flags)
 #define OF_MARK_DYNAMIC(x) set_bit(OF_DYNAMIC, &x->_flags)
 
+extern bool of_node_name_eq(const struct device_node *np, const char *name);
+extern bool of_node_name_prefix(const struct device_node *np, const char *prefix);
+
 static inline const char *of_node_full_name(const struct device_node *np)
 {
 	return np ? np->full_name : "<no-node>";
@@ -290,6 +293,8 @@ extern struct device_node *of_get_next_child(const struct device_node *node,
 extern struct device_node *of_get_next_available_child(
 	const struct device_node *node, struct device_node *prev);
 
+extern struct device_node *of_get_compatible_child(const struct device_node *parent,
+					const char *compatible);
 extern struct device_node *of_get_child_by_name(const struct device_node *node,
 					const char *name);
 
@@ -362,6 +367,9 @@ extern struct device_node *of_parse_phandle(const struct device_node *np,
 					    int index);
 extern int of_parse_phandle_with_args(const struct device_node *np,
 	const char *list_name, const char *cells_name, int index,
+	struct of_phandle_args *out_args);
+extern int of_parse_phandle_with_args_map(const struct device_node *np,
+	const char *list_name, const char *stem_name, int index,
 	struct of_phandle_args *out_args);
 extern int of_parse_phandle_with_fixed_args(const struct device_node *np,
 	const char *list_name, int cells_count, int index,
@@ -558,6 +566,16 @@ static inline struct device_node *to_of_node(const struct fwnode_handle *fwnode)
 	return NULL;
 }
 
+static inline bool of_node_name_eq(const struct device_node *np, const char *name)
+{
+	return false;
+}
+
+static inline bool of_node_name_prefix(const struct device_node *np, const char *prefix)
+{
+	return false;
+}
+
 static inline const char* of_node_full_name(const struct device_node *np)
 {
 	return "<no-node>";
@@ -627,6 +645,12 @@ static inline struct device_node *of_find_node_with_property(
 static inline bool of_have_populated_dt(void)
 {
 	return false;
+}
+
+static inline struct device_node *of_get_compatible_child(const struct device_node *parent,
+					const char *compatible)
+{
+	return NULL;
 }
 
 static inline struct device_node *of_get_child_by_name(
@@ -815,6 +839,15 @@ static inline int of_parse_phandle_with_args(const struct device_node *np,
 	return -ENOSYS;
 }
 
+static inline int of_parse_phandle_with_args_map(const struct device_node *np,
+						 const char *list_name,
+						 const char *stem_name,
+						 int index,
+						 struct of_phandle_args *out_args)
+{
+	return -ENOSYS;
+}
+
 static inline int of_parse_phandle_with_fixed_args(const struct device_node *np,
 	const char *list_name, int cells_count, int index,
 	struct of_phandle_args *out_args)
@@ -953,6 +986,18 @@ static inline struct device_node *of_find_matching_node(
 	const struct of_device_id *matches)
 {
 	return of_find_matching_node_and_match(from, matches, NULL);
+}
+
+static inline const char *of_node_get_device_type(const struct device_node *np)
+{
+	return of_get_property(np, "type", NULL);
+}
+
+static inline bool of_node_is_type(const struct device_node *np, const char *type)
+{
+	const char *match = of_node_get_device_type(np);
+
+	return np && match && type && !strcmp(match, type);
 }
 
 /**
@@ -1359,8 +1404,8 @@ struct of_overlay_notify_data {
 
 #ifdef CONFIG_OF_OVERLAY
 
-/* ID based overlays; the API for external users */
-int of_overlay_apply(struct device_node *tree, int *ovcs_id);
+int of_overlay_fdt_apply(const void *overlay_fdt, u32 overlay_fdt_size,
+			 int *ovcs_id);
 int of_overlay_remove(int *ovcs_id);
 int of_overlay_remove_all(void);
 
@@ -1369,7 +1414,7 @@ int of_overlay_notifier_unregister(struct notifier_block *nb);
 
 #else
 
-static inline int of_overlay_apply(struct device_node *tree, int *ovcs_id)
+static inline int of_overlay_fdt_apply(void *overlay_fdt, int *ovcs_id)
 {
 	return -ENOTSUPP;
 }

@@ -87,7 +87,7 @@ static int validate_client(struct intel_guc_client *client,
 
 static bool client_doorbell_in_sync(struct intel_guc_client *client)
 {
-	return doorbell_ok(client->guc, client->doorbell_id);
+	return !client || doorbell_ok(client->guc, client->doorbell_id);
 }
 
 /*
@@ -137,7 +137,6 @@ static int igt_guc_clients(void *args)
 		goto unlock;
 	}
 	GEM_BUG_ON(!guc->execbuf_client);
-	GEM_BUG_ON(!guc->preempt_client);
 
 	err = validate_client(guc->execbuf_client,
 			      GUC_CLIENT_PRIORITY_KMD_NORMAL, false);
@@ -146,16 +145,18 @@ static int igt_guc_clients(void *args)
 		goto out;
 	}
 
-	err = validate_client(guc->preempt_client,
-			      GUC_CLIENT_PRIORITY_KMD_HIGH, true);
-	if (err) {
-		pr_err("preempt client validation failed\n");
-		goto out;
+	if (guc->preempt_client) {
+		err = validate_client(guc->preempt_client,
+				      GUC_CLIENT_PRIORITY_KMD_HIGH, true);
+		if (err) {
+			pr_err("preempt client validation failed\n");
+			goto out;
+		}
 	}
 
 	/* each client should now have reserved a doorbell */
 	if (!has_doorbell(guc->execbuf_client) ||
-	    !has_doorbell(guc->preempt_client)) {
+	    (guc->preempt_client && !has_doorbell(guc->preempt_client))) {
 		pr_err("guc_clients_create didn't reserve doorbells\n");
 		err = -EINVAL;
 		goto out;
@@ -195,19 +196,23 @@ static int igt_guc_clients(void *args)
 	}
 
 	unreserve_doorbell(guc->execbuf_client);
-	err = guc_clients_doorbell_init(guc);
+
+	__create_doorbell(guc->execbuf_client);
+	err = __guc_allocate_doorbell(guc, guc->execbuf_client->stage_id);
 	if (err != -EIO) {
 		pr_err("unexpected (err = %d)", err);
-		goto out;
+		goto out_db;
 	}
 
 	if (!available_dbs(guc, guc->execbuf_client->priority)) {
 		pr_err("doorbell not available when it should\n");
 		err = -EIO;
-		goto out;
+		goto out_db;
 	}
 
+out_db:
 	/* clean after test */
+	__destroy_doorbell(guc->execbuf_client);
 	err = reserve_doorbell(guc->execbuf_client);
 	if (err) {
 		pr_err("failed to reserve back the doorbell back\n");
@@ -224,7 +229,8 @@ out:
 	 * clients during unload.
 	 */
 	destroy_doorbell(guc->execbuf_client);
-	destroy_doorbell(guc->preempt_client);
+	if (guc->preempt_client)
+		destroy_doorbell(guc->preempt_client);
 	guc_clients_destroy(guc);
 	guc_clients_create(guc);
 	guc_clients_doorbell_init(guc);

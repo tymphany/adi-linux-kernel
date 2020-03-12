@@ -133,7 +133,7 @@ static void au0828_irq_callback(struct urb *urb)
 		au0828_isocdbg("au0828_irq_callback called: status kill\n");
 		return;
 	default:            /* unknown error */
-		au0828_isocdbg("urb completition error %d.\n", urb->status);
+		au0828_isocdbg("urb completion error %d.\n", urb->status);
 		break;
 	}
 
@@ -217,14 +217,14 @@ static int au0828_init_isoc(struct au0828_dev *dev, int max_packets,
 	dev->isoc_ctl.isoc_copy = isoc_copy;
 	dev->isoc_ctl.num_bufs = num_bufs;
 
-	dev->isoc_ctl.urb = kzalloc(sizeof(void *)*num_bufs,  GFP_KERNEL);
+	dev->isoc_ctl.urb = kcalloc(num_bufs, sizeof(void *),  GFP_KERNEL);
 	if (!dev->isoc_ctl.urb) {
 		au0828_isocdbg("cannot alloc memory for usb buffers\n");
 		return -ENOMEM;
 	}
 
-	dev->isoc_ctl.transfer_buffer = kzalloc(sizeof(void *)*num_bufs,
-					      GFP_KERNEL);
+	dev->isoc_ctl.transfer_buffer = kcalloc(num_bufs, sizeof(void *),
+						GFP_KERNEL);
 	if (!dev->isoc_ctl.transfer_buffer) {
 		au0828_isocdbg("cannot allocate memory for usb transfer\n");
 		kfree(dev->isoc_ctl.urb);
@@ -1091,8 +1091,8 @@ static int au0828_v4l2_close(struct file *filp)
 		*/
 		ret = v4l_enable_media_source(vdev);
 		if (ret == 0)
-			v4l2_device_call_all(&dev->v4l2_dev, 0, core,
-					     s_power, 0);
+			v4l2_device_call_all(&dev->v4l2_dev, 0, tuner,
+					     standby);
 		dev->std_set_in_tuner_core = 0;
 
 		/* When close the device, set the usb intf0 into alt0 to free

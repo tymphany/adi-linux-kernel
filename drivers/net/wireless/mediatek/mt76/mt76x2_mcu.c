@@ -23,23 +23,6 @@
 #include "mt76x2_dma.h"
 #include "mt76x2_eeprom.h"
 
-struct mt76x2_fw_header {
-	__le32 ilm_len;
-	__le32 dlm_len;
-	__le16 build_ver;
-	__le16 fw_ver;
-	u8 pad[4];
-	char build_time[16];
-};
-
-struct mt76x2_patch_header {
-	char build_time[16];
-	char platform[4];
-	char hw_version[4];
-	char patch_version[4];
-	u8 pad[2];
-};
-
 static struct sk_buff *mt76x2_mcu_msg_alloc(const void *data, int len)
 {
 	struct sk_buff *skb;
@@ -187,7 +170,7 @@ mt76pci_load_firmware(struct mt76x2_dev *dev)
 {
 	const struct firmware *fw;
 	const struct mt76x2_fw_header *hdr;
-	int i, len, ret;
+	int len, ret;
 	__le32 *cur;
 	u32 offset, val;
 
@@ -240,16 +223,7 @@ mt76pci_load_firmware(struct mt76x2_dev *dev)
 
 	/* trigger firmware */
 	mt76_wr(dev, MT_MCU_INT_LEVEL, 2);
-	for (i = 200; i > 0; i--) {
-		val = mt76_rr(dev, MT_MCU_COM_REG0);
-
-		if (val & 1)
-			break;
-
-		msleep(10);
-	}
-
-	if (!i) {
+	if (!mt76_poll_msec(dev, MT_MCU_COM_REG0, 1, 1, 200)) {
 		dev_err(dev->mt76.dev, "Firmware failed to start\n");
 		release_firmware(fw);
 		return -ETIMEDOUT;

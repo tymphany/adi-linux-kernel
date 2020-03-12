@@ -105,7 +105,8 @@ static int __init arm_idle_init_cpu(int cpu)
 
 	ret = cpuidle_register_driver(drv);
 	if (ret) {
-		pr_err("Failed to register cpuidle driver\n");
+		if (ret != -EBUSY)
+			pr_err("Failed to register cpuidle driver\n");
 		goto out_kfree_drv;
 	}
 
@@ -129,7 +130,6 @@ static int __init arm_idle_init_cpu(int cpu)
 
 	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
 	if (!dev) {
-		pr_err("Failed to allocate cpuidle device\n");
 		ret = -ENOMEM;
 		goto out_unregister_drv;
 	}

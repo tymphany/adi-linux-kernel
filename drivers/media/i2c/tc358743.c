@@ -1,22 +1,9 @@
+// SPDX-License-Identifier: GPL-2.0-only
 /*
  * tc358743 - Toshiba HDMI to CSI-2 bridge
  *
  * Copyright 2015 Cisco Systems, Inc. and/or its affiliates. All rights
  * reserved.
- *
- * This program is free software; you may redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; version 2 of the License.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
- * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
- * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
- * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- *
  */
 
 /*
@@ -1931,7 +1918,8 @@ static int tc358743_probe_of(struct tc358743_state *state)
 	endpoint = v4l2_fwnode_endpoint_alloc_parse(of_fwnode_handle(ep));
 	if (IS_ERR(endpoint)) {
 		dev_err(dev, "failed to parse endpoint\n");
-		return PTR_ERR(endpoint);
+		ret = PTR_ERR(endpoint);
+		goto put_node;
 	}
 
 	if (endpoint->bus_type != V4L2_MBUS_CSI2 ||
@@ -2026,6 +2014,8 @@ disable_clk:
 	clk_disable_unprepare(refclk);
 free_endpoint:
 	v4l2_fwnode_endpoint_free(endpoint);
+put_node:
+	of_node_put(ep);
 	return ret;
 }
 #else

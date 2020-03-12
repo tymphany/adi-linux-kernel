@@ -1,18 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Common header file for probe-based Dynamic events.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * This code was copied from kernel/trace/trace_kprobe.h written by
  * Masami Hiramatsu <masami.hiramatsu.pt@hitachi.com>
@@ -416,3 +404,14 @@ store_trace_args(int ent_size, struct trace_probe *tp, struct pt_regs *regs,
 }
 
 extern int set_print_fmt(struct trace_probe *tp, bool is_return);
+
+#ifdef CONFIG_PERF_EVENTS
+extern struct trace_event_call *
+create_local_trace_kprobe(char *func, void *addr, unsigned long offs,
+			  bool is_return);
+extern void destroy_local_trace_kprobe(struct trace_event_call *event_call);
+
+extern struct trace_event_call *
+create_local_trace_uprobe(char *name, unsigned long offs, bool is_return);
+extern void destroy_local_trace_uprobe(struct trace_event_call *event_call);
+#endif

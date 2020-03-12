@@ -288,8 +288,14 @@ static int malidp_crtc_atomic_check_scaling(struct drm_crtc *crtc,
 		s->enhancer_enable = ((h_upscale_factor >> 16) >= 2 ||
 				      (v_upscale_factor >> 16) >= 2);
 
-		s->input_w = pstate->src_w >> 16;
-		s->input_h = pstate->src_h >> 16;
+		if (pstate->rotation & MALIDP_ROTATED_MASK) {
+			s->input_w = pstate->src_h >> 16;
+			s->input_h = pstate->src_w >> 16;
+		} else {
+			s->input_w = pstate->src_w >> 16;
+			s->input_h = pstate->src_h >> 16;
+		}
+
 		s->output_w = pstate->crtc_w;
 		s->output_h = pstate->crtc_h;
 
@@ -403,6 +409,16 @@ static int malidp_crtc_atomic_check(struct drm_crtc *crtc,
 			if (ms->rotmem_size > rot_mem_usable)
 				return -EINVAL;
 		}
+	}
+
+	/* If only the writeback routing has changed, we don't need a modeset */
+	if (state->connectors_changed) {
+		u32 old_mask = crtc->state->connector_mask;
+		u32 new_mask = state->connector_mask;
+
+		if ((old_mask ^ new_mask) ==
+		    (1 << drm_connector_index(&malidp->mw_connector.base)))
+			state->connectors_changed = false;
 	}
 
 	ret = malidp_crtc_atomic_check_gamma(crtc, state);
@@ -525,14 +541,13 @@ int malidp_crtc_init(struct drm_device *drm)
 
 	if (!primary) {
 		DRM_ERROR("no primary plane found\n");
-		ret = -EINVAL;
-		goto crtc_cleanup_planes;
+		return -EINVAL;
 	}
 
 	ret = drm_crtc_init_with_planes(drm, &malidp->crtc, primary, NULL,
 					&malidp_crtc_funcs, NULL);
 	if (ret)
-		goto crtc_cleanup_planes;
+		return ret;
 
 	drm_crtc_helper_add(&malidp->crtc, &malidp_crtc_helper_funcs);
 	drm_mode_crtc_set_gamma_size(&malidp->crtc, MALIDP_GAMMA_LUT_SIZE);
@@ -542,9 +557,4 @@ int malidp_crtc_init(struct drm_device *drm)
 	malidp_se_set_enh_coeffs(malidp->dev);
 
 	return 0;
-
-crtc_cleanup_planes:
-	malidp_de_planes_destroy(drm);
-
-	return ret;
 }

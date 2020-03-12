@@ -386,8 +386,9 @@ int qlcnic_83xx_setup_intr(struct qlcnic_adapter *adapter)
 	}
 
 	/* setup interrupt mapping table for fw */
-	ahw->intr_tbl = vzalloc(num_msix *
-				sizeof(struct qlcnic_intrpt_config));
+	ahw->intr_tbl =
+		vzalloc(array_size(num_msix,
+				   sizeof(struct qlcnic_intrpt_config)));
 	if (!ahw->intr_tbl)
 		return -ENOMEM;
 
@@ -478,7 +479,7 @@ irqreturn_t qlcnic_83xx_clear_legacy_intr(struct qlcnic_adapter *adapter)
 	wmb();
 
 	/* clear the interrupt trigger control register */
-	writel(0, adapter->isr_int_vec);
+	writel_relaxed(0, adapter->isr_int_vec);
 	intr_val = readl(adapter->isr_int_vec);
 	do {
 		intr_val = readl(adapter->tgt_status_reg);
@@ -2134,7 +2135,8 @@ out:
 }
 
 void qlcnic_83xx_change_l2_filter(struct qlcnic_adapter *adapter, u64 *addr,
-				  u16 vlan_id)
+				  u16 vlan_id,
+				  struct qlcnic_host_tx_ring *tx_ring)
 {
 	u8 mac[ETH_ALEN];
 	memcpy(&mac, addr, ETH_ALEN);

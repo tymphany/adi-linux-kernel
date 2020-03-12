@@ -122,7 +122,7 @@ static int pmu_parse_irqs(struct arm_pmu *pmu)
 			return pmu_parse_percpu_irq(pmu, irq);
 	}
 
-	if (!pmu_has_irq_affinity(pdev->dev.of_node)) {
+	if (nr_cpu_ids != 1 && !pmu_has_irq_affinity(pdev->dev.of_node)) {
 		pr_warn("no interrupt-affinity property for %pOF, guessing.\n",
 			pdev->dev.of_node);
 	}
@@ -160,7 +160,7 @@ static int pmu_parse_irqs(struct arm_pmu *pmu)
 static int armpmu_request_irqs(struct arm_pmu *armpmu)
 {
 	struct pmu_hw_events __percpu *hw_events = armpmu->hw_events;
-	int cpu, err;
+	int cpu, err = 0;
 
 	for_each_cpu(cpu, &armpmu->supported_cpus) {
 		int irq = per_cpu(hw_events->irq, cpu);

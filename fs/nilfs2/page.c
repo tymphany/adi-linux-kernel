@@ -1,17 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * page.c - buffer/page management specific to NILFS
  *
  * Copyright (C) 2005-2008 Nippon Telegraph and Telephone Corporation.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
  *
  * Written by Ryusuke Konishi and Seiji Kihara.
  */
@@ -331,15 +322,15 @@ repeat:
 			struct page *page2;
 
 			/* move the page to the destination cache */
-			spin_lock_irq(&smap->tree_lock);
-			page2 = radix_tree_delete(&smap->page_tree, offset);
+			xa_lock_irq(&smap->i_pages);
+			page2 = radix_tree_delete(&smap->i_pages, offset);
 			WARN_ON(page2 != page);
 
 			smap->nrpages--;
-			spin_unlock_irq(&smap->tree_lock);
+			xa_unlock_irq(&smap->i_pages);
 
-			spin_lock_irq(&dmap->tree_lock);
-			err = radix_tree_insert(&dmap->page_tree, offset, page);
+			xa_lock_irq(&dmap->i_pages);
+			err = radix_tree_insert(&dmap->i_pages, offset, page);
 			if (unlikely(err < 0)) {
 				WARN_ON(err == -EEXIST);
 				page->mapping = NULL;
@@ -348,11 +339,11 @@ repeat:
 				page->mapping = dmap;
 				dmap->nrpages++;
 				if (PageDirty(page))
-					radix_tree_tag_set(&dmap->page_tree,
+					radix_tree_tag_set(&dmap->i_pages,
 							   offset,
 							   PAGECACHE_TAG_DIRTY);
 			}
-			spin_unlock_irq(&dmap->tree_lock);
+			xa_unlock_irq(&dmap->i_pages);
 		}
 		unlock_page(page);
 	}
@@ -474,15 +465,15 @@ int __nilfs_clear_page_dirty(struct page *page)
 	struct address_space *mapping = page->mapping;
 
 	if (mapping) {
-		spin_lock_irq(&mapping->tree_lock);
+		xa_lock_irq(&mapping->i_pages);
 		if (test_bit(PG_dirty, &page->flags)) {
-			radix_tree_tag_clear(&mapping->page_tree,
+			radix_tree_tag_clear(&mapping->i_pages,
 					     page_index(page),
 					     PAGECACHE_TAG_DIRTY);
-			spin_unlock_irq(&mapping->tree_lock);
+			xa_unlock_irq(&mapping->i_pages);
 			return clear_page_dirty_for_io(page);
 		}
-		spin_unlock_irq(&mapping->tree_lock);
+		xa_unlock_irq(&mapping->i_pages);
 		return 0;
 	}
 	return TestClearPageDirty(page);

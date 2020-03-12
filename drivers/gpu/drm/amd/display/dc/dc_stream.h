@@ -48,6 +48,8 @@ struct dc_stream_status {
 struct dc_stream_state {
 	struct dc_sink *sink;
 	struct dc_crtc_timing timing;
+	struct dc_crtc_timing_adjust timing_adjust;
+	struct vrr_params vrr_params;
 
 	struct rect src; /* composition area */
 	struct rect dst; /* stream addressable area */
@@ -56,10 +58,13 @@ struct dc_stream_state {
 
 	struct freesync_context freesync_ctx;
 
-	struct dc_hdr_static_metadata hdr_static_metadata;
+	struct dc_info_packet hdr_static_metadata;
+	PHYSICAL_ADDRESS_LOC dmdata_address;
+	bool   use_dynamic_meta;
+
 	struct dc_transfer_func *out_transfer_func;
 	struct colorspace_transform gamut_remap_matrix;
-	struct csc_transform csc_color_matrix;
+	struct dc_csc_transform csc_color_matrix;
 
 	enum dc_color_space output_color_space;
 	enum dc_dither_option dither_option;
@@ -67,10 +72,18 @@ struct dc_stream_state {
 	enum view_3d_format view_format;
 
 	bool ignore_msa_timing_param;
+
+	unsigned long long periodic_fn_vsync_delta;
+
 	/* TODO: custom INFO packets */
 	/* TODO: ABM info (DMCU) */
-	/* TODO: PSR info */
+	/* PSR info */
+	unsigned char psr_version;
 	/* TODO: CEA VIC */
+
+	/* DMCU info */
+	unsigned int abm_level;
+	unsigned int bl_pwm_level;
 
 	/* from core_stream struct */
 	struct dc_context *ctx;
@@ -87,6 +100,7 @@ struct dc_stream_state {
 
 	struct dc_cursor_attributes cursor_attributes;
 	struct dc_cursor_position cursor_position;
+	uint32_t sdr_white_level; // for boosting (SDR) cursor in HDR mode
 
 	/* from stream struct */
 	struct kref refcount;
@@ -102,7 +116,10 @@ struct dc_stream_update {
 	struct rect src;
 	struct rect dst;
 	struct dc_transfer_func *out_transfer_func;
-	struct dc_hdr_static_metadata *hdr_static_metadata;
+	struct dc_info_packet *hdr_static_metadata;
+	unsigned int *abm_level;
+
+	unsigned long long *periodic_fn_vsync_delta;
 };
 
 bool dc_is_stream_unchanged(
@@ -121,13 +138,6 @@ bool dc_is_stream_scaling_unchanged(
  *   This does not trigger a flip.  No surface address is programmed.
  */
 
-bool dc_commit_planes_to_stream(
-		struct dc *dc,
-		struct dc_plane_state **plane_states,
-		uint8_t new_plane_count,
-		struct dc_stream_state *dc_stream,
-		struct dc_state *state);
-
 void dc_commit_updates_for_stream(struct dc *dc,
 		struct dc_surface_update *srf_updates,
 		int surface_count,
@@ -138,10 +148,7 @@ void dc_commit_updates_for_stream(struct dc *dc,
 /*
  * Log the current stream state.
  */
-void dc_stream_log(
-	const struct dc_stream_state *stream,
-	struct dal_logger *dc_logger,
-	enum dc_log_type log_type);
+void dc_stream_log(const struct dc *dc, const struct dc_stream_state *stream);
 
 uint8_t dc_get_current_stream_count(struct dc *dc);
 struct dc_stream_state *dc_get_stream_at_index(struct dc *dc, uint8_t i);
@@ -152,7 +159,7 @@ struct dc_stream_state *dc_get_stream_at_index(struct dc *dc, uint8_t i);
 uint32_t dc_stream_get_vblank_counter(const struct dc_stream_state *stream);
 
 /* TODO: Return parsed values rather than direct register read
- * This has a dependency on the caller (amdgpu_get_crtc_scanoutpos)
+ * This has a dependency on the caller (amdgpu_display_get_crtc_scanoutpos)
  * being refactored properly to be dce-specific
  */
 bool dc_stream_get_scanoutpos(const struct dc_stream_state *stream,
@@ -197,14 +204,6 @@ bool dc_add_all_planes_for_stream(
 		struct dc_state *context);
 
 enum dc_status dc_validate_stream(struct dc *dc, struct dc_stream_state *stream);
-
-/*
- * This function takes a stream and checks if it is guaranteed to be supported.
- * Guaranteed means that MAX_COFUNC similar streams are supported.
- *
- * After this call:
- *   No hardware is programmed for call.  Only validation is done.
- */
 
 /*
  * Set up streams and links associated to drive sinks
@@ -257,23 +256,6 @@ bool dc_stream_set_cursor_position(
 	struct dc_stream_state *stream,
 	const struct dc_cursor_position *position);
 
-bool dc_stream_adjust_vmin_vmax(struct dc *dc,
-				struct dc_stream_state **stream,
-				int num_streams,
-				int vmin,
-				int vmax);
-
-bool dc_stream_get_crtc_position(struct dc *dc,
-				 struct dc_stream_state **stream,
-				 int num_streams,
-				 unsigned int *v_pos,
-				 unsigned int *nom_v_pos);
-
-void dc_stream_set_static_screen_events(struct dc *dc,
-					struct dc_stream_state **stream,
-					int num_streams,
-					const struct dc_static_screen_events *events);
-
 
 bool dc_stream_adjust_vmin_vmax(struct dc *dc,
 				struct dc_stream_state **stream,
@@ -287,9 +269,36 @@ bool dc_stream_get_crtc_position(struct dc *dc,
 				 unsigned int *v_pos,
 				 unsigned int *nom_v_pos);
 
+bool dc_stream_configure_crc(struct dc *dc,
+			     struct dc_stream_state *stream,
+			     bool enable,
+			     bool continuous);
+
+bool dc_stream_get_crc(struct dc *dc,
+		       struct dc_stream_state *stream,
+		       uint32_t *r_cr,
+		       uint32_t *g_y,
+		       uint32_t *b_cb);
+
 void dc_stream_set_static_screen_events(struct dc *dc,
 					struct dc_stream_state **stream,
 					int num_streams,
 					const struct dc_static_screen_events *events);
+
+void dc_stream_set_dither_option(struct dc_stream_state *stream,
+				 enum dc_dither_option option);
+
+
+bool dc_stream_adjust_vmin_vmax(struct dc *dc,
+				struct dc_stream_state **stream,
+				int num_streams,
+				int vmin,
+				int vmax);
+
+bool dc_stream_get_crtc_position(struct dc *dc,
+				 struct dc_stream_state **stream,
+				 int num_streams,
+				 unsigned int *v_pos,
+				 unsigned int *nom_v_pos);
 
 #endif /* DC_STREAM_H_ */

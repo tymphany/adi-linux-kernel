@@ -40,7 +40,6 @@ int drm_atomic_helper_check_modeset(struct drm_device *dev,
 				struct drm_atomic_state *state);
 int drm_atomic_helper_check_plane_state(struct drm_plane_state *plane_state,
 					const struct drm_crtc_state *crtc_state,
-					const struct drm_rect *clip,
 					int min_scale,
 					int max_scale,
 					bool can_position,
@@ -101,6 +100,7 @@ int __must_check drm_atomic_helper_swap_state(struct drm_atomic_state *state,
 int drm_atomic_helper_setup_commit(struct drm_atomic_state *state,
 				   bool nonblock);
 void drm_atomic_helper_wait_for_dependencies(struct drm_atomic_state *state);
+void drm_atomic_helper_fake_vblank(struct drm_atomic_state *state);
 void drm_atomic_helper_commit_hw_done(struct drm_atomic_state *state);
 void drm_atomic_helper_commit_cleanup_done(struct drm_atomic_state *state);
 

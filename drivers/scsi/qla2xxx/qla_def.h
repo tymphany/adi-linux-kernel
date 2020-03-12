@@ -313,6 +313,7 @@ struct srb_cmd {
 #define SRB_CRC_CTX_DMA_VALID		BIT_2	/* DIF: context DMA valid */
 #define SRB_CRC_PROT_DMA_VALID		BIT_4	/* DIF: prot DMA valid */
 #define SRB_CRC_CTX_DSD_VALID		BIT_5	/* DIF: dsd_list valid */
+#define SRB_WAKEUP_ON_COMP		BIT_6
 
 /* To identify if a srb is of T10-CRC type. @sp => srb_t pointer */
 #define IS_PROT_IO(sp)	(sp->flags & SRB_CRC_CTX_DSD_VALID)
@@ -361,6 +362,8 @@ struct ct_arg {
 	dma_addr_t	rsp_dma;
 	u32		req_size;
 	u32		rsp_size;
+	u32		req_allocated_size;
+	u32		rsp_allocated_size;
 	void		*req;
 	void		*rsp;
 	port_id_t	id;
@@ -377,6 +380,7 @@ struct srb_iocb {
 #define SRB_LOGIN_COND_PLOGI	BIT_1
 #define SRB_LOGIN_SKIP_PRLI	BIT_2
 #define SRB_LOGIN_NVME_PRLI	BIT_3
+#define SRB_LOGIN_PRLI_ONLY	BIT_4
 			uint16_t data[2];
 			u32 iop[2];
 		} logio;
@@ -396,6 +400,8 @@ struct srb_iocb {
 			struct completion comp;
 			struct els_plogi_payload *els_plogi_pyld;
 			struct els_plogi_payload *els_resp_pyld;
+			u32 tx_size;
+			u32 rx_size;
 			dma_addr_t els_plogi_pyld_dma;
 			dma_addr_t els_resp_pyld_dma;
 			uint32_t	fw_status[3];
@@ -2279,8 +2285,6 @@ enum discovery_state {
 	DSC_LOGIN_PEND,
 	DSC_LOGIN_FAILED,
 	DSC_GPDB,
-	DSC_GFPN_ID,
-	DSC_GPSC,
 	DSC_UPD_FCPORT,
 	DSC_LOGIN_COMPLETE,
 	DSC_ADISC,
@@ -2312,6 +2316,7 @@ enum fcport_mgt_event {
 	FCME_ADISC_DONE,
 	FCME_GNNID_DONE,
 	FCME_GFPNID_DONE,
+	FCME_ELS_PLOGI_DONE,
 };
 
 enum rscn_addr_format {
@@ -2346,6 +2351,7 @@ typedef struct fc_port {
 	unsigned int login_succ:1;
 	unsigned int query:1;
 	unsigned int id_changed:1;
+	unsigned int rscn_rcvd:1;
 
 	struct work_struct nvme_del_work;
 	struct completion nvme_del_done;
@@ -2356,6 +2362,8 @@ typedef struct fc_port {
 #define NVME_PRLI_SP_DISCOVERY  BIT_3
 	uint8_t nvme_flag;
 #define NVME_FLAG_REGISTERED 4
+#define NVME_FLAG_DELETING 2
+#define NVME_FLAG_RESETTING 1
 
 	struct fc_port *conflict;
 	unsigned char logout_completed;
@@ -2405,6 +2413,7 @@ typedef struct fc_port {
 	struct ct_sns_desc ct_desc;
 	enum discovery_state disc_state;
 	enum login_state fw_login_state;
+	unsigned long dm_login_expire;
 	unsigned long plogi_nack_done_deadline;
 
 	u32 login_gen, last_login_gen;
@@ -2415,7 +2424,8 @@ typedef struct fc_port {
 	u8 iocb[IOCB_SIZE];
 	u8 current_login_state;
 	u8 last_login_state;
-	struct completion n2n_done;
+	u16 n2n_link_reset_cnt;
+	u16 n2n_chip_reset;
 } fc_port_t;
 
 #define QLA_FCPORT_SCAN		1
@@ -2981,8 +2991,14 @@ enum scan_flags_t {
 	SF_QUEUED = BIT_1,
 };
 
+enum fc4type_t {
+	FS_FC4TYPE_FCP	= BIT_0,
+	FS_FC4TYPE_NVME	= BIT_1,
+};
+
 struct fab_scan_rp {
 	port_id_t id;
+	enum fc4type_t fc4type;
 	u8 port_name[8];
 	u8 node_name[8];
 };
@@ -3218,6 +3234,8 @@ enum qla_work_type {
 	QLA_EVT_GNNID,
 	QLA_EVT_GFPNID,
 	QLA_EVT_SP_RETRY,
+	QLA_EVT_IIDMA,
+	QLA_EVT_ELS_PLOGI,
 };
 
 
@@ -3274,6 +3292,7 @@ struct qla_work_evt {
 		} nack;
 		struct {
 			u8 fc4_type;
+			srb_t *sp;
 		} gpnft;
 	 } u;
 };
@@ -3463,7 +3482,6 @@ struct qla_qpair {
 	struct work_struct q_work;
 	struct list_head qp_list_elem; /* vha->qp_list */
 	struct list_head hints_list;
-	struct list_head nvme_done_list;
 	uint16_t cpuid;
 	struct qla_tgt_counters tgt_counters;
 };
@@ -3589,6 +3607,8 @@ struct qla_hw_data {
 		uint32_t	detected_lr_sfp:1;
 		uint32_t	using_lr_setting:1;
 		uint32_t	rida_fmt2:1;
+		uint32_t	purge_mbox:1;
+		uint32_t        n2n_bigger:1;
 	} flags;
 
 	uint16_t max_exchg;
@@ -3834,6 +3854,10 @@ struct qla_hw_data {
 	int		port_down_retry_count;
 	uint8_t		mbx_count;
 	uint8_t		aen_mbx_count;
+	atomic_t	num_pend_mbx_stage1;
+	atomic_t	num_pend_mbx_stage2;
+	atomic_t	num_pend_mbx_stage3;
+	uint16_t	frame_payload_size;
 
 	uint32_t	login_retry_count;
 	/* SNS command interfaces. */
@@ -3892,6 +3916,9 @@ struct qla_hw_data {
 	dma_addr_t	exchoffld_buf_dma;
 	int		exchoffld_size;
 	int 		exchoffld_count;
+
+	/* n2n */
+	struct els_plogi_payload plogi_els_payld;
 
 	void            *swl;
 
@@ -4147,6 +4174,7 @@ struct qla_hw_data {
 	struct work_struct board_disable;
 
 	struct mr_data_fx00 mr;
+	uint32_t chip_reset;
 
 	struct qlt_hw_data tgt;
 	int	allow_cna_fw_dump;
@@ -4228,7 +4256,7 @@ typedef struct scsi_qla_host {
 #define FCOE_CTX_RESET_NEEDED	18	/* Initiate FCoE context reset */
 #define MPI_RESET_NEEDED	19	/* Initiate MPI FW reset */
 #define ISP_QUIESCE_NEEDED	20	/* Driver need some quiescence */
-#define FREE_BIT 21
+#define N2N_LINK_RESET		21
 #define PORT_UPDATE_NEEDED	22
 #define FX00_RESET_RECOVERY	23
 #define FX00_TARGET_SCAN	24
@@ -4281,8 +4309,6 @@ typedef struct scsi_qla_host {
 	struct		nvme_fc_local_port *nvme_local_port;
 	struct completion nvme_del_done;
 	struct list_head nvme_rport_list;
-	atomic_t 	nvme_active_aen_cnt;
-	uint16_t	nvme_last_rptd_aen;
 
 	uint16_t	fcoe_vlan_id;
 	uint16_t	fcoe_fcf_idx;
