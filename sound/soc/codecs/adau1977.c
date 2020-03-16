@@ -719,18 +719,8 @@ static int adau1977_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 static int adau1977_startup(struct snd_pcm_substream *substream,
 	struct snd_soc_dai *dai)
 {
-<<<<<<< HEAD
-	struct adau1977 *adau1977 = snd_soc_codec_get_drvdata(dai->codec);
-=======
-	struct adau1977 *adau1977 = snd_soc_component_get_drvdata(dai->component);
-	u64 formats = 0;
 
-	if (adau1977->slot_width == 16)
-		formats = SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S16_BE;
-	else if (adau1977->right_j || adau1977->slot_width == 24)
-		formats = SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S16_BE |
-			SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S24_BE;
->>>>>>> v4.19
+	struct adau1977 *adau1977 = snd_soc_component_get_drvdata(dai->component);
 
 	snd_pcm_hw_constraint_list(substream->runtime, 0,
 		SNDRV_PCM_HW_PARAM_RATE, &adau1977->constraints);

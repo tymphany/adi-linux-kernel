@@ -780,6 +780,7 @@ static int mcp23s08_probe_one(struct mcp23s08 *mcp, struct device *dev,
 	int status, ret;
 	bool mirror = false;
 	bool open_drain = false;
+	struct regmap_config *one_regmap_config = NULL;
 	int raw_chip_address = (addr & ~0x40) >> 1;
 
 	mutex_init(&mcp->lock);
@@ -827,6 +828,7 @@ static int mcp23s08_probe_one(struct mcp23s08 *mcp, struct device *dev,
 
 		one_regmap_config->name = devm_kasprintf(dev, GFP_KERNEL, "%d", raw_chip_address);
 		mcp->regmap = devm_regmap_init(dev, &mcp23sxx_spi_regmap, mcp,
+					       one_regmap_config);
 		break;
 
 	case MCP_TYPE_S18:

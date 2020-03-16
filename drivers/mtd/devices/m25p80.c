@@ -253,8 +253,9 @@ static int m25p_probe(struct spi_mem *spimem)
 static int m25p_remove(struct spi_mem *spimem)
 {
 	struct m25p	*flash = spi_mem_get_drvdata(spimem);
+	struct spi_nor *nor = &flash->spi_nor;
 
-	spi_nor_restore(&flash->spi_nor);
+	spi_nor_restore(nor);
 
 #if defined (CONFIG_ARCH_SC58X) || defined (CONFIG_ARCH_SC57X)
 	softconfig_of_set_group_active_pins_output(nor->dev,
