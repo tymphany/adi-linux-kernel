@@ -75,7 +75,7 @@
 		lcd@0 {
 			compatible = "sc58x,lcd";
 			reg = <0x31040000 0xFF>;
-			interrupts = <0 83 0>;
+			interrupts = <GIC_SPI 83 IRQ_TYPE_NONE>;
 			dma-channel = <28>;
 			cs-gpio = <39>;
 			spu_securep_id = <95>;
