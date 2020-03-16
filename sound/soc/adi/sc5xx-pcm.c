@@ -191,7 +191,7 @@ static struct snd_soc_platform_driver sc5xx_soc_platform = {
 
 static int sc5xx_soc_platform_probe(struct platform_device *pdev)
 {
-	return devm_snd_soc_register_platform(&pdev->dev, &sc5xx_soc_platform);
+	return devm_snd_soc_register_component(&pdev->dev, &sc5xx_soc_platform);
 }
 
 static struct platform_driver sc5xx_pcm_driver = {
