@@ -344,8 +344,8 @@ static int adau1962_lookup_mcs(struct adau1962 *adau1962, unsigned int rate,
 static int adau1962_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params, struct snd_soc_dai *dai)
 {
-	struct snd_soc_codec *codec = dai->codec;
-	struct adau1962 *adau1962 = snd_soc_codec_get_drvdata(codec);
+	struct snd_soc_component *component = dai->component;
+	struct adau1962 *adau1962 = snd_soc_component_get_drvdata(component);
 	unsigned int rate = params_rate(params);
 	unsigned int slot_width;
 	unsigned int ctrl0, ctrl0_mask;
@@ -421,11 +421,11 @@ static int adau1962_hw_params(struct snd_pcm_substream *substream,
 				ADAU1962_PLL_MCS_MASK, mcs << 1);
 }
 
-static int adau1962_set_bias_level(struct snd_soc_codec *codec,
+static int adau1962_set_bias_level(struct snd_soc_component *component,
 	enum snd_soc_bias_level level)
 {
 #if 0
-	struct adau1962 *adau1962 = snd_soc_codec_get_drvdata(codec);
+	struct adau1962 *adau1962 = snd_soc_component_get_drvdata(component);
 	int ret = 0;
 
 	switch (level) {
@@ -434,7 +434,7 @@ static int adau1962_set_bias_level(struct snd_soc_codec *codec,
 	case SND_SOC_BIAS_PREPARE:
 		break;
 	case SND_SOC_BIAS_STANDBY:
-		if (snd_soc_codec_get_bias_level(codec) == SND_SOC_BIAS_OFF)
+		if (snd_soc_component_get_bias_level(component) == SND_SOC_BIAS_OFF)
 			ret = adau1962_power_enable(adau1962);
 		break;
 	case SND_SOC_BIAS_OFF:
@@ -451,7 +451,7 @@ static int adau1962_set_bias_level(struct snd_soc_codec *codec,
 static int adau1962_set_tdm_slot(struct snd_soc_dai *dai, unsigned int tx_mask,
 	unsigned int rx_mask, int slots, int width)
 {
-	struct adau1962 *adau1962 = snd_soc_codec_get_drvdata(dai->codec);
+	struct adau1962 *adau1962 = snd_soc_component_get_drvdata(dai->component);
 	unsigned int ctrl0, ctrl1, ctrl2;
 	int ret;
 
@@ -526,7 +526,7 @@ static int adau1962_set_tdm_slot(struct snd_soc_dai *dai, unsigned int tx_mask,
 
 static int adau1962_mute(struct snd_soc_dai *dai, int mute, int stream)
 {
-	struct adau1962 *adau1962 = snd_soc_codec_get_drvdata(dai->codec);
+	struct adau1962 *adau1962 = snd_soc_component_get_drvdata(dai->component);
 	unsigned int val;
 
 	if (mute)
@@ -540,7 +540,7 @@ static int adau1962_mute(struct snd_soc_dai *dai, int mute, int stream)
 
 static int adau1962_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 {
-	struct adau1962 *adau1962 = snd_soc_codec_get_drvdata(dai->codec);
+	struct adau1962 *adau1962 = snd_soc_component_get_drvdata(dai->component);
 	unsigned int ctrl0 = 0, ctrl1 = 0;
 	bool invert_lrclk;
 	int ret;
@@ -624,7 +624,7 @@ static int adau1962_startup(struct snd_pcm_substream *substream,
 	struct snd_soc_dai *dai)
 {
 #if 0
-	struct adau1962 *adau1962 = snd_soc_codec_get_drvdata(dai->codec);
+	struct adau1962 *adau1962 = snd_soc_component_get_drvdata(dai->component);
 	u64 formats = 0;
 
 	if (adau1962->slot_width == 16)
@@ -694,10 +694,10 @@ static bool adau1962_check_sysclk(unsigned int mclk, unsigned int base_freq)
 	return true;
 }
 
-static int adau1962_set_sysclk(struct snd_soc_codec *codec,
+static int adau1962_set_sysclk(struct snd_soc_component *component,
 	int clk_id, int source, unsigned int freq, int dir)
 {
-	struct adau1962 *adau1962 = snd_soc_codec_get_drvdata(codec);
+	struct adau1962 *adau1962 = snd_soc_component_get_drvdata(component);
 	unsigned int mask = 0;
 	unsigned int clk_src;
 	unsigned int ret;
@@ -748,19 +748,16 @@ static int adau1962_set_sysclk(struct snd_soc_codec *codec,
 	return 0;
 }
 
-static const struct snd_soc_codec_driver adau1962_codec_driver = {
+static const struct snd_soc_component_driver adau1962_component_driver = {
 	.set_bias_level = adau1962_set_bias_level,
 	.set_sysclk = adau1962_set_sysclk,
-	.idle_bias_off = true,
-
-	.component_driver = {
-		.controls = adau1962_snd_controls,
-		.num_controls = ARRAY_SIZE(adau1962_snd_controls),
-		.dapm_widgets = adau1962_dapm_widgets,
-		.num_dapm_widgets = ARRAY_SIZE(adau1962_dapm_widgets),
-		.dapm_routes = adau1962_dapm_routes,
-		.num_dapm_routes = ARRAY_SIZE(adau1962_dapm_routes),
-	},
+	.idle_bias_on = 1, //hfeng to check here 0?1?
+	.controls = adau1962_snd_controls,
+	.num_controls = ARRAY_SIZE(adau1962_snd_controls),
+	.dapm_widgets = adau1962_dapm_widgets,
+	.num_dapm_widgets = ARRAY_SIZE(adau1962_dapm_widgets),
+	.dapm_routes = adau1962_dapm_routes,
+	.num_dapm_routes = ARRAY_SIZE(adau1962_dapm_routes),
 };
 
 int adau1962_probe(struct device *dev, struct regmap *regmap,
@@ -830,7 +827,7 @@ int adau1962_probe(struct device *dev, struct regmap *regmap,
 				ADAU1962_PLL_CLK_PUP, ADAU1962_PLL_CLK_PUP);
 	adau1962_print(adau1962);
 
-	return snd_soc_register_codec(dev, &adau1962_codec_driver,
+	return snd_soc_register_component(dev, &adau1962_component_driver,
 			&adau1962_dai, 1);
 }
 EXPORT_SYMBOL_GPL(adau1962_probe);
