@@ -184,14 +184,14 @@ static int sc5xx_pcm_new(struct snd_soc_pcm_runtime *rtd)
 				SNDRV_DMA_TYPE_DEV, card->dev, size, size);
 }
 
-static struct snd_soc_platform_driver sc5xx_soc_platform = {
+static struct snd_soc_component_driver sc5xx_soc_component = {
 	.ops		= &sc5xx_pcm_ops,
 	.pcm_new	= sc5xx_pcm_new,
 };
 
 static int sc5xx_soc_platform_probe(struct platform_device *pdev)
 {
-	return devm_snd_soc_register_component(&pdev->dev, &sc5xx_soc_platform);
+	return devm_snd_soc_register_component(&pdev->dev, &sc5xx_soc_component, NULL, 0);
 }
 
 static struct platform_driver sc5xx_pcm_driver = {

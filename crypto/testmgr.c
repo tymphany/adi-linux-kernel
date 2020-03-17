@@ -4583,6 +4583,12 @@ static const struct alg_test_desc alg_test_descs[] = {
 		.test = alg_test_hash,
 		.fips_allowed = 1,
 		.suite = {
+			.hash = __VECS(ghash_tv_template)
+		}
+	}, {
+		.alg = "hmac(crc32)",
+		.test = alg_test_hash,
+		.suite = {
 			.hash = __VECS(adi_crc_tv_template)
 		}
 	}, {
