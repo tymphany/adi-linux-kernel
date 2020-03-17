@@ -93,7 +93,10 @@ static const struct snd_soc_ops adau1962_ops = {
 
 static int __maybe_unused sc5xx_adau1962_init(struct snd_soc_pcm_runtime *rtd)
 {
-	return snd_soc_codec_set_sysclk(rtd->codec, ADAU1962_SYSCLK,
+ struct snd_soc_dai *dai = rtd->codec_dai;
+ struct snd_soc_component *component = dai->component;
+
+	return snd_soc_component_set_sysclk(component, ADAU1962_SYSCLK,
 			ADAU1962_SYSCLK_SRC_MCLK, 24576000, SND_SOC_CLOCK_IN);
 }
 
@@ -159,7 +162,10 @@ static const struct snd_soc_ops adau1979_ops = {
 
 static int __maybe_unused sc5xx_adau1979_init(struct snd_soc_pcm_runtime *rtd)
 {
-	return snd_soc_codec_set_sysclk(rtd->codec, ADAU1977_SYSCLK,
+ struct snd_soc_dai *dai = rtd->codec_dai;
+ struct snd_soc_component *component = dai->component;
+
+	return snd_soc_component_set_sysclk(component, ADAU1977_SYSCLK,
 			ADAU1977_SYSCLK_SRC_MCLK, 24576000, SND_SOC_CLOCK_IN);
 }
 
