@@ -725,9 +725,7 @@ static int adi_cap_g_parm(struct file *file, void *fh,
 {
 	struct adi_cap_device *adi_cap_dev = video_drvdata(file);
 
-	if (a->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
-		return -EINVAL;
-	return v4l2_subdev_call(adi_cap_dev->sd, video, g_parm, a);
+	return v4l2_g_parm_cap(video_devdata(file), adi_cap_dev->sd, a);
 }
 
 static int adi_cap_s_parm(struct file *file, void *fh,
@@ -735,9 +733,7 @@ static int adi_cap_s_parm(struct file *file, void *fh,
 {
 	struct adi_cap_device *adi_cap_dev = video_drvdata(file);
 
-	if (a->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
-		return -EINVAL;
-	return v4l2_subdev_call(adi_cap_dev->sd, video, s_parm, a);
+	return v4l2_s_parm_cap(video_devdata(file), adi_cap_dev->sd, a);
 }
 
 static int adi_cap_log_status(struct file *file, void *priv)

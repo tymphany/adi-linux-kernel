@@ -694,9 +694,7 @@ static int adi_disp_g_parm(struct file *file, void *fh,
 {
 	struct adi_disp_device *disp = video_drvdata(file);
 
-	if (a->type != V4L2_BUF_TYPE_VIDEO_OUTPUT)
-		return -EINVAL;
-	return v4l2_subdev_call(disp->sd, video, g_parm, a);
+	return v4l2_g_parm_cap(video_devdata(file), disp->sd, a);
 }
 
 static int adi_disp_s_parm(struct file *file, void *fh,
@@ -704,9 +702,7 @@ static int adi_disp_s_parm(struct file *file, void *fh,
 {
 	struct adi_disp_device *disp = video_drvdata(file);
 
-	if (a->type != V4L2_BUF_TYPE_VIDEO_OUTPUT)
-		return -EINVAL;
-	return v4l2_subdev_call(disp->sd, video, s_parm, a);
+	return v4l2_g_parm_cap(video_devdata(file), disp->sd, a);
 }
 
 static int adi_disp_log_status(struct file *file, void *priv)
