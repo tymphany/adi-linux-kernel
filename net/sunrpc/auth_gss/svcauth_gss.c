@@ -1375,7 +1375,7 @@ static int create_use_gss_proxy_proc_entry(struct net *net)
 	struct proc_dir_entry **p = &sn->use_gssp_proc;
 
 	sn->use_gss_proxy = -1;
-	*p = proc_create_data("use-gss-proxy", S_IFREG|S_IRUSR|S_IWUSR,
+	*p = proc_create_data("use-gss-proxy", S_IFREG | 0600,
 			      sn->proc_net_rpc,
 			      &use_gss_proxy_ops, net);
 	if (!*p)
@@ -1389,7 +1389,7 @@ static void destroy_use_gss_proxy_proc_entry(struct net *net)
 	struct sunrpc_net *sn = net_generic(net, sunrpc_net_id);
 
 	if (sn->use_gssp_proc) {
-		remove_proc_entry("use-gss-proxy", sn->proc_net_rpc); 
+		remove_proc_entry("use-gss-proxy", sn->proc_net_rpc);
 		clear_gssp_clnt(sn);
 	}
 }

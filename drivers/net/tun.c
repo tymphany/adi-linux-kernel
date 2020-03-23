@@ -70,6 +70,7 @@
 #include <net/netns/generic.h>
 #include <net/rtnetlink.h>
 #include <net/sock.h>
+#include <net/xdp.h>
 #include <linux/seq_file.h>
 #include <linux/uio.h>
 #include <linux/skb_array.h>
@@ -78,6 +79,10 @@
 #include <linux/mutex.h>
 
 #include <linux/uaccess.h>
+#include <linux/proc_fs.h>
+
+static void tun_default_link_ksettings(struct net_device *dev,
+				       struct ethtool_link_ksettings *cmd);
 
 /* Uncomment to enable debugging */
 /* #define TUN_DEBUG 1 */
@@ -176,6 +181,7 @@ struct tun_file {
 	};
 	struct napi_struct napi;
 	bool napi_enabled;
+	bool napi_frags_enabled;
 	struct mutex napi_mutex;	/* Protects access to the above napi */
 	struct list_head next;
 	struct tun_struct *detached;
@@ -195,6 +201,7 @@ struct tun_flow_entry {
 };
 
 #define TUN_NUM_FLOW_ENTRIES 1024
+#define TUN_MASK_FLOW_ENTRIES (TUN_NUM_FLOW_ENTRIES - 1)
 
 struct tun_prog {
 	struct rcu_head rcu;
@@ -240,6 +247,7 @@ struct tun_struct {
 	struct bpf_prog __rcu *xdp_prog;
 	struct tun_prog __rcu *steering_prog;
 	struct tun_prog __rcu *filter_prog;
+	struct ethtool_link_ksettings link_ksettings;
 };
 
 struct veth {
@@ -247,11 +255,11 @@ struct veth {
 	__be16 h_vlan_TCI;
 };
 
-bool tun_is_xdp_buff(void *ptr)
+bool tun_is_xdp_frame(void *ptr)
 {
 	return (unsigned long)ptr & TUN_XDP_FLAG;
 }
-EXPORT_SYMBOL(tun_is_xdp_buff);
+EXPORT_SYMBOL(tun_is_xdp_frame);
 
 void *tun_xdp_to_ptr(void *ptr)
 {
@@ -306,32 +314,32 @@ static int tun_napi_poll(struct napi_struct *napi, int budget)
 }
 
 static void tun_napi_init(struct tun_struct *tun, struct tun_file *tfile,
-			  bool napi_en)
+			  bool napi_en, bool napi_frags)
 {
 	tfile->napi_enabled = napi_en;
+	tfile->napi_frags_enabled = napi_en && napi_frags;
 	if (napi_en) {
 		netif_napi_add(tun->dev, &tfile->napi, tun_napi_poll,
 			       NAPI_POLL_WEIGHT);
 		napi_enable(&tfile->napi);
-		mutex_init(&tfile->napi_mutex);
 	}
 }
 
-static void tun_napi_disable(struct tun_struct *tun, struct tun_file *tfile)
+static void tun_napi_disable(struct tun_file *tfile)
 {
 	if (tfile->napi_enabled)
 		napi_disable(&tfile->napi);
 }
 
-static void tun_napi_del(struct tun_struct *tun, struct tun_file *tfile)
+static void tun_napi_del(struct tun_file *tfile)
 {
 	if (tfile->napi_enabled)
 		netif_napi_del(&tfile->napi);
 }
 
-static bool tun_napi_frags_enabled(const struct tun_struct *tun)
+static bool tun_napi_frags_enabled(const struct tun_file *tfile)
 {
-	return READ_ONCE(tun->flags) & IFF_NAPI_FRAGS;
+	return tfile->napi_frags_enabled;
 }
 
 #ifdef CONFIG_TUN_VNET_CROSS_LE
@@ -400,7 +408,7 @@ static inline __virtio16 cpu_to_tun16(struct tun_struct *tun, u16 val)
 
 static inline u32 tun_hashfn(u32 rxhash)
 {
-	return rxhash & 0x3ff;
+	return rxhash & TUN_MASK_FLOW_ENTRIES;
 }
 
 static struct tun_flow_entry *tun_flow_find(struct hlist_head *head, u32 rxhash)
@@ -524,11 +532,6 @@ static void tun_flow_update(struct tun_struct *tun, u32 rxhash,
 
 	rcu_read_lock();
 
-	/* We may get a very small possibility of OOO during switching, not
-	 * worth to optimize.*/
-	if (tun->numqueues == 1 || tfile->detached)
-		goto unlock;
-
 	e = tun_flow_find(head, rxhash);
 	if (likely(e)) {
 		/* TODO: keep queueing to old queue until it's empty? */
@@ -547,7 +550,6 @@ static void tun_flow_update(struct tun_struct *tun, u32 rxhash,
 		spin_unlock_bh(&tun->lock);
 	}
 
-unlock:
 	rcu_read_unlock();
 }
 
@@ -607,7 +609,8 @@ static u16 tun_ebpf_select_queue(struct tun_struct *tun, struct sk_buff *skb)
 }
 
 static u16 tun_select_queue(struct net_device *dev, struct sk_buff *skb,
-			    void *accel_priv, select_queue_fallback_t fallback)
+			    struct net_device *sb_dev,
+			    select_queue_fallback_t fallback)
 {
 	struct tun_struct *tun = netdev_priv(dev);
 	u16 ret;
@@ -659,10 +662,10 @@ void tun_ptr_free(void *ptr)
 {
 	if (!ptr)
 		return;
-	if (tun_is_xdp_buff(ptr)) {
-		struct xdp_buff *xdp = tun_ptr_to_xdp(ptr);
+	if (tun_is_xdp_frame(ptr)) {
+		struct xdp_frame *xdpf = tun_ptr_to_xdp(ptr);
 
-		put_page(virt_to_head_page(xdp->data));
+		xdp_return_frame(xdpf);
 	} else {
 		__skb_array_destroy_skb(ptr);
 	}
@@ -680,15 +683,6 @@ static void tun_queue_purge(struct tun_file *tfile)
 	skb_queue_purge(&tfile->sk.sk_error_queue);
 }
 
-static void tun_cleanup_tx_ring(struct tun_file *tfile)
-{
-	if (tfile->tx_ring.queue) {
-		ptr_ring_cleanup(&tfile->tx_ring, tun_ptr_free);
-		xdp_rxq_info_unreg(&tfile->xdp_rxq);
-		memset(&tfile->tx_ring, 0, sizeof(tfile->tx_ring));
-	}
-}
-
 static void __tun_detach(struct tun_file *tfile, bool clean)
 {
 	struct tun_file *ntfile;
@@ -697,8 +691,8 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
 	tun = rtnl_dereference(tfile->tun);
 
 	if (tun && clean) {
-		tun_napi_disable(tun, tfile);
-		tun_napi_del(tun, tfile);
+		tun_napi_disable(tfile);
+		tun_napi_del(tfile);
 	}
 
 	if (tun && !tfile->detached) {
@@ -735,15 +729,24 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
 			    tun->dev->reg_state == NETREG_REGISTERED)
 				unregister_netdevice(tun->dev);
 		}
-		tun_cleanup_tx_ring(tfile);
+		if (tun)
+			xdp_rxq_info_unreg(&tfile->xdp_rxq);
+		ptr_ring_cleanup(&tfile->tx_ring, tun_ptr_free);
 		sock_put(&tfile->sk);
 	}
 }
 
 static void tun_detach(struct tun_file *tfile, bool clean)
 {
+	struct tun_struct *tun;
+	struct net_device *dev;
+
 	rtnl_lock();
+	tun = rtnl_dereference(tfile->tun);
+	dev = tun ? tun->dev : NULL;
 	__tun_detach(tfile, clean);
+	if (dev)
+		netdev_state_change(dev);
 	rtnl_unlock();
 }
 
@@ -756,7 +759,7 @@ static void tun_detach_all(struct net_device *dev)
 	for (i = 0; i < n; i++) {
 		tfile = rtnl_dereference(tun->tfiles[i]);
 		BUG_ON(!tfile);
-		tun_napi_disable(tun, tfile);
+		tun_napi_disable(tfile);
 		tfile->socket.sk->sk_shutdown = RCV_SHUTDOWN;
 		tfile->socket.sk->sk_data_ready(tfile->socket.sk);
 		RCU_INIT_POINTER(tfile->tun, NULL);
@@ -772,17 +775,17 @@ static void tun_detach_all(struct net_device *dev)
 	synchronize_net();
 	for (i = 0; i < n; i++) {
 		tfile = rtnl_dereference(tun->tfiles[i]);
-		tun_napi_del(tun, tfile);
+		tun_napi_del(tfile);
 		/* Drop read queue */
 		tun_queue_purge(tfile);
+		xdp_rxq_info_unreg(&tfile->xdp_rxq);
 		sock_put(&tfile->sk);
-		tun_cleanup_tx_ring(tfile);
 	}
 	list_for_each_entry_safe(tfile, tmp, &tun->disabled, next) {
 		tun_enable_queue(tfile);
 		tun_queue_purge(tfile);
+		xdp_rxq_info_unreg(&tfile->xdp_rxq);
 		sock_put(&tfile->sk);
-		tun_cleanup_tx_ring(tfile);
 	}
 	BUG_ON(tun->numdisabled != 0);
 
@@ -791,7 +794,7 @@ static void tun_detach_all(struct net_device *dev)
 }
 
 static int tun_attach(struct tun_struct *tun, struct file *file,
-		      bool skip_filter, bool napi)
+		      bool skip_filter, bool napi, bool napi_frags)
 {
 	struct tun_file *tfile = file->private_data;
 	struct net_device *dev = tun->dev;
@@ -826,7 +829,8 @@ static int tun_attach(struct tun_struct *tun, struct file *file,
 	}
 
 	if (!tfile->detached &&
-	    ptr_ring_init(&tfile->tx_ring, dev->tx_queue_len, GFP_KERNEL)) {
+	    ptr_ring_resize(&tfile->tx_ring, dev->tx_queue_len,
+			    GFP_KERNEL, tun_ptr_free)) {
 		err = -ENOMEM;
 		goto out;
 	}
@@ -846,6 +850,12 @@ static int tun_attach(struct tun_struct *tun, struct file *file,
 				       tun->dev, tfile->queue_index);
 		if (err < 0)
 			goto out;
+		err = xdp_rxq_info_reg_mem_model(&tfile->xdp_rxq,
+						 MEM_TYPE_PAGE_SHARED, NULL);
+		if (err < 0) {
+			xdp_rxq_info_unreg(&tfile->xdp_rxq);
+			goto out;
+		}
 		err = 0;
 	}
 
@@ -857,7 +867,7 @@ static int tun_attach(struct tun_struct *tun, struct file *file,
 		tun_enable_queue(tfile);
 	} else {
 		sock_hold(&tfile->sk);
-		tun_napi_init(tun, tfile, napi);
+		tun_napi_init(tun, tfile, napi, napi_frags);
 	}
 
 	tun_set_real_num_queues(tun);
@@ -1094,12 +1104,7 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 		goto drop;
 
 	len = run_ebpf_filter(tun, skb, len);
-
-	/* Trim extra bytes since we may insert vlan proto & TCI
-	 * in tun_put_user().
-	 */
-	len -= skb_vlan_tag_present(skb) ? sizeof(struct veth) : 0;
-	if (len <= 0 || pskb_trim(skb, len))
+	if (len == 0 || pskb_trim(skb, len))
 		goto drop;
 
 	if (unlikely(skb_orphan_frags_rx(skb, GFP_ATOMIC)))
@@ -1149,43 +1154,6 @@ static netdev_features_t tun_net_fix_features(struct net_device *dev,
 
 	return (features & tun->set_features) | (features & ~TUN_USER_FEATURES);
 }
-#ifdef CONFIG_NET_POLL_CONTROLLER
-static void tun_poll_controller(struct net_device *dev)
-{
-	/*
-	 * Tun only receives frames when:
-	 * 1) the char device endpoint gets data from user space
-	 * 2) the tun socket gets a sendmsg call from user space
-	 * If NAPI is not enabled, since both of those are synchronous
-	 * operations, we are guaranteed never to have pending data when we poll
-	 * for it so there is nothing to do here but return.
-	 * We need this though so netpoll recognizes us as an interface that
-	 * supports polling, which enables bridge devices in virt setups to
-	 * still use netconsole
-	 * If NAPI is enabled, however, we need to schedule polling for all
-	 * queues unless we are using napi_gro_frags(), which we call in
-	 * process context and not in NAPI context.
-	 */
-	struct tun_struct *tun = netdev_priv(dev);
-
-	if (tun->flags & IFF_NAPI) {
-		struct tun_file *tfile;
-		int i;
-
-		if (tun_napi_frags_enabled(tun))
-			return;
-
-		rcu_read_lock();
-		for (i = 0; i < tun->numqueues; i++) {
-			tfile = rcu_dereference(tun->tfiles[i]);
-			if (tfile->napi_enabled)
-				napi_schedule(&tfile->napi);
-		}
-		rcu_read_unlock();
-	}
-	return;
-}
-#endif
 
 static void tun_set_headroom(struct net_device *dev, int new_hr)
 {
@@ -1266,7 +1234,6 @@ static int tun_xdp(struct net_device *dev, struct netdev_bpf *xdp)
 		return tun_xdp_set(dev, xdp->prog, xdp->extack);
 	case XDP_QUERY_PROG:
 		xdp->prog_id = tun_xdp_query(dev);
-		xdp->prog_attached = !!xdp->prog_id;
 		return 0;
 	default:
 		return -EINVAL;
@@ -1280,72 +1247,73 @@ static const struct net_device_ops tun_netdev_ops = {
 	.ndo_start_xmit		= tun_net_xmit,
 	.ndo_fix_features	= tun_net_fix_features,
 	.ndo_select_queue	= tun_select_queue,
-#ifdef CONFIG_NET_POLL_CONTROLLER
-	.ndo_poll_controller	= tun_poll_controller,
-#endif
 	.ndo_set_rx_headroom	= tun_set_headroom,
 	.ndo_get_stats64	= tun_net_get_stats64,
 };
 
-static int tun_xdp_xmit(struct net_device *dev, struct xdp_buff *xdp)
+static void __tun_xdp_flush_tfile(struct tun_file *tfile)
+{
+	/* Notify and wake up reader process */
+	if (tfile->flags & TUN_FASYNC)
+		kill_fasync(&tfile->fasync, SIGIO, POLL_IN);
+	tfile->socket.sk->sk_data_ready(tfile->socket.sk);
+}
+
+static int tun_xdp_xmit(struct net_device *dev, int n,
+			struct xdp_frame **frames, u32 flags)
 {
 	struct tun_struct *tun = netdev_priv(dev);
-	struct xdp_buff *buff = xdp->data_hard_start;
-	int headroom = xdp->data - xdp->data_hard_start;
 	struct tun_file *tfile;
 	u32 numqueues;
-	int ret = 0;
+	int drops = 0;
+	int cnt = n;
+	int i;
 
-	/* Assure headroom is available and buff is properly aligned */
-	if (unlikely(headroom < sizeof(*xdp) || tun_is_xdp_buff(xdp)))
-		return -ENOSPC;
-
-	*buff = *xdp;
+	if (unlikely(flags & ~XDP_XMIT_FLAGS_MASK))
+		return -EINVAL;
 
 	rcu_read_lock();
 
 	numqueues = READ_ONCE(tun->numqueues);
 	if (!numqueues) {
-		ret = -ENOSPC;
-		goto out;
+		rcu_read_unlock();
+		return -ENXIO; /* Caller will free/return all frames */
 	}
 
 	tfile = rcu_dereference(tun->tfiles[smp_processor_id() %
 					    numqueues]);
-	/* Encode the XDP flag into lowest bit for consumer to differ
-	 * XDP buffer from sk_buff.
-	 */
-	if (ptr_ring_produce(&tfile->tx_ring, tun_xdp_to_ptr(buff))) {
-		this_cpu_inc(tun->pcpu_stats->tx_dropped);
-		ret = -ENOSPC;
-	}
 
-out:
+	spin_lock(&tfile->tx_ring.producer_lock);
+	for (i = 0; i < n; i++) {
+		struct xdp_frame *xdp = frames[i];
+		/* Encode the XDP flag into lowest bit for consumer to differ
+		 * XDP buffer from sk_buff.
+		 */
+		void *frame = tun_xdp_to_ptr(xdp);
+
+		if (__ptr_ring_produce(&tfile->tx_ring, frame)) {
+			this_cpu_inc(tun->pcpu_stats->tx_dropped);
+			xdp_return_frame_rx_napi(xdp);
+			drops++;
+		}
+	}
+	spin_unlock(&tfile->tx_ring.producer_lock);
+
+	if (flags & XDP_XMIT_FLUSH)
+		__tun_xdp_flush_tfile(tfile);
+
 	rcu_read_unlock();
-	return ret;
+	return cnt - drops;
 }
 
-static void tun_xdp_flush(struct net_device *dev)
+static int tun_xdp_tx(struct net_device *dev, struct xdp_buff *xdp)
 {
-	struct tun_struct *tun = netdev_priv(dev);
-	struct tun_file *tfile;
-	u32 numqueues;
+	struct xdp_frame *frame = convert_to_xdp_frame(xdp);
 
-	rcu_read_lock();
+	if (unlikely(!frame))
+		return -EOVERFLOW;
 
-	numqueues = READ_ONCE(tun->numqueues);
-	if (!numqueues)
-		goto out;
-
-	tfile = rcu_dereference(tun->tfiles[smp_processor_id() %
-					    numqueues]);
-	/* Notify and wake up reader process */
-	if (tfile->flags & TUN_FASYNC)
-		kill_fasync(&tfile->fasync, SIGIO, POLL_IN);
-	tfile->socket.sk->sk_data_ready(tfile->socket.sk);
-
-out:
-	rcu_read_unlock();
+	return tun_xdp_xmit(dev, 1, &frame, XDP_XMIT_FLUSH);
 }
 
 static const struct net_device_ops tap_netdev_ops = {
@@ -1358,15 +1326,11 @@ static const struct net_device_ops tap_netdev_ops = {
 	.ndo_set_mac_address	= eth_mac_addr,
 	.ndo_validate_addr	= eth_validate_addr,
 	.ndo_select_queue	= tun_select_queue,
-#ifdef CONFIG_NET_POLL_CONTROLLER
-	.ndo_poll_controller	= tun_poll_controller,
-#endif
 	.ndo_features_check	= passthru_features_check,
 	.ndo_set_rx_headroom	= tun_set_headroom,
 	.ndo_get_stats64	= tun_net_get_stats64,
 	.ndo_bpf		= tun_xdp,
 	.ndo_xdp_xmit		= tun_xdp_xmit,
-	.ndo_xdp_flush		= tun_xdp_flush,
 };
 
 static void tun_flow_init(struct tun_struct *tun)
@@ -1426,6 +1390,13 @@ static void tun_net_init(struct net_device *dev)
 	dev->max_mtu = MAX_MTU - dev->hard_header_len;
 }
 
+static bool tun_sock_writeable(struct tun_struct *tun, struct tun_file *tfile)
+{
+	struct sock *sk = tfile->socket.sk;
+
+	return (tun->dev->flags & IFF_UP) && sock_writeable(sk);
+}
+
 /* Character device part */
 
 /* Poll */
@@ -1448,10 +1419,14 @@ static __poll_t tun_chr_poll(struct file *file, poll_table *wait)
 	if (!ptr_ring_empty(&tfile->tx_ring))
 		mask |= EPOLLIN | EPOLLRDNORM;
 
-	if (tun->dev->flags & IFF_UP &&
-	    (sock_writeable(sk) ||
-	     (!test_and_set_bit(SOCKWQ_ASYNC_NOSPACE, &sk->sk_socket->flags) &&
-	      sock_writeable(sk))))
+	/* Make sure SOCKWQ_ASYNC_NOSPACE is set if not writable to
+	 * guarantee EPOLLOUT to be raised by either here or
+	 * tun_sock_write_space(). Then process could get notification
+	 * after it writes to a down device and meets -EIO.
+	 */
+	if (tun_sock_writeable(tun, tfile) ||
+	    (!test_and_set_bit(SOCKWQ_ASYNC_NOSPACE, &sk->sk_socket->flags) &&
+	     tun_sock_writeable(tun, tfile)))
 		mask |= EPOLLOUT | EPOLLWRNORM;
 
 	if (tun->dev->reg_state != NETREG_REGISTERED)
@@ -1613,7 +1588,6 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 	unsigned int delta = 0;
 	char *buf;
 	size_t copied;
-	bool xdp_xmit = false;
 	int err, pad = TUN_RX_PAD;
 
 	rcu_read_lock();
@@ -1643,7 +1617,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 	else
 		*skb_xdp = 0;
 
-	preempt_disable();
+	local_bh_disable();
 	rcu_read_lock();
 	xdp_prog = rcu_dereference(tun->xdp_prog);
 	if (xdp_prog && !*skb_xdp) {
@@ -1668,13 +1642,19 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 			if (err)
 				goto err_redirect;
 			rcu_read_unlock();
-			preempt_enable();
+			local_bh_enable();
 			return NULL;
 		case XDP_TX:
-			xdp_xmit = true;
-			/* fall through */
+			get_page(alloc_frag->page);
+			alloc_frag->offset += buflen;
+			if (tun_xdp_tx(tun->dev, &xdp) < 0)
+				goto err_redirect;
+			rcu_read_unlock();
+			local_bh_enable();
+			return NULL;
 		case XDP_PASS:
 			delta = orig_data - xdp.data;
+			len = xdp.data_end - xdp.data;
 			break;
 		default:
 			bpf_warn_invalid_xdp_action(act);
@@ -1690,25 +1670,17 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 	skb = build_skb(buf, buflen);
 	if (!skb) {
 		rcu_read_unlock();
-		preempt_enable();
+		local_bh_enable();
 		return ERR_PTR(-ENOMEM);
 	}
 
 	skb_reserve(skb, pad - delta);
-	skb_put(skb, len + delta);
+	skb_put(skb, len);
 	get_page(alloc_frag->page);
 	alloc_frag->offset += buflen;
 
-	if (xdp_xmit) {
-		skb->dev = tun->dev;
-		generic_xdp_tx(skb, xdp_prog);
-		rcu_read_unlock();
-		preempt_enable();
-		return NULL;
-	}
-
 	rcu_read_unlock();
-	preempt_enable();
+	local_bh_enable();
 
 	return skb;
 
@@ -1716,7 +1688,7 @@ err_redirect:
 	put_page(alloc_frag->page);
 err_xdp:
 	rcu_read_unlock();
-	preempt_enable();
+	local_bh_enable();
 	this_cpu_inc(tun->pcpu_stats->rx_dropped);
 	return NULL;
 }
@@ -1738,7 +1710,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	int err;
 	u32 rxhash = 0;
 	int skb_xdp = 1;
-	bool frags = tun_napi_frags_enabled(tun);
+	bool frags = tun_napi_frags_enabled(tfile);
 
 	if (!(tun->dev->flags & IFF_UP))
 		return -EIO;
@@ -1912,22 +1884,28 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 		struct bpf_prog *xdp_prog;
 		int ret;
 
+		local_bh_disable();
 		rcu_read_lock();
 		xdp_prog = rcu_dereference(tun->xdp_prog);
 		if (xdp_prog) {
 			ret = do_xdp_generic(xdp_prog, skb);
 			if (ret != XDP_PASS) {
 				rcu_read_unlock();
+				local_bh_enable();
 				return total_len;
 			}
 		}
 		rcu_read_unlock();
+		local_bh_enable();
 	}
 
-	rcu_read_lock();
-	if (!rcu_dereference(tun->steering_prog))
+	/* Compute the costly rx hash only if needed for flow updates.
+	 * We may get a very small possibility of OOO during switching, not
+	 * worth to optimize.
+	 */
+	if (!rcu_access_pointer(tun->steering_prog) && tun->numqueues > 1 &&
+	    !tfile->detached)
 		rxhash = __skb_get_hash_symmetric(skb);
-	rcu_read_unlock();
 
 	if (frags) {
 		/* Exercise flow dissector code path. */
@@ -1996,11 +1974,11 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
 
 static ssize_t tun_put_user_xdp(struct tun_struct *tun,
 				struct tun_file *tfile,
-				struct xdp_buff *xdp,
+				struct xdp_frame *xdp_frame,
 				struct iov_iter *iter)
 {
 	int vnet_hdr_sz = 0;
-	size_t size = xdp->data_end - xdp->data;
+	size_t size = xdp_frame->len;
 	struct tun_pcpu_stats *stats;
 	size_t ret;
 
@@ -2016,7 +1994,7 @@ static ssize_t tun_put_user_xdp(struct tun_struct *tun,
 		iov_iter_advance(iter, vnet_hdr_sz - sizeof(gso));
 	}
 
-	ret = copy_to_iter(xdp->data, size, iter) + vnet_hdr_sz;
+	ret = copy_to_iter(xdp_frame->data, size, iter) + vnet_hdr_sz;
 
 	stats = get_cpu_ptr(tun->pcpu_stats);
 	u64_stats_update_begin(&stats->syncp);
@@ -2070,7 +2048,8 @@ static ssize_t tun_put_user(struct tun_struct *tun,
 			return -EINVAL;
 
 		if (virtio_net_hdr_from_skb(skb, &gso,
-					    tun_is_little_endian(tun), true)) {
+					    tun_is_little_endian(tun), true,
+					    vlan_hlen)) {
 			struct skb_shared_info *sinfo = skb_shinfo(skb);
 			pr_err("unexpected GSO type: "
 			       "0x%x, gso_size %d, hdr_len %d\n",
@@ -2184,11 +2163,11 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 			return err;
 	}
 
-	if (tun_is_xdp_buff(ptr)) {
-		struct xdp_buff *xdp = tun_ptr_to_xdp(ptr);
+	if (tun_is_xdp_frame(ptr)) {
+		struct xdp_frame *xdpf = tun_ptr_to_xdp(ptr);
 
-		ret = tun_put_user_xdp(tun, tfile, xdp, to);
-		put_page(virt_to_head_page(xdp->data));
+		ret = tun_put_user_xdp(tun, tfile, xdpf, to);
+		xdp_return_frame(xdpf);
 	} else {
 		struct sk_buff *skb = ptr;
 
@@ -2270,6 +2249,7 @@ static void tun_setup(struct net_device *dev)
 
 	tun->owner = INVALID_UID;
 	tun->group = INVALID_GID;
+	tun_default_link_ksettings(dev, &tun->link_ksettings);
 
 	dev->ethtool_ops = &tun_ethtool_ops;
 	dev->needs_free_netdev = true;
@@ -2287,11 +2267,67 @@ static int tun_validate(struct nlattr *tb[], struct nlattr *data[],
 	return -EINVAL;
 }
 
+static size_t tun_get_size(const struct net_device *dev)
+{
+	BUILD_BUG_ON(sizeof(u32) != sizeof(uid_t));
+	BUILD_BUG_ON(sizeof(u32) != sizeof(gid_t));
+
+	return nla_total_size(sizeof(uid_t)) + /* OWNER */
+	       nla_total_size(sizeof(gid_t)) + /* GROUP */
+	       nla_total_size(sizeof(u8)) + /* TYPE */
+	       nla_total_size(sizeof(u8)) + /* PI */
+	       nla_total_size(sizeof(u8)) + /* VNET_HDR */
+	       nla_total_size(sizeof(u8)) + /* PERSIST */
+	       nla_total_size(sizeof(u8)) + /* MULTI_QUEUE */
+	       nla_total_size(sizeof(u32)) + /* NUM_QUEUES */
+	       nla_total_size(sizeof(u32)) + /* NUM_DISABLED_QUEUES */
+	       0;
+}
+
+static int tun_fill_info(struct sk_buff *skb, const struct net_device *dev)
+{
+	struct tun_struct *tun = netdev_priv(dev);
+
+	if (nla_put_u8(skb, IFLA_TUN_TYPE, tun->flags & TUN_TYPE_MASK))
+		goto nla_put_failure;
+	if (uid_valid(tun->owner) &&
+	    nla_put_u32(skb, IFLA_TUN_OWNER,
+			from_kuid_munged(current_user_ns(), tun->owner)))
+		goto nla_put_failure;
+	if (gid_valid(tun->group) &&
+	    nla_put_u32(skb, IFLA_TUN_GROUP,
+			from_kgid_munged(current_user_ns(), tun->group)))
+		goto nla_put_failure;
+	if (nla_put_u8(skb, IFLA_TUN_PI, !(tun->flags & IFF_NO_PI)))
+		goto nla_put_failure;
+	if (nla_put_u8(skb, IFLA_TUN_VNET_HDR, !!(tun->flags & IFF_VNET_HDR)))
+		goto nla_put_failure;
+	if (nla_put_u8(skb, IFLA_TUN_PERSIST, !!(tun->flags & IFF_PERSIST)))
+		goto nla_put_failure;
+	if (nla_put_u8(skb, IFLA_TUN_MULTI_QUEUE,
+		       !!(tun->flags & IFF_MULTI_QUEUE)))
+		goto nla_put_failure;
+	if (tun->flags & IFF_MULTI_QUEUE) {
+		if (nla_put_u32(skb, IFLA_TUN_NUM_QUEUES, tun->numqueues))
+			goto nla_put_failure;
+		if (nla_put_u32(skb, IFLA_TUN_NUM_DISABLED_QUEUES,
+				tun->numdisabled))
+			goto nla_put_failure;
+	}
+
+	return 0;
+
+nla_put_failure:
+	return -EMSGSIZE;
+}
+
 static struct rtnl_link_ops tun_link_ops __read_mostly = {
 	.kind		= DRV_NAME,
 	.priv_size	= sizeof(struct tun_struct),
 	.setup		= tun_setup,
 	.validate	= tun_validate,
+	.get_size       = tun_get_size,
+	.fill_info      = tun_fill_info,
 };
 
 static void tun_sock_write_space(struct sock *sk)
@@ -2371,10 +2407,10 @@ out_free:
 static int tun_ptr_peek_len(void *ptr)
 {
 	if (likely(ptr)) {
-		if (tun_is_xdp_buff(ptr)) {
-			struct xdp_buff *xdp = tun_ptr_to_xdp(ptr);
+		if (tun_is_xdp_frame(ptr)) {
+			struct xdp_frame *xdpf = tun_ptr_to_xdp(ptr);
 
-			return xdp->data_end - xdp->data;
+			return xdpf->len;
 		}
 		return __skb_array_len_with_tag(ptr);
 	} else {
@@ -2499,7 +2535,8 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
 			return err;
 
 		err = tun_attach(tun, file, ifr->ifr_flags & IFF_NOFILTER,
-				 ifr->ifr_flags & IFF_NAPI);
+				 ifr->ifr_flags & IFF_NAPI,
+				 ifr->ifr_flags & IFF_NAPI_FRAGS);
 		if (err < 0)
 			return err;
 
@@ -2508,10 +2545,15 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
 			/* One or more queue has already been attached, no need
 			 * to initialize the device again.
 			 */
+			netdev_state_change(dev);
 			return 0;
 		}
-	}
-	else {
+
+		tun->flags = (tun->flags & ~TUN_FEATURES) |
+			      (ifr->ifr_flags & TUN_FEATURES);
+
+		netdev_state_change(dev);
+	} else {
 		char *name;
 		unsigned long flags = 0;
 		int queues = ifr->ifr_flags & IFF_MULTI_QUEUE ?
@@ -2588,8 +2630,12 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
 				     ~(NETIF_F_HW_VLAN_CTAG_TX |
 				       NETIF_F_HW_VLAN_STAG_TX);
 
+		tun->flags = (tun->flags & ~TUN_FEATURES) |
+			      (ifr->ifr_flags & TUN_FEATURES);
+
 		INIT_LIST_HEAD(&tun->disabled);
-		err = tun_attach(tun, file, false, ifr->ifr_flags & IFF_NAPI);
+		err = tun_attach(tun, file, false, ifr->ifr_flags & IFF_NAPI,
+				 ifr->ifr_flags & IFF_NAPI_FRAGS);
 		if (err < 0)
 			goto err_free_flow;
 
@@ -2601,9 +2647,6 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
 	netif_carrier_on(tun->dev);
 
 	tun_debug(KERN_INFO, tun, "tun_set_iff\n");
-
-	tun->flags = (tun->flags & ~TUN_FEATURES) |
-		(ifr->ifr_flags & TUN_FEATURES);
 
 	/* Make sure persistent devices do not get stuck in
 	 * xoff state.
@@ -2741,7 +2784,8 @@ static int tun_set_queue(struct file *file, struct ifreq *ifr)
 		ret = security_tun_dev_attach_queue(tun->security);
 		if (ret < 0)
 			goto unlock;
-		ret = tun_attach(tun, file, false, tun->flags & IFF_NAPI);
+		ret = tun_attach(tun, file, false, tun->flags & IFF_NAPI,
+				 tun->flags & IFF_NAPI_FRAGS);
 	} else if (ifr->ifr_flags & IFF_DETACH_QUEUE) {
 		tun = rtnl_dereference(tfile->tun);
 		if (!tun || !(tun->flags & IFF_MULTI_QUEUE) || tfile->detached)
@@ -2750,6 +2794,9 @@ static int tun_set_queue(struct file *file, struct ifreq *ifr)
 			__tun_detach(tfile, false);
 	} else
 		ret = -EINVAL;
+
+	if (ret >= 0)
+		netdev_state_change(tun->dev);
 
 unlock:
 	rtnl_unlock();
@@ -2780,6 +2827,7 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
 			    unsigned long arg, int ifreq_len)
 {
 	struct tun_file *tfile = file->private_data;
+	struct net *net = sock_net(&tfile->sk);
 	struct tun_struct *tun;
 	void __user* argp = (void __user*)arg;
 	struct ifreq ifr;
@@ -2790,8 +2838,10 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
 	unsigned int ifindex;
 	int le;
 	int ret;
+	bool do_notify = false;
 
-	if (cmd == TUNSETIFF || cmd == TUNSETQUEUE || _IOC_TYPE(cmd) == SOCK_IOC_TYPE) {
+	if (cmd == TUNSETIFF || cmd == TUNSETQUEUE ||
+	    (_IOC_TYPE(cmd) == SOCK_IOC_TYPE && cmd != SIOCGSKNS)) {
 		if (copy_from_user(&ifr, argp, ifreq_len))
 			return -EFAULT;
 	} else {
@@ -2804,8 +2854,13 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
 		 */
 		return put_user(IFF_TUN | IFF_TAP | TUN_FEATURES,
 				(unsigned int __user*)argp);
-	} else if (cmd == TUNSETQUEUE)
+	} else if (cmd == TUNSETQUEUE) {
 		return tun_set_queue(file, &ifr);
+	} else if (cmd == SIOCGSKNS) {
+		if (!ns_capable(net->user_ns, CAP_NET_ADMIN))
+			return -EPERM;
+		return open_related_ns(&net->ns, get_net_ns);
+	}
 
 	ret = 0;
 	rtnl_lock();
@@ -2818,7 +2873,7 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
 
 		ifr.ifr_name[IFNAMSIZ-1] = '\0';
 
-		ret = tun_set_iff(sock_net(&tfile->sk), file, &ifr);
+		ret = tun_set_iff(net, file, &ifr);
 
 		if (ret)
 			goto unlock;
@@ -2876,10 +2931,12 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
 		if (arg && !(tun->flags & IFF_PERSIST)) {
 			tun->flags |= IFF_PERSIST;
 			__module_get(THIS_MODULE);
+			do_notify = true;
 		}
 		if (!arg && (tun->flags & IFF_PERSIST)) {
 			tun->flags &= ~IFF_PERSIST;
 			module_put(THIS_MODULE);
+			do_notify = true;
 		}
 
 		tun_debug(KERN_INFO, tun, "persist %s\n",
@@ -2894,6 +2951,7 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
 			break;
 		}
 		tun->owner = owner;
+		do_notify = true;
 		tun_debug(KERN_INFO, tun, "owner set to %u\n",
 			  from_kuid(&init_user_ns, tun->owner));
 		break;
@@ -2906,6 +2964,7 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
 			break;
 		}
 		tun->group = group;
+		do_notify = true;
 		tun_debug(KERN_INFO, tun, "group set to %u\n",
 			  from_kgid(&init_user_ns, tun->group));
 		break;
@@ -3065,6 +3124,9 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
 		break;
 	}
 
+	if (do_notify)
+		netdev_state_change(tun->dev);
+
 unlock:
 	rtnl_unlock();
 	if (tun)
@@ -3116,7 +3178,7 @@ static int tun_chr_fasync(int fd, struct file *file, int on)
 		goto out;
 
 	if (on) {
-		__f_setown(file, task_pid(current), PIDTYPE_PID, 0);
+		__f_setown(file, task_pid(current), PIDTYPE_TGID, 0);
 		tfile->flags |= TUN_FASYNC;
 	} else
 		tfile->flags &= ~TUN_FASYNC;
@@ -3136,6 +3198,12 @@ static int tun_chr_open(struct inode *inode, struct file * file)
 					    &tun_proto, 0);
 	if (!tfile)
 		return -ENOMEM;
+	if (ptr_ring_init(&tfile->tx_ring, 0, GFP_KERNEL)) {
+		sk_free(&tfile->sk);
+		return -ENOMEM;
+	}
+
+	mutex_init(&tfile->napi_mutex);
 	RCU_INIT_POINTER(tfile->tun, NULL);
 	tfile->flags = 0;
 	tfile->ifindex = 0;
@@ -3155,8 +3223,6 @@ static int tun_chr_open(struct inode *inode, struct file * file)
 	INIT_LIST_HEAD(&tfile->next);
 
 	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
-
-	memset(&tfile->tx_ring, 0, sizeof(tfile->tx_ring));
 
 	return 0;
 }
@@ -3219,8 +3285,8 @@ static struct miscdevice tun_miscdev = {
 
 /* ethtool interface */
 
-static int tun_get_link_ksettings(struct net_device *dev,
-				  struct ethtool_link_ksettings *cmd)
+static void tun_default_link_ksettings(struct net_device *dev,
+				       struct ethtool_link_ksettings *cmd)
 {
 	ethtool_link_ksettings_zero_link_mode(cmd, supported);
 	ethtool_link_ksettings_zero_link_mode(cmd, advertising);
@@ -3229,6 +3295,23 @@ static int tun_get_link_ksettings(struct net_device *dev,
 	cmd->base.port		= PORT_TP;
 	cmd->base.phy_address	= 0;
 	cmd->base.autoneg	= AUTONEG_DISABLE;
+}
+
+static int tun_get_link_ksettings(struct net_device *dev,
+				  struct ethtool_link_ksettings *cmd)
+{
+	struct tun_struct *tun = netdev_priv(dev);
+
+	memcpy(cmd, &tun->link_ksettings, sizeof(*cmd));
+	return 0;
+}
+
+static int tun_set_link_ksettings(struct net_device *dev,
+				  const struct ethtool_link_ksettings *cmd)
+{
+	struct tun_struct *tun = netdev_priv(dev);
+
+	memcpy(&tun->link_ksettings, cmd, sizeof(*cmd));
 	return 0;
 }
 
@@ -3299,6 +3382,7 @@ static const struct ethtool_ops tun_ethtool_ops = {
 	.get_coalesce   = tun_get_coalesce,
 	.set_coalesce   = tun_set_coalesce,
 	.get_link_ksettings = tun_get_link_ksettings,
+	.set_link_ksettings = tun_set_link_ksettings,
 };
 
 static int tun_queue_resize(struct tun_struct *tun)

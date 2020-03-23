@@ -269,6 +269,7 @@ struct kvm_s390_sie_block {
 	__u8	reserved1c0[8];		/* 0x01c0 */
 #define ECD_HOSTREGMGMT	0x20000000
 #define ECD_MEF		0x08000000
+#define ECD_ETOKENF	0x02000000
 	__u32	ecd;			/* 0x01c8 */
 	__u8	reserved1cc[18];	/* 0x01cc */
 	__u64	pp;			/* 0x01de */
@@ -294,6 +295,7 @@ struct kvm_vcpu_stat {
 	u64 exit_userspace;
 	u64 exit_null;
 	u64 exit_external_request;
+	u64 exit_io_request;
 	u64 exit_external_interrupt;
 	u64 exit_stop_request;
 	u64 exit_validity;
@@ -310,16 +312,29 @@ struct kvm_vcpu_stat {
 	u64 exit_program_interruption;
 	u64 exit_instr_and_program;
 	u64 exit_operation_exception;
+	u64 deliver_ckc;
+	u64 deliver_cputm;
 	u64 deliver_external_call;
 	u64 deliver_emergency_signal;
 	u64 deliver_service_signal;
-	u64 deliver_virtio_interrupt;
+	u64 deliver_virtio;
 	u64 deliver_stop_signal;
 	u64 deliver_prefix_signal;
 	u64 deliver_restart_signal;
-	u64 deliver_program_int;
-	u64 deliver_io_int;
+	u64 deliver_program;
+	u64 deliver_io;
+	u64 deliver_machine_check;
 	u64 exit_wait_state;
+	u64 inject_ckc;
+	u64 inject_cputm;
+	u64 inject_external_call;
+	u64 inject_emergency_signal;
+	u64 inject_mchk;
+	u64 inject_pfault_init;
+	u64 inject_program;
+	u64 inject_restart;
+	u64 inject_set_prefix;
+	u64 inject_stop_signal;
 	u64 instruction_epsw;
 	u64 instruction_gs;
 	u64 instruction_io_other;
@@ -641,10 +656,16 @@ struct kvm_vcpu_arch {
 	seqcount_t cputm_seqcount;
 	__u64 cputm_start;
 	bool gs_enabled;
+	bool skey_enabled;
 };
 
 struct kvm_vm_stat {
-	ulong remote_tlb_flush;
+	u64 inject_io;
+	u64 inject_float_mchk;
+	u64 inject_pfault_done;
+	u64 inject_service_signal;
+	u64 inject_virtio;
+	u64 remote_tlb_flush;
 };
 
 struct kvm_arch_memory_slot {
@@ -774,12 +795,6 @@ struct kvm_s390_vsie {
 	struct page *pages[KVM_MAX_VCPUS];
 };
 
-struct kvm_s390_migration_state {
-	unsigned long bitmap_size;	/* in bits (number of guest pages) */
-	atomic64_t dirty_pages;		/* number of dirty pages */
-	unsigned long *pgste_bitmap;
-};
-
 struct kvm_arch{
 	void *sca;
 	int use_esca;
@@ -792,6 +807,8 @@ struct kvm_arch{
 	int css_support;
 	int use_irqchip;
 	int use_cmma;
+	int use_pfmfi;
+	int use_skf;
 	int user_cpu_state_ctrl;
 	int user_sigp;
 	int user_stsi;
@@ -807,7 +824,8 @@ struct kvm_arch{
 	struct kvm_s390_vsie vsie;
 	u8 epdx;
 	u64 epoch;
-	struct kvm_s390_migration_state *migration_state;
+	int migration_mode;
+	atomic64_t cmma_dirty_pages;
 	/* subset of available cpu features enabled by user space */
 	DECLARE_BITMAP(cpu_feat, KVM_S390_VM_CPU_FEAT_NR_BITS);
 	struct kvm_s390_gisa *gisa;

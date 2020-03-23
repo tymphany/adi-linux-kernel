@@ -2,6 +2,7 @@
 #ifndef __PERF_HEADER_H
 #define __PERF_HEADER_H
 
+#include <linux/stddef.h>
 #include <linux/perf_event.h>
 #include <sys/types.h>
 #include <stdbool.h>
@@ -36,6 +37,7 @@ enum {
 	HEADER_STAT,
 	HEADER_CACHE,
 	HEADER_SAMPLE_TIME,
+	HEADER_MEM_TOPOLOGY,
 	HEADER_LAST_FEATURE,
 	HEADER_FEAT_BITS	= 256,
 };
@@ -174,4 +176,5 @@ int write_padded(struct feat_fd *fd, const void *bf,
 int get_cpuid(char *buffer, size_t sz);
 
 char *get_cpuid_str(struct perf_pmu *pmu __maybe_unused);
+int strcmp_cpuid_str(const char *s1, const char *s2);
 #endif /* __PERF_HEADER_H */

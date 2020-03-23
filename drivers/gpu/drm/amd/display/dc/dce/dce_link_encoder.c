@@ -56,6 +56,8 @@
 
 #define CTX \
 	enc110->base.ctx
+#define DC_LOGGER \
+	enc110->base.ctx->logger
 
 #define REG(reg)\
 	(enc110->link_regs->reg)
@@ -111,6 +113,7 @@ static const struct link_encoder_funcs dce110_lnk_enc_funcs = {
 	.connect_dig_be_to_fe = dce110_link_encoder_connect_dig_be_to_fe,
 	.enable_hpd = dce110_link_encoder_enable_hpd,
 	.disable_hpd = dce110_link_encoder_disable_hpd,
+	.is_dig_enabled = dce110_is_dig_enabled,
 	.destroy = dce110_link_encoder_destroy
 };
 
@@ -253,6 +256,11 @@ static void setup_panel_mode(
 	enum dp_panel_mode panel_mode)
 {
 	uint32_t value;
+	struct dc_context *ctx = enc110->base.ctx;
+
+	/* if psp set panel mode, dal should be program it */
+	if (ctx->dc->caps.psp_setup_panel_mode)
+		return;
 
 	ASSERT(REG(DP_DPHY_INTERNAL_CTRL));
 	value = REG_READ(DP_DPHY_INTERNAL_CTRL);
@@ -533,8 +541,9 @@ void dce110_psr_program_secondary_packet(struct link_encoder *enc,
 		DP_SEC_GSP0_PRIORITY, 1);
 }
 
-static bool is_dig_enabled(const struct dce110_link_encoder *enc110)
+bool dce110_is_dig_enabled(struct link_encoder *enc)
 {
+	struct dce110_link_encoder *enc110 = TO_DCE110_LINK_ENC(enc);
 	uint32_t value;
 
 	REG_GET(DIG_BE_EN_CNTL, DIG_ENABLE, &value);
@@ -641,6 +650,9 @@ static bool dce110_link_encoder_validate_hdmi_output(
 
 	if (!enc110->base.features.flags.bits.HDMI_6GB_EN &&
 		adjusted_pix_clk_khz >= 300000)
+		return false;
+	if (enc110->base.ctx->dc->debug.hdmi20_disable &&
+		crtc_timing->pixel_encoding == PIXEL_ENCODING_YCBCR420)
 		return false;
 	return true;
 }
@@ -765,10 +777,12 @@ void dce110_link_encoder_construct(
 				bp_cap_info.DP_HBR3_EN;
 		enc110->base.features.flags.bits.HDMI_6GB_EN = bp_cap_info.HDMI_6GB_EN;
 	} else {
-		dm_logger_write(enc110->base.ctx->logger, LOG_WARNING,
-				"%s: Failed to get encoder_cap_info from VBIOS with error code %d!\n",
+		DC_LOG_WARNING("%s: Failed to get encoder_cap_info from VBIOS with error code %d!\n",
 				__func__,
 				result);
+	}
+	if (enc110->base.ctx->dc->debug.hdmi20_disable) {
+		enc110->base.features.flags.bits.HDMI_6GB_EN = 0;
 	}
 }
 
@@ -819,7 +833,6 @@ void dce110_link_encoder_hw_init(
 	struct link_encoder *enc)
 {
 	struct dce110_link_encoder *enc110 = TO_DCE110_LINK_ENC(enc);
-	struct dc_context *ctx = enc110->base.ctx;
 	struct bp_transmitter_control cntl = { 0 };
 	enum bp_result result;
 
@@ -831,11 +844,13 @@ void dce110_link_encoder_hw_init(
 	cntl.coherent = false;
 	cntl.hpd_sel = enc110->base.hpd_source;
 
+	if (enc110->base.connector.id == CONNECTOR_ID_EDP)
+		cntl.signal = SIGNAL_TYPE_EDP;
+
 	result = link_transmitter_control(enc110, &cntl);
 
 	if (result != BP_RESULT_OK) {
-		dm_logger_write(ctx->logger, LOG_ERROR,
-			"%s: Failed to execute VBIOS command table!\n",
+		DC_LOG_ERROR("%s: Failed to execute VBIOS command table!\n",
 			__func__);
 		BREAK_TO_DEBUGGER();
 		return;
@@ -911,12 +926,11 @@ void dce110_link_encoder_enable_tmds_output(
 	uint32_t pixel_clock)
 {
 	struct dce110_link_encoder *enc110 = TO_DCE110_LINK_ENC(enc);
-	struct dc_context *ctx = enc110->base.ctx;
 	struct bp_transmitter_control cntl = { 0 };
 	enum bp_result result;
 
 	/* Enable the PHY */
-
+	cntl.connector_obj_id = enc110->base.connector;
 	cntl.action = TRANSMITTER_CONTROL_ENABLE;
 	cntl.engine_id = enc->preferred_engine;
 	cntl.transmitter = enc110->base.transmitter;
@@ -935,8 +949,7 @@ void dce110_link_encoder_enable_tmds_output(
 	result = link_transmitter_control(enc110, &cntl);
 
 	if (result != BP_RESULT_OK) {
-		dm_logger_write(ctx->logger, LOG_ERROR,
-			"%s: Failed to execute VBIOS command table!\n",
+		DC_LOG_ERROR("%s: Failed to execute VBIOS command table!\n",
 			__func__);
 		BREAK_TO_DEBUGGER();
 	}
@@ -949,7 +962,6 @@ void dce110_link_encoder_enable_dp_output(
 	enum clock_source_id clock_source)
 {
 	struct dce110_link_encoder *enc110 = TO_DCE110_LINK_ENC(enc);
-	struct dc_context *ctx = enc110->base.ctx;
 	struct bp_transmitter_control cntl = { 0 };
 	enum bp_result result;
 
@@ -960,7 +972,7 @@ void dce110_link_encoder_enable_dp_output(
 	 * We need to set number of lanes manually.
 	 */
 	configure_encoder(enc110, link_settings);
-
+	cntl.connector_obj_id = enc110->base.connector;
 	cntl.action = TRANSMITTER_CONTROL_ENABLE;
 	cntl.engine_id = enc->preferred_engine;
 	cntl.transmitter = enc110->base.transmitter;
@@ -976,8 +988,7 @@ void dce110_link_encoder_enable_dp_output(
 	result = link_transmitter_control(enc110, &cntl);
 
 	if (result != BP_RESULT_OK) {
-		dm_logger_write(ctx->logger, LOG_ERROR,
-			"%s: Failed to execute VBIOS command table!\n",
+		DC_LOG_ERROR("%s: Failed to execute VBIOS command table!\n",
 			__func__);
 		BREAK_TO_DEBUGGER();
 	}
@@ -990,7 +1001,6 @@ void dce110_link_encoder_enable_dp_mst_output(
 	enum clock_source_id clock_source)
 {
 	struct dce110_link_encoder *enc110 = TO_DCE110_LINK_ENC(enc);
-	struct dc_context *ctx = enc110->base.ctx;
 	struct bp_transmitter_control cntl = { 0 };
 	enum bp_result result;
 
@@ -1017,8 +1027,7 @@ void dce110_link_encoder_enable_dp_mst_output(
 	result = link_transmitter_control(enc110, &cntl);
 
 	if (result != BP_RESULT_OK) {
-		dm_logger_write(ctx->logger, LOG_ERROR,
-			"%s: Failed to execute VBIOS command table!\n",
+		DC_LOG_ERROR("%s: Failed to execute VBIOS command table!\n",
 			__func__);
 		BREAK_TO_DEBUGGER();
 	}
@@ -1032,11 +1041,10 @@ void dce110_link_encoder_disable_output(
 	enum signal_type signal)
 {
 	struct dce110_link_encoder *enc110 = TO_DCE110_LINK_ENC(enc);
-	struct dc_context *ctx = enc110->base.ctx;
 	struct bp_transmitter_control cntl = { 0 };
 	enum bp_result result;
 
-	if (!is_dig_enabled(enc110)) {
+	if (!dce110_is_dig_enabled(enc)) {
 		/* OF_SKIP_POWER_DOWN_INACTIVE_ENCODER */
 		return;
 	}
@@ -1060,8 +1068,7 @@ void dce110_link_encoder_disable_output(
 	result = link_transmitter_control(enc110, &cntl);
 
 	if (result != BP_RESULT_OK) {
-		dm_logger_write(ctx->logger, LOG_ERROR,
-			"%s: Failed to execute VBIOS command table!\n",
+		DC_LOG_ERROR("%s: Failed to execute VBIOS command table!\n",
 			__func__);
 		BREAK_TO_DEBUGGER();
 		return;

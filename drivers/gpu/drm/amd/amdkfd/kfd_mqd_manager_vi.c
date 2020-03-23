@@ -43,6 +43,31 @@ static inline struct vi_sdma_mqd *get_sdma_mqd(void *mqd)
 	return (struct vi_sdma_mqd *)mqd;
 }
 
+static void update_cu_mask(struct mqd_manager *mm, void *mqd,
+			struct queue_properties *q)
+{
+	struct vi_mqd *m;
+	uint32_t se_mask[4] = {0}; /* 4 is the max # of SEs */
+
+	if (q->cu_mask_count == 0)
+		return;
+
+	mqd_symmetrically_map_cu_mask(mm,
+		q->cu_mask, q->cu_mask_count, se_mask);
+
+	m = get_mqd(mqd);
+	m->compute_static_thread_mgmt_se0 = se_mask[0];
+	m->compute_static_thread_mgmt_se1 = se_mask[1];
+	m->compute_static_thread_mgmt_se2 = se_mask[2];
+	m->compute_static_thread_mgmt_se3 = se_mask[3];
+
+	pr_debug("Update cu mask to %#x %#x %#x %#x\n",
+		m->compute_static_thread_mgmt_se0,
+		m->compute_static_thread_mgmt_se1,
+		m->compute_static_thread_mgmt_se2,
+		m->compute_static_thread_mgmt_se3);
+}
+
 static int init_mqd(struct mqd_manager *mm, void **mqd,
 			struct kfd_mem_obj **mqd_mem_obj, uint64_t *gart_addr,
 			struct queue_properties *q)
@@ -151,6 +176,8 @@ static int __update_mqd(struct mqd_manager *mm, void *mqd,
 
 	m->cp_hqd_pq_rptr_report_addr_lo = lower_32_bits((uint64_t)q->read_ptr);
 	m->cp_hqd_pq_rptr_report_addr_hi = upper_32_bits((uint64_t)q->read_ptr);
+	m->cp_hqd_pq_wptr_poll_addr_lo = lower_32_bits((uint64_t)q->write_ptr);
+	m->cp_hqd_pq_wptr_poll_addr_hi = upper_32_bits((uint64_t)q->write_ptr);
 
 	m->cp_hqd_pq_doorbell_control =
 		q->doorbell_off <<
@@ -194,9 +221,12 @@ static int __update_mqd(struct mqd_manager *mm, void *mqd,
 			atc_bit << CP_HQD_CTX_SAVE_CONTROL__ATC__SHIFT |
 			mtype << CP_HQD_CTX_SAVE_CONTROL__MTYPE__SHIFT;
 
+	update_cu_mask(mm, mqd, q);
+
 	q->is_active = (q->queue_size > 0 &&
 			q->queue_address != 0 &&
-			q->queue_percent > 0);
+			q->queue_percent > 0 &&
+			!q->is_evicted);
 
 	return 0;
 }
@@ -206,6 +236,12 @@ static int update_mqd(struct mqd_manager *mm, void *mqd,
 			struct queue_properties *q)
 {
 	return __update_mqd(mm, mqd, q, MTYPE_CC, 1);
+}
+
+static int update_mqd_tonga(struct mqd_manager *mm, void *mqd,
+			struct queue_properties *q)
+{
+	return __update_mqd(mm, mqd, q, MTYPE_UC, 0);
 }
 
 static int destroy_mqd(struct mqd_manager *mm, void *mqd,
@@ -334,7 +370,8 @@ static int update_mqd_sdma(struct mqd_manager *mm, void *mqd,
 
 	q->is_active = (q->queue_size > 0 &&
 			q->queue_address != 0 &&
-			q->queue_percent > 0);
+			q->queue_percent > 0 &&
+			!q->is_evicted);
 
 	return 0;
 }
@@ -430,5 +467,18 @@ struct mqd_manager *mqd_manager_init_vi(enum KFD_MQD_TYPE type,
 		return NULL;
 	}
 
+	return mqd;
+}
+
+struct mqd_manager *mqd_manager_init_vi_tonga(enum KFD_MQD_TYPE type,
+			struct kfd_dev *dev)
+{
+	struct mqd_manager *mqd;
+
+	mqd = mqd_manager_init_vi(type, dev);
+	if (!mqd)
+		return NULL;
+	if ((type == KFD_MQD_TYPE_CP) || (type == KFD_MQD_TYPE_COMPUTE))
+		mqd->update_mqd = update_mqd_tonga;
 	return mqd;
 }

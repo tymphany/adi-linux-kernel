@@ -56,14 +56,17 @@ static void mlx5i_build_nic_params(struct mlx5_core_dev *mdev,
 				   struct mlx5e_params *params)
 {
 	/* Override RQ params as IPoIB supports only LINKED LIST RQ for now */
-	mlx5e_init_rq_type_params(mdev, params, MLX5_WQ_TYPE_LINKED_LIST);
+	MLX5E_SET_PFLAG(params, MLX5E_PFLAG_RX_STRIDING_RQ, false);
+	mlx5e_set_rq_type(mdev, params);
+	mlx5e_init_rq_type_params(mdev, params);
 
 	/* RQ size in ipoib by default is 512 */
-	params->log_rq_size = is_kdump_kernel() ?
+	params->log_rq_mtu_frames = is_kdump_kernel() ?
 		MLX5E_PARAMS_MINIMUM_LOG_RQ_SIZE :
 		MLX5I_PARAMS_DEFAULT_LOG_RQ_SIZE;
 
 	params->lro_en = false;
+	params->hard_mtu = MLX5_IB_GRH_BYTES + MLX5_IPOIB_HARD_LEN;
 }
 
 /* Called directly after IPoIB netdevice was created to initialize SW structs */
@@ -73,16 +76,20 @@ void mlx5i_init(struct mlx5_core_dev *mdev,
 		void *ppriv)
 {
 	struct mlx5e_priv *priv  = mlx5i_epriv(netdev);
+	u16 max_mtu;
 
 	/* priv init */
 	priv->mdev        = mdev;
 	priv->netdev      = netdev;
 	priv->profile     = profile;
 	priv->ppriv       = ppriv;
-	priv->hard_mtu = MLX5_IB_GRH_BYTES + MLX5_IPOIB_HARD_LEN;
 	mutex_init(&priv->state_lock);
 
-	mlx5e_build_nic_params(mdev, &priv->channels.params, profile->max_nch(mdev));
+	mlx5_query_port_max_mtu(mdev, &max_mtu, 1);
+	netdev->mtu = max_mtu;
+
+	mlx5e_build_nic_params(mdev, &priv->channels.params,
+			       profile->max_nch(mdev), netdev->mtu);
 	mlx5i_build_nic_params(mdev, &priv->channels.params);
 
 	mlx5e_timestamp_init(priv);
@@ -366,25 +373,27 @@ static int mlx5i_change_mtu(struct net_device *netdev, int new_mtu)
 {
 	struct mlx5e_priv *priv = mlx5i_epriv(netdev);
 	struct mlx5e_channels new_channels = {};
-	int curr_mtu;
+	struct mlx5e_params *params;
 	int err = 0;
 
 	mutex_lock(&priv->state_lock);
 
-	curr_mtu    = netdev->mtu;
-	netdev->mtu = new_mtu;
+	params = &priv->channels.params;
 
-	if (!test_bit(MLX5E_STATE_OPENED, &priv->state))
-		goto out;
-
-	new_channels.params = priv->channels.params;
-	err = mlx5e_open_channels(priv, &new_channels);
-	if (err) {
-		netdev->mtu = curr_mtu;
+	if (!test_bit(MLX5E_STATE_OPENED, &priv->state)) {
+		params->sw_mtu = new_mtu;
+		netdev->mtu = params->sw_mtu;
 		goto out;
 	}
 
+	new_channels.params = *params;
+	new_channels.params.sw_mtu = new_mtu;
+	err = mlx5e_open_channels(priv, &new_channels);
+	if (err)
+		goto out;
+
 	mlx5e_switch_priv_channels(priv, &new_channels, NULL);
+	netdev->mtu = new_channels.params.sw_mtu;
 
 out:
 	mutex_unlock(&priv->state_lock);
@@ -538,7 +547,7 @@ static int mlx5i_detach_mcast(struct net_device *netdev, struct ib_device *hca,
 
 	err = mlx5_core_detach_mcg(mdev, gid, ipriv->qp.qpn);
 	if (err)
-		mlx5_core_dbg(mdev, "failed dettaching QPN 0x%x, MGID %pI6\n",
+		mlx5_core_dbg(mdev, "failed detaching QPN 0x%x, MGID %pI6\n",
 			      ipriv->qp.qpn, gid->raw);
 
 	return err;
@@ -573,6 +582,22 @@ static int mlx5i_check_required_hca_cap(struct mlx5_core_dev *mdev)
 	}
 
 	return 0;
+}
+
+static void mlx5_rdma_netdev_free(struct net_device *netdev)
+{
+	struct mlx5e_priv *priv = mlx5i_epriv(netdev);
+	struct mlx5i_priv *ipriv = priv->ppriv;
+	const struct mlx5e_profile *profile = priv->profile;
+
+	mlx5e_detach_netdev(priv);
+	profile->cleanup(priv);
+	destroy_workqueue(priv->wq);
+
+	if (!ipriv->sub_interface) {
+		mlx5i_pkey_qpn_ht_cleanup(netdev);
+		mlx5e_destroy_mdev_resources(priv->mdev);
+	}
 }
 
 struct net_device *mlx5_rdma_netdev_alloc(struct mlx5_core_dev *mdev,
@@ -648,6 +673,9 @@ struct net_device *mlx5_rdma_netdev_alloc(struct mlx5_core_dev *mdev,
 	rn->detach_mcast = mlx5i_detach_mcast;
 	rn->set_id = mlx5i_set_pkey_index;
 
+	netdev->priv_destructor = mlx5_rdma_netdev_free;
+	netdev->needs_free_netdev = 1;
+
 	return netdev;
 
 destroy_ht:
@@ -660,21 +688,3 @@ err_free_netdev:
 	return NULL;
 }
 EXPORT_SYMBOL(mlx5_rdma_netdev_alloc);
-
-void mlx5_rdma_netdev_free(struct net_device *netdev)
-{
-	struct mlx5e_priv *priv = mlx5i_epriv(netdev);
-	struct mlx5i_priv *ipriv = priv->ppriv;
-	const struct mlx5e_profile *profile = priv->profile;
-
-	mlx5e_detach_netdev(priv);
-	profile->cleanup(priv);
-	destroy_workqueue(priv->wq);
-
-	if (!ipriv->sub_interface) {
-		mlx5i_pkey_qpn_ht_cleanup(netdev);
-		mlx5e_destroy_mdev_resources(priv->mdev);
-	}
-	free_netdev(netdev);
-}
-EXPORT_SYMBOL(mlx5_rdma_netdev_free);

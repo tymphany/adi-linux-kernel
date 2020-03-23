@@ -36,7 +36,6 @@
 	} while (0)
 
 /* tmio MMC platform flags */
-#define TMIO_MMC_WRPROTECT_DISABLE	BIT(0)
 /*
  * Some controllers can support a 2-byte block size when the bus width
  * is configured in 4-bit mode.
@@ -90,6 +89,9 @@
 
 /* Some controllers have a CBSY bit */
 #define TMIO_MMC_HAVE_CBSY		BIT(11)
+
+/* Some controllers that support HS400 use use 4 taps while others use 8. */
+#define TMIO_MMC_HAVE_4TAP_HS400	BIT(13)
 
 int tmio_core_mmc_enable(void __iomem *cnf, int shift, unsigned long base);
 int tmio_core_mmc_resume(void __iomem *cnf, int shift, unsigned long base);

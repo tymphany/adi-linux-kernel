@@ -1,12 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * R-Car Gen3 Digital Radio Interface (DRIF) driver
  *
  * Copyright (C) 2017 Renesas Electronics Corporation
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -274,7 +270,7 @@ static int rcar_drif_alloc_dmachannels(struct rcar_drif_sdr *sdr)
 {
 	struct dma_slave_config dma_cfg;
 	unsigned int i;
-	int ret = -ENODEV;
+	int ret;
 
 	for_each_rcar_drif_channel(i, &sdr->cur_ch_mask) {
 		struct rcar_drif *ch = sdr->ch[i];
@@ -282,6 +278,7 @@ static int rcar_drif_alloc_dmachannels(struct rcar_drif_sdr *sdr)
 		ch->dmach = dma_request_slave_channel(&ch->pdev->dev, "rx");
 		if (!ch->dmach) {
 			rdrif_err(sdr, "ch%u: dma channel req failed\n", i);
+			ret = -ENODEV;
 			goto dmach_error;
 		}
 
@@ -1498,5 +1495,5 @@ module_platform_driver(rcar_drif_driver);
 
 MODULE_DESCRIPTION("Renesas R-Car Gen3 DRIF driver");
 MODULE_ALIAS("platform:" RCAR_DRIF_DRV_NAME);
-MODULE_LICENSE("GPL v2");
+MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Ramesh Shanmugasundaram <ramesh.shanmugasundaram@bp.renesas.com>");

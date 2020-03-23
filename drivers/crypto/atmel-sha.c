@@ -2316,9 +2316,7 @@ struct atmel_sha_authenc_ctx *atmel_sha_authenc_spawn(unsigned long mode)
 		goto error;
 	}
 
-	tfm = crypto_alloc_ahash(name,
-				 CRYPTO_ALG_TYPE_AHASH,
-				 CRYPTO_ALG_TYPE_AHASH_MASK);
+	tfm = crypto_alloc_ahash(name, 0, 0);
 	if (IS_ERR(tfm)) {
 		err = PTR_ERR(tfm);
 		goto error;
@@ -2726,18 +2724,14 @@ static struct crypto_platform_data *atmel_sha_of_init(struct platform_device *pd
 	}
 
 	pdata = devm_kzalloc(&pdev->dev, sizeof(*pdata), GFP_KERNEL);
-	if (!pdata) {
-		dev_err(&pdev->dev, "could not allocate memory for pdata\n");
+	if (!pdata)
 		return ERR_PTR(-ENOMEM);
-	}
 
 	pdata->dma_slave = devm_kzalloc(&pdev->dev,
 					sizeof(*(pdata->dma_slave)),
 					GFP_KERNEL);
-	if (!pdata->dma_slave) {
-		dev_err(&pdev->dev, "could not allocate memory for dma_slave\n");
+	if (!pdata->dma_slave)
 		return ERR_PTR(-ENOMEM);
-	}
 
 	return pdata;
 }
@@ -2758,7 +2752,6 @@ static int atmel_sha_probe(struct platform_device *pdev)
 
 	sha_dd = devm_kzalloc(&pdev->dev, sizeof(*sha_dd), GFP_KERNEL);
 	if (sha_dd == NULL) {
-		dev_err(dev, "unable to alloc data struct.\n");
 		err = -ENOMEM;
 		goto sha_dd_err;
 	}

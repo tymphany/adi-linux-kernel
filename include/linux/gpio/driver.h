@@ -95,6 +95,13 @@ struct gpio_irq_chip {
 	unsigned int num_parents;
 
 	/**
+	 * @parent_irq:
+	 *
+	 * For use by gpiochip_set_cascaded_irqchip()
+	 */
+	unsigned int parent_irq;
+
+	/**
 	 * @parents:
 	 *
 	 * A list of interrupt parents of a GPIO chip. This is owned by the
@@ -201,6 +208,8 @@ static inline struct gpio_irq_chip *to_gpio_irq_chip(struct irq_chip *chip)
  * @reg_set: output set register (out=high) for generic GPIO
  * @reg_clr: output clear register (out=low) for generic GPIO
  * @reg_dir: direction setting register for generic GPIO
+ * @bgpio_dir_inverted: indicates that the direction register is inverted
+ *	(gpiolib private state variable)
  * @bgpio_bits: number of register bits used for a generic GPIO i.e.
  *	<register width> * 8
  * @bgpio_lock: used to lock chip->bgpio_data. Also, this is needed to keep
@@ -267,6 +276,7 @@ struct gpio_chip {
 	void __iomem *reg_set;
 	void __iomem *reg_clr;
 	void __iomem *reg_dir;
+	bool bgpio_dir_inverted;
 	int bgpio_bits;
 	spinlock_t bgpio_lock;
 	unsigned long bgpio_data;
@@ -287,6 +297,21 @@ struct gpio_chip {
 	 */
 	struct gpio_irq_chip irq;
 #endif
+
+	/**
+	 * @need_valid_mask:
+	 *
+	 * If set core allocates @valid_mask with all bits set to one.
+	 */
+	bool need_valid_mask;
+
+	/**
+	 * @valid_mask:
+	 *
+	 * If not %NULL holds bitmask of GPIOs which are valid to be used
+	 * from the chip.
+	 */
+	unsigned long *valid_mask;
 
 #if defined(CONFIG_OF_GPIO)
 	/*
@@ -384,6 +409,7 @@ bool gpiochip_line_is_open_source(struct gpio_chip *chip, unsigned int offset);
 
 /* Sleep persistence inquiry for drivers */
 bool gpiochip_line_is_persistent(struct gpio_chip *chip, unsigned int offset);
+bool gpiochip_line_is_valid(const struct gpio_chip *chip, unsigned int offset);
 
 /* get driver data */
 void *gpiochip_get_data(struct gpio_chip *chip);

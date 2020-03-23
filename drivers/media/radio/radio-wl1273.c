@@ -671,7 +671,7 @@ fail:
 static int wl1273_fm_suspend(struct wl1273_device *radio)
 {
 	struct wl1273_core *core = radio->core;
-	int r = 0;
+	int r;
 
 	/* Cannot go from OFF to SUSPENDED */
 	if (core->mode == WL1273_MODE_RX)
@@ -1096,7 +1096,7 @@ static __poll_t wl1273_fm_fops_poll(struct file *file,
 	struct wl1273_core *core = radio->core;
 
 	if (radio->owner && radio->owner != file)
-		return -EBUSY;
+		return EPOLLERR;
 
 	radio->owner = file;
 

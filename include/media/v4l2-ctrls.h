@@ -181,10 +181,10 @@ typedef void (*v4l2_ctrl_notify_fnc)(struct v4l2_ctrl *ctrl, void *priv);
  *		not freed when the control is deleted. Should this be needed
  *		then a new internal bitfield can be added to tell the framework
  *		to free this pointer.
- * @p_cur:	The control's current value represented via a union with
+ * @p_cur:	The control's current value represented via a union which
  *		provides a standard way of accessing control types
  *		through a pointer.
- * @p_new:	The control's new value represented via a union with provides
+ * @p_new:	The control's new value represented via a union which provides
  *		a standard way of accessing control types
  *		through a pointer.
  */
@@ -761,8 +761,8 @@ void v4l2_ctrl_grab(struct v4l2_ctrl *ctrl, bool grabbed);
  * An error is returned if one of the range arguments is invalid for this
  * control type.
  *
- * This function assumes that the control handler is not locked and will
- * take the lock itself.
+ * The caller is responsible for acquiring the control handler mutex on behalf
+ * of __v4l2_ctrl_modify_range().
  */
 int __v4l2_ctrl_modify_range(struct v4l2_ctrl *ctrl,
 			     s64 min, s64 max, u64 step, s64 def);

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-/* Copyright (C) 2009-2017  B.A.T.M.A.N. contributors:
+/* Copyright (C) 2009-2018  B.A.T.M.A.N. contributors:
  *
  * Marek Lindner, Simon Wunderlich
  *
@@ -1339,7 +1339,11 @@ static bool batadv_purge_orig_node(struct batadv_priv *bat_priv,
 	return false;
 }
 
-static void _batadv_purge_orig(struct batadv_priv *bat_priv)
+/**
+ * batadv_purge_orig_ref() - Purge all outdated originators
+ * @bat_priv: the bat priv with all the soft interface information
+ */
+void batadv_purge_orig_ref(struct batadv_priv *bat_priv)
 {
 	struct batadv_hashtable *hash = bat_priv->orig_hash;
 	struct hlist_node *node_tmp;
@@ -1385,19 +1389,10 @@ static void batadv_purge_orig(struct work_struct *work)
 
 	delayed_work = to_delayed_work(work);
 	bat_priv = container_of(delayed_work, struct batadv_priv, orig_work);
-	_batadv_purge_orig(bat_priv);
+	batadv_purge_orig_ref(bat_priv);
 	queue_delayed_work(batadv_event_workqueue,
 			   &bat_priv->orig_work,
 			   msecs_to_jiffies(BATADV_ORIG_WORK_PERIOD));
-}
-
-/**
- * batadv_purge_orig_ref() - Purge all outdated originators
- * @bat_priv: the bat priv with all the soft interface information
- */
-void batadv_purge_orig_ref(struct batadv_priv *bat_priv)
-{
-	_batadv_purge_orig(bat_priv);
 }
 
 #ifdef CONFIG_BATMAN_ADV_DEBUGFS

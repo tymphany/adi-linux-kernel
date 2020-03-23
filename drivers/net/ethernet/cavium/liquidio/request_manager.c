@@ -98,8 +98,9 @@ int octeon_init_instr_queue(struct octeon_device *oct,
 	iq->request_list = vmalloc_node((sizeof(*iq->request_list) * num_descs),
 					       numa_node);
 	if (!iq->request_list)
-		iq->request_list = vmalloc(sizeof(*iq->request_list) *
-						  num_descs);
+		iq->request_list =
+			vmalloc(array_size(num_descs,
+					   sizeof(*iq->request_list)));
 	if (!iq->request_list) {
 		lio_dma_free(oct, q_size, iq->base_addr, iq->base_addr_dma);
 		dev_err(&oct->pci_dev->dev, "Alloc failed for IQ[%d] nr free list\n",
@@ -109,8 +110,8 @@ int octeon_init_instr_queue(struct octeon_device *oct,
 
 	memset(iq->request_list, 0, sizeof(*iq->request_list) * num_descs);
 
-	dev_dbg(&oct->pci_dev->dev, "IQ[%d]: base: %p basedma: %llx count: %d\n",
-		iq_no, iq->base_addr, iq->base_addr_dma, iq->max_count);
+	dev_dbg(&oct->pci_dev->dev, "IQ[%d]: base: %p basedma: %pad count: %d\n",
+		iq_no, iq->base_addr, &iq->base_addr_dma, iq->max_count);
 
 	iq->txpciq.u64 = txpciq.u64;
 	iq->fill_threshold = (u32)conf->db_min;
@@ -125,7 +126,12 @@ int octeon_init_instr_queue(struct octeon_device *oct,
 
 	/* Initialize the spinlock for this instruction queue */
 	spin_lock_init(&iq->lock);
-	spin_lock_init(&iq->post_lock);
+	if (iq_no == 0) {
+		iq->allow_soft_cmds = true;
+		spin_lock_init(&iq->post_lock);
+	} else {
+		iq->allow_soft_cmds = false;
+	}
 
 	spin_lock_init(&iq->iq_flush_running_lock);
 
@@ -366,6 +372,7 @@ int
 lio_process_iq_request_list(struct octeon_device *oct,
 			    struct octeon_instr_queue *iq, u32 napi_budget)
 {
+	struct cavium_wq *cwq = &oct->dma_comp_wq;
 	int reqtype;
 	void *buf;
 	u32 old = iq->flush_index;
@@ -449,6 +456,10 @@ lio_process_iq_request_list(struct octeon_device *oct,
 		octeon_report_tx_completion_to_bql(iq->app_ctx, pkts_compl,
 						   bytes_compl);
 	iq->flush_index = old;
+
+	if (atomic_read(&oct->response_list
+			[OCTEON_ORDERED_SC_LIST].pending_req_count))
+		queue_delayed_work(cwq->wq, &cwq->wk.work, msecs_to_jiffies(1));
 
 	return inst_count;
 }
@@ -560,7 +571,8 @@ octeon_send_command(struct octeon_device *oct, u32 iq_no,
 	/* Get the lock and prevent other tasks and tx interrupt handler from
 	 * running.
 	 */
-	spin_lock_bh(&iq->post_lock);
+	if (iq->allow_soft_cmds)
+		spin_lock_bh(&iq->post_lock);
 
 	st = __post_command2(iq, cmd);
 
@@ -577,7 +589,8 @@ octeon_send_command(struct octeon_device *oct, u32 iq_no,
 		INCR_INSTRQUEUE_PKT_COUNT(oct, iq_no, instr_dropped, 1);
 	}
 
-	spin_unlock_bh(&iq->post_lock);
+	if (iq->allow_soft_cmds)
+		spin_unlock_bh(&iq->post_lock);
 
 	/* This is only done here to expedite packets being flushed
 	 * for cases where there are no IQ completion interrupts.
@@ -623,7 +636,8 @@ octeon_prepare_soft_command(struct octeon_device *oct,
 		pki_ih3->tag     = LIO_CONTROL;
 		pki_ih3->tagtype = ATOMIC_TAG;
 		pki_ih3->qpg         =
-			oct->instr_queue[sc->iq_no]->txpciq.s.qpg;
+			oct->instr_queue[sc->iq_no]->txpciq.s.ctrl_qpg;
+
 		pki_ih3->pm          = 0x7;
 		pki_ih3->sl          = 8;
 
@@ -695,10 +709,19 @@ octeon_prepare_soft_command(struct octeon_device *oct,
 int octeon_send_soft_command(struct octeon_device *oct,
 			     struct octeon_soft_command *sc)
 {
+	struct octeon_instr_queue *iq;
 	struct octeon_instr_ih2 *ih2;
 	struct octeon_instr_ih3 *ih3;
 	struct octeon_instr_irh *irh;
 	u32 len;
+
+	iq = oct->instr_queue[sc->iq_no];
+	if (!iq->allow_soft_cmds) {
+		dev_err(&oct->pci_dev->dev, "Soft commands are not allowed on Queue %d\n",
+			sc->iq_no);
+		INCR_INSTRQUEUE_PKT_COUNT(oct, sc->iq_no, instr_dropped, 1);
+		return IQ_SEND_FAILED;
+	}
 
 	if (OCTEON_CN23XX_PF(oct) || OCTEON_CN23XX_VF(oct)) {
 		ih3 =  (struct octeon_instr_ih3 *)&sc->cmd.cmd3.ih3;

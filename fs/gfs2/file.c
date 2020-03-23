@@ -26,10 +26,12 @@
 #include <linux/dlm.h>
 #include <linux/dlm_plock.h>
 #include <linux/delay.h>
+#include <linux/backing-dev.h>
 
 #include "gfs2.h"
 #include "incore.h"
 #include "bmap.h"
+#include "aops.h"
 #include "dir.h"
 #include "glock.h"
 #include "glops.h"
@@ -387,7 +389,7 @@ static int gfs2_allocate_page_backing(struct page *page)
  * blocks allocated on disk to back that page.
  */
 
-static int gfs2_page_mkwrite(struct vm_fault *vmf)
+static vm_fault_t gfs2_page_mkwrite(struct vm_fault *vmf)
 {
 	struct page *page = vmf->page;
 	struct inode *inode = file_inode(vmf->vma->vm_file);
@@ -688,12 +690,83 @@ static int gfs2_fsync(struct file *file, loff_t start, loff_t end,
 	return ret ? ret : ret1;
 }
 
+static ssize_t gfs2_file_direct_read(struct kiocb *iocb, struct iov_iter *to)
+{
+	struct file *file = iocb->ki_filp;
+	struct gfs2_inode *ip = GFS2_I(file->f_mapping->host);
+	size_t count = iov_iter_count(to);
+	struct gfs2_holder gh;
+	ssize_t ret;
+
+	if (!count)
+		return 0; /* skip atime */
+
+	gfs2_holder_init(ip->i_gl, LM_ST_DEFERRED, 0, &gh);
+	ret = gfs2_glock_nq(&gh);
+	if (ret)
+		goto out_uninit;
+
+	ret = iomap_dio_rw(iocb, to, &gfs2_iomap_ops, NULL);
+
+	gfs2_glock_dq(&gh);
+out_uninit:
+	gfs2_holder_uninit(&gh);
+	return ret;
+}
+
+static ssize_t gfs2_file_direct_write(struct kiocb *iocb, struct iov_iter *from)
+{
+	struct file *file = iocb->ki_filp;
+	struct inode *inode = file->f_mapping->host;
+	struct gfs2_inode *ip = GFS2_I(inode);
+	size_t len = iov_iter_count(from);
+	loff_t offset = iocb->ki_pos;
+	struct gfs2_holder gh;
+	ssize_t ret;
+
+	/*
+	 * Deferred lock, even if its a write, since we do no allocation on
+	 * this path. All we need to change is the atime, and this lock mode
+	 * ensures that other nodes have flushed their buffered read caches
+	 * (i.e. their page cache entries for this inode). We do not,
+	 * unfortunately, have the option of only flushing a range like the
+	 * VFS does.
+	 */
+	gfs2_holder_init(ip->i_gl, LM_ST_DEFERRED, 0, &gh);
+	ret = gfs2_glock_nq(&gh);
+	if (ret)
+		goto out_uninit;
+
+	/* Silently fall back to buffered I/O when writing beyond EOF */
+	if (offset + len > i_size_read(&ip->i_inode))
+		goto out;
+
+	ret = iomap_dio_rw(iocb, from, &gfs2_iomap_ops, NULL);
+
+out:
+	gfs2_glock_dq(&gh);
+out_uninit:
+	gfs2_holder_uninit(&gh);
+	return ret;
+}
+
+static ssize_t gfs2_file_read_iter(struct kiocb *iocb, struct iov_iter *to)
+{
+	ssize_t ret;
+
+	if (iocb->ki_flags & IOCB_DIRECT) {
+		ret = gfs2_file_direct_read(iocb, to);
+		if (likely(ret != -ENOTBLK))
+			return ret;
+		iocb->ki_flags &= ~IOCB_DIRECT;
+	}
+	return generic_file_read_iter(iocb, to);
+}
+
 /**
  * gfs2_file_write_iter - Perform a write to a file
  * @iocb: The io context
- * @iov: The data to write
- * @nr_segs: Number of @iov segments
- * @pos: The file position
+ * @from: The data to write
  *
  * We have to do a lock/unlock here to refresh the inode size for
  * O_APPEND writes, otherwise we can land up writing at the wrong
@@ -705,8 +778,9 @@ static int gfs2_fsync(struct file *file, loff_t start, loff_t end,
 static ssize_t gfs2_file_write_iter(struct kiocb *iocb, struct iov_iter *from)
 {
 	struct file *file = iocb->ki_filp;
-	struct gfs2_inode *ip = GFS2_I(file_inode(file));
-	int ret;
+	struct inode *inode = file_inode(file);
+	struct gfs2_inode *ip = GFS2_I(inode);
+	ssize_t written = 0, ret;
 
 	ret = gfs2_rsqa_alloc(ip);
 	if (ret)
@@ -723,17 +797,81 @@ static ssize_t gfs2_file_write_iter(struct kiocb *iocb, struct iov_iter *from)
 		gfs2_glock_dq_uninit(&gh);
 	}
 
-	return generic_file_write_iter(iocb, from);
+	inode_lock(inode);
+	ret = generic_write_checks(iocb, from);
+	if (ret <= 0)
+		goto out;
+
+	/* We can write back this queue in page reclaim */
+	current->backing_dev_info = inode_to_bdi(inode);
+
+	ret = file_remove_privs(file);
+	if (ret)
+		goto out2;
+
+	ret = file_update_time(file);
+	if (ret)
+		goto out2;
+
+	if (iocb->ki_flags & IOCB_DIRECT) {
+		struct address_space *mapping = file->f_mapping;
+		loff_t pos, endbyte;
+		ssize_t buffered;
+
+		written = gfs2_file_direct_write(iocb, from);
+		if (written < 0 || !iov_iter_count(from))
+			goto out2;
+
+		ret = iomap_file_buffered_write(iocb, from, &gfs2_iomap_ops);
+		if (unlikely(ret < 0))
+			goto out2;
+		buffered = ret;
+
+		/*
+		 * We need to ensure that the page cache pages are written to
+		 * disk and invalidated to preserve the expected O_DIRECT
+		 * semantics.
+		 */
+		pos = iocb->ki_pos;
+		endbyte = pos + buffered - 1;
+		ret = filemap_write_and_wait_range(mapping, pos, endbyte);
+		if (!ret) {
+			iocb->ki_pos += buffered;
+			written += buffered;
+			invalidate_mapping_pages(mapping,
+						 pos >> PAGE_SHIFT,
+						 endbyte >> PAGE_SHIFT);
+		} else {
+			/*
+			 * We don't know how much we wrote, so just return
+			 * the number of bytes which were direct-written
+			 */
+		}
+	} else {
+		ret = iomap_file_buffered_write(iocb, from, &gfs2_iomap_ops);
+		if (likely(ret > 0))
+			iocb->ki_pos += ret;
+	}
+
+out2:
+	current->backing_dev_info = NULL;
+out:
+	inode_unlock(inode);
+	if (likely(ret > 0)) {
+		/* Handle various SYNC-type writes */
+		ret = generic_write_sync(iocb, ret);
+	}
+	return written ? written : ret;
 }
 
 static int fallocate_chunk(struct inode *inode, loff_t offset, loff_t len,
 			   int mode)
 {
+	struct super_block *sb = inode->i_sb;
 	struct gfs2_inode *ip = GFS2_I(inode);
+	loff_t end = offset + len;
 	struct buffer_head *dibh;
 	int error;
-	unsigned int nr_blks;
-	sector_t lblock = offset >> inode->i_blkbits;
 
 	error = gfs2_meta_inode_buffer(ip, &dibh);
 	if (unlikely(error))
@@ -747,21 +885,21 @@ static int fallocate_chunk(struct inode *inode, loff_t offset, loff_t len,
 			goto out;
 	}
 
-	while (len) {
-		struct buffer_head bh_map = { .b_state = 0, .b_blocknr = 0 };
-		bh_map.b_size = len;
-		set_buffer_zeronew(&bh_map);
+	while (offset < end) {
+		struct iomap iomap = { };
 
-		error = gfs2_block_map(inode, lblock, &bh_map, 1);
-		if (unlikely(error))
+		error = gfs2_iomap_get_alloc(inode, offset, end - offset,
+					     &iomap);
+		if (error)
 			goto out;
-		len -= bh_map.b_size;
-		nr_blks = bh_map.b_size >> inode->i_blkbits;
-		lblock += nr_blks;
-		if (!buffer_new(&bh_map))
+		offset = iomap.offset + iomap.length;
+		if (!(iomap.flags & IOMAP_F_NEW))
 			continue;
-		if (unlikely(!buffer_zeronew(&bh_map))) {
-			error = -EIO;
+		error = sb_issue_zeroout(sb, iomap.addr >> inode->i_blkbits,
+					 iomap.length >> inode->i_blkbits,
+					 GFP_NOFS);
+		if (error) {
+			fs_err(GFS2_SB(inode), "Failed to zero data buffers\n");
 			goto out;
 		}
 	}
@@ -809,7 +947,7 @@ static long __gfs2_fallocate(struct file *file, int mode, loff_t offset, loff_t 
 	struct gfs2_inode *ip = GFS2_I(inode);
 	struct gfs2_alloc_parms ap = { .aflags = 0, };
 	unsigned int data_blocks = 0, ind_blocks = 0, rblocks;
-	loff_t bytes, max_bytes, max_blks = UINT_MAX;
+	loff_t bytes, max_bytes, max_blks;
 	int error;
 	const loff_t pos = offset;
 	const loff_t count = len;
@@ -861,7 +999,8 @@ static long __gfs2_fallocate(struct file *file, int mode, loff_t offset, loff_t 
 			return error;
 		/* ap.allowed tells us how many blocks quota will allow
 		 * us to write. Check if this reduces max_blks */
-		if (ap.allowed && ap.allowed < max_blks)
+		max_blks = UINT_MAX;
+		if (ap.allowed)
 			max_blks = ap.allowed;
 
 		error = gfs2_inplace_reserve(ip, &ap);
@@ -1125,7 +1264,7 @@ static int gfs2_flock(struct file *file, int cmd, struct file_lock *fl)
 
 const struct file_operations gfs2_file_fops = {
 	.llseek		= gfs2_llseek,
-	.read_iter	= generic_file_read_iter,
+	.read_iter	= gfs2_file_read_iter,
 	.write_iter	= gfs2_file_write_iter,
 	.unlocked_ioctl	= gfs2_ioctl,
 	.mmap		= gfs2_mmap,
@@ -1155,7 +1294,7 @@ const struct file_operations gfs2_dir_fops = {
 
 const struct file_operations gfs2_file_fops_nolock = {
 	.llseek		= gfs2_llseek,
-	.read_iter	= generic_file_read_iter,
+	.read_iter	= gfs2_file_read_iter,
 	.write_iter	= gfs2_file_write_iter,
 	.unlocked_ioctl	= gfs2_ioctl,
 	.mmap		= gfs2_mmap,
