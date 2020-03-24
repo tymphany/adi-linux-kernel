@@ -318,9 +318,8 @@
 			interrupt-parent = <&gic>;
 			interrupts = <GIC_SPI 148 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "macirq";
-			snps,fixed-burst;
-			snps,burst_len = <0x8>; /* BLEN16 */
-			snps,pbl = <2>;
+			snps,mixed-burst;
+			snps,pbl = <8>;
 			snps,force_sf_dma_mode;
 			snps,perfect-filter-entries = <32>;
 			clock-names = "stmmaceth";
