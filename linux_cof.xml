@@ -4,7 +4,7 @@
 <!-- adi_modified: File has some portions that were copied from a source other than ADI. This may be copying a function from a port for another -->
 <!-- not_shipped: The file is stored in the repository but is never shipped to customers -->
 <!-- external: The file has been copied from a source other than ADI, or is of unknown origin, and ADI have made NO Changes to the file -->
-<Linux-kernel-v4.16.0>
+<Linux-kernel-v4.19.0>
 <File1>
 cof.xml
 <Date_Added>2018/5/11</Date_Added>
@@ -1485,4 +1485,4 @@ drivers/media/i2c/adv7511.c
 <File_License>GPL2</File_License>
 <Comment>Added ADI portion to adv7511 sensor</Comment>
 </File185>
-</Linux-kernel-v4.16.0>
+</Linux-kernel-v4.19.0>
