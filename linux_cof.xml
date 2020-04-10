@@ -1485,4 +1485,28 @@ drivers/media/i2c/adv7511.c
 <File_License>GPL2</File_License>
 <Comment>Added ADI portion to adv7511 sensor</Comment>
 </File185>
+<File186>
+drivers/cpufreq/sc5xx-cpufreq.c
+<Date_Added>2020/4/10</Date_Added>
+<File_Origin>adi_created</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI CPU Frequency Module for sc5xx. Written entirely by ADI</Comment>
+</File186>
+<File187>
+drivers/cpufreq/Makefile
+<Date_Added>2020/4/10</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to cpufreq Makefile</Comment>
+</File187>
+<File188>
+driver/cpufreq/Kconfig.arm
+<Date_Added>2020/4/10</Date_Added>
+<File_Origin>adi_modified</File_Origin>
+<Added_by>hfeng</Added_by>
+<File_License>GPL2</File_License>
+<Comment>Added ADI portion to cpufreq driver Kconfig</Comment>
+</File188>
 </Linux-kernel-v4.19.0>
