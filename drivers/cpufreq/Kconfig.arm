@@ -298,3 +298,17 @@ config ARM_PXA2xx_CPUFREQ
 	  This add the CPUFreq driver support for Intel PXA2xx SOCs.
 
 	  If in doubt, say N.
+
+config SC58X_CPUFREQ
+	bool "SC58X CPUFreq support"
+	depends on ARCH_SC58X
+	default y
+	help
+	  This adds the CPUFreq driver support for SC58X SOCs.
+
+config SC57X_CPUFREQ
+	bool "SC57X CPUFreq support"
+	depends on ARCH_SC57X
+	default y
+	help
+	  This adds the CPUFreq driver support for SC57X SOCs.
