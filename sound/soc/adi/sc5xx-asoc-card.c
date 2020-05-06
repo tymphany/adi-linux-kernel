@@ -25,6 +25,37 @@
 
 #include "../codecs/adau1962.h"
 #include "../codecs/adau1977.h"
+#include "../codecs/adau17x1.h"
+
+static const struct snd_soc_dapm_widget sc5xx_adau1761_dapm_widgets[] = {
+	SND_SOC_DAPM_LINE("In 1", NULL),
+	SND_SOC_DAPM_LINE("In 2", NULL),
+	SND_SOC_DAPM_LINE("In 3-4", NULL),
+
+	SND_SOC_DAPM_LINE("Diff Out L", NULL),
+	SND_SOC_DAPM_LINE("Diff Out R", NULL),
+	SND_SOC_DAPM_LINE("Stereo Out", NULL),
+	SND_SOC_DAPM_HP("Capless HP Out", NULL),
+};
+
+static const struct snd_soc_dapm_route sc5xx_adau1761_dapm_routes[] = {
+	{ "LAUX", NULL, "In 3-4" },
+	{ "RAUX", NULL, "In 3-4" },
+	{ "LINP", NULL, "In 1" },
+	{ "LINN", NULL, "In 1"},
+	{ "RINP", NULL, "In 2" },
+	{ "RINN", NULL, "In 2" },
+
+	{ "In 1", NULL, "MICBIAS" },
+	{ "In 2", NULL, "MICBIAS" },
+
+	{ "Capless HP Out", NULL, "LHP" },
+	{ "Capless HP Out", NULL, "RHP" },
+	{ "Diff Out L", NULL, "LOUT" },
+	{ "Diff Out R", NULL, "ROUT" },
+	{ "Stereo Out", NULL, "LOUT" },
+	{ "Stereo Out", NULL, "ROUT" },
+};
 
 static int sc5xx_adau1962_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params)
@@ -156,6 +187,95 @@ static int sc5xx_adau1979_hw_params(struct snd_pcm_substream *substream,
 	return ret;
 }
 
+static int sam_adau1761_hw_params(struct snd_pcm_substream *substream,
+	struct snd_pcm_hw_params *params)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	unsigned int fmt, rx_mask = 0;
+	unsigned int slot_width = 0;
+	int ret, slots = 0;
+
+	switch (params_channels(params)) {
+	case 2: /* Stereo I2S mode */
+		fmt =	SND_SOC_DAIFMT_I2S |
+			SND_SOC_DAIFMT_NB_NF |
+			SND_SOC_DAIFMT_CBM_CFM;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	switch (params_width(params)) {
+	case 16:
+		slot_width = 16;
+		break;
+	case 24:
+	case 32:
+		slot_width = 32;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	ret = snd_soc_runtime_set_dai_fmt(rtd, fmt);
+	if (ret)
+		return ret;
+
+	return snd_soc_dai_set_tdm_slot(codec_dai, 0, rx_mask,
+				 slots, slot_width);
+}
+
+static int sc5xx_adau1761_hw_params(struct snd_pcm_substream *substream,
+	struct snd_pcm_hw_params *params)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	int pll_rate;
+	int ret;
+
+	switch (params_rate(params)) {
+	case 48000:
+	case 8000:
+	case 12000:
+	case 16000:
+	case 24000:
+	case 32000:
+	case 96000:
+		pll_rate = 48000 * 1024;
+		break;
+	case 44100:
+	case 7350:
+	case 11025:
+	case 14700:
+	case 22050:
+	case 29400:
+	case 88200:
+		pll_rate = 44100 * 1024;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	ret = snd_soc_dai_set_pll(codec_dai, ADAU17X1_PLL,
+			ADAU17X1_PLL_SRC_MCLK, 12288000, pll_rate);
+	if (ret)
+		return ret;
+
+	ret = snd_soc_dai_set_sysclk(codec_dai, ADAU17X1_CLK_SRC_PLL, 12288000,
+			SND_SOC_CLOCK_IN);
+	if (ret) {
+		printk("%s error, ret:%d\n", __func__, ret);
+		return ret;
+	}
+
+	return sam_adau1761_hw_params(substream, params);
+}
+
+static const struct snd_soc_ops sc5xx_adau1761_ops = {
+	.hw_params = sc5xx_adau1761_hw_params,
+};
+
 static const struct snd_soc_ops adau1979_ops = {
 	.hw_params = sc5xx_adau1979_hw_params,
 };
@@ -191,6 +311,16 @@ static struct snd_soc_dai_link sc5xx_asoc_dai_links[] = {
 		.ops = &adau1979_ops,
 	},
 #endif
+#ifdef CONFIG_SND_SC5XX_ADAU1761
+	{
+		.name = "adau1761",
+		.stream_name = "adau1761",
+		.codec_dai_name = "adau-hifi",
+		.platform_name = "sc5xx-pcm-audio",
+		.ops = &sc5xx_adau1761_ops,
+		.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBM_CFM,
+	},
+#endif
 };
 
 /* ADI sc5xx audio machine driver */
@@ -199,6 +329,13 @@ static struct snd_soc_card sc5xx_asoc_card = {
 	.owner = THIS_MODULE,
 	.dai_link = sc5xx_asoc_dai_links,
 	.num_links = ARRAY_SIZE(sc5xx_asoc_dai_links),
+#ifdef CONFIG_SND_SC5XX_ADAU1761
+	.dapm_widgets = sc5xx_adau1761_dapm_widgets,
+	.num_dapm_widgets = ARRAY_SIZE(sc5xx_adau1761_dapm_widgets),
+	.dapm_routes = sc5xx_adau1761_dapm_routes,
+	.num_dapm_routes = ARRAY_SIZE(sc5xx_adau1761_dapm_routes),
+	.fully_routed = true,
+#endif
 };
 
 static int sc5xx_asoc_probe(struct platform_device *pdev)
@@ -217,6 +354,12 @@ static int sc5xx_asoc_probe(struct platform_device *pdev)
 			of_parse_phandle(pdev->dev.of_node, "adi,cpu-dai", 0);
 	sc5xx_asoc_dai_links[id++].codec_of_node =
 			of_parse_phandle(pdev->dev.of_node, "adi,codec", 1);
+#endif
+#ifdef CONFIG_SND_SC5XX_ADAU1761
+	sc5xx_asoc_dai_links[id].cpu_of_node = 
+			of_parse_phandle(pdev->dev.of_node, "adi,cpu-dai", 0);
+	sc5xx_asoc_dai_links[id++].codec_of_node =
+			of_parse_phandle(pdev->dev.of_node, "adi,codec", 0);
 #endif
 	return devm_snd_soc_register_card(&pdev->dev, &sc5xx_asoc_card);
 }
