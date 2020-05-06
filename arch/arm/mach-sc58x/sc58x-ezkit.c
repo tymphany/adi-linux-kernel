@@ -21,9 +21,39 @@
 #include <mach/gpio.h>
 
 #include "core.h"
+
 #if IS_ENABLED(CONFIG_SND_SC5XX_SPORT)
 void sru_init(void)
 {
+#if IS_ENABLED(CONFIG_MACH_SC589_MINI)
+	SRU(0, HIGH, DAI0_PBEN05_I);
+	SRU(0, LOW, DAI0_PB05_I);
+	SRU(0, LOW, DAI0_PBEN06_I);
+
+	/* Set up pins for ADAU1761 */
+	/* set DAI0_PIN01 for ADAU1761 DAC data as an output */
+	SRU(0, HIGH, DAI0_PBEN01_I);
+	/* set DAI0_PIN02 for ADAU1761 ADC data as an input */
+	SRU(0, LOW, DAI0_PBEN02_I);
+	/* set DAI0_PIN03 for ADAU1761 CLK as an input */
+	SRU(0, LOW, DAI0_PBEN03_I);
+	/* set DAI0_PIN04 for ADAU1761 FS as an input */
+	SRU(0, LOW, DAI0_PBEN04_I);
+
+	/* Connect ADAU1761 signals to SPORT0 */
+	/* route ADAU1761 ADC pin to SPT0 BD0 input */
+	SRU(0, DAI0_PB02_O, SPT0_BD0_I);
+	/* route SPT0A AD0 output to 1761 DAC pin */
+	SRU(0, SPT0_AD0_O, DAI0_PB01_I);
+	/* route ADAU1761 BCLK pin to SPORT0A clock input */
+	SRU(0, DAI0_PB03_O, SPT0_ACLK_I);
+	/* route ADAU1761 BCLK pin to SPORT0B clock input */
+	SRU(0, DAI0_PB03_O, SPT0_BCLK_I);
+	/* route ADAU1761 FS pin to SPORT0A frame sync */
+	SRU(0, DAI0_PB04_O, SPT0_AFS_I);
+	/* route ADAU1761 FS pin to SPORT0B frame sync */
+	SRU(0, DAI0_PB04_O, SPT0_BFS_I);
+#else
 	/* set DAI1_PIN02 to input */
 	SRU(1, LOW, DAI1_PBEN02_I);
 	/* route DAI1_PIN02 to SPT4_ACLK */
@@ -51,9 +81,11 @@ void sru_init(void)
 	SRU(1, LOW, DAI1_PBEN06_I);
 	/* route DAI1_PIN06 to SPT4_BD0 */
 	SRU(1, DAI1_PB06_O, SPT4_BD0_I);
+#endif
 }
 EXPORT_SYMBOL(sru_init);
 #endif
+
 void pads_init(void)
 {
 	writel(0xffffffff, __io_address(REG_PADS0_DAI0_IE));

@@ -36,6 +36,11 @@
 			button_gpio = <81>;
 			led_gpio = <50>;
 		};
+		sound {
+			compatible = "sc5xx,asoc-card";
+			adi,cpu-dai = <&i2s0>;
+			adi,codec = <&adau1761>;
+		};
 	};
 };
 
@@ -97,6 +102,12 @@
 
 &i2c0 {
 	status = "okay";
+	adau1761:adau1761@0x38{
+		compatible = "adi,adau1761";
+		reg = <0x38>;
+		twi-select-gpio = <&gpb 8 0>, 	/* Low: ADAU1761 TWI0 Connected */
+				<&gpb 6 0>;
+	};
 };
 
 &i2c1 {
@@ -104,6 +115,14 @@
 };
 
 &i2c2 {
+	status = "okay";
+};
+
+&i2s0 {
+	reg = <0x31002000 0x80>, <0x31002080 0x80>;
+	interrupts = <0 53 IRQ_TYPE_LEVEL_HIGH>,
+			<0 55 IRQ_TYPE_LEVEL_HIGH>;
+	dma-channel = <0>, <1>;
 	status = "okay";
 };
 
