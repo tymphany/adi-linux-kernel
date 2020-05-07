@@ -30,25 +30,35 @@ config SND_SC5XX_PCM
 	  or TDM mode.
 	  You will also need to select the audio interfaces to support below.
 
-config SND_SC5XX_ADAU1979
-	tristate "Support for the ADAU1979 board on SC5XX ezkit board"
+config SND_SC5XX_ADAU1761
+	tristate "Support for the ADAU1761 Machine driver on SHARC Audio board"
 	depends on SND_SC5XX_PCM && I2C
+	select SND_SC5XX_MACHINE
+	select SND_SOC_ADI_SC5XX_I2S
+	select SND_SOC_ADAU1761_I2C
+	help
+	Say Y if you want to add support for the Analog Devices ADAU1761
+        machine driver on the SHARC Audio board.
+
+config SND_SC5XX_ADAU1979
+	tristate "Support for the ADAU1979 Machine driver on SC5XX ezkit board"
+	depends on SND_SC5XX_PCM && I2C && (!SND_SC5XX_ADAU1761)
 	select SND_SC5XX_MACHINE
 	select SND_SOC_ADI_SC5XX_I2S
 	select SND_SOC_ADAU1977_I2C
 	help
 	Say Y if you want to add support for the Analog Devices ADAU1979
-        board connected to the SC5XX ezkit board.
+        machine driver on the SC5XX ezkit board.
 
 config SND_SC5XX_ADAU1962
-	tristate "Support for the ADAU1962 board on SC5XX ezkit board"
-	depends on SND_SC5XX_PCM && I2C
+	tristate "Support for the ADAU1962 Machine driver on SC5XX ezkit board"
+	depends on SND_SC5XX_PCM && I2C && (!SND_SC5XX_ADAU1761)
 	select SND_SC5XX_MACHINE
 	select SND_SOC_ADI_SC5XX_I2S
 	select SND_SOC_ADAU1962_I2C
 	help
 	Say Y if you want to add support for the Analog Devices ADAU1962
-        board connected to the SC5XX ezkit board.
+        machine driver on the SC5XX ezkit board.
 
 config SND_SC5XX_SPORT
 	tristate

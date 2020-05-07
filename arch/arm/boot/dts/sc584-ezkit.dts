@@ -212,6 +212,10 @@
 };
 
 &i2s0 {
+	reg = <0x31002400 0x80>, <0x31002480 0x80>;
+	interrupts = <GIC_SPI 61 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 63 IRQ_TYPE_LEVEL_HIGH>;
+	dma-channel = <10>, <11>;
 	status = "okay";
 };
 
