@@ -437,7 +437,7 @@ static int adi_dma_probe(struct platform_device *pdev)
 	struct dma_channel *dma = NULL;
 	int spu_securep_id, ret = 0;
 	char *id_str;
-	int id;
+	unsigned long id;
 
 	id_str = strchr(node->full_name, '@');
 	if (id_str != NULL && (++id_str) != NULL)
