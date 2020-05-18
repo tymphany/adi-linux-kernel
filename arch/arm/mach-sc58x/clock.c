@@ -172,7 +172,7 @@ unsigned long pll_round_rate(struct clk *clk, unsigned long rate)
 	return clk->parent->rate * div;
 }
 
-int pll_set_rate(struct clk *clk, unsigned long rate)
+unsigned long pll_set_rate(struct clk *clk, unsigned long rate)
 {
 	u32 msel;
 	u32 stat = readl(__io_address(REG_CGU0_STAT));

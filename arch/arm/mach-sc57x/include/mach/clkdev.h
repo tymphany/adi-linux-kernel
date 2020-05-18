@@ -28,7 +28,7 @@ struct clk_ops {
 	void                    (*enable)(struct clk *);
 	void                    (*disable)(struct clk *);
 	unsigned long           (*get_rate)(struct clk *);
-	int                     (*set_rate)(struct clk *, unsigned long);
+	unsigned long           (*set_rate)(struct clk *, unsigned long);
 };
 
 struct clk {
