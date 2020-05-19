@@ -5,7 +5,7 @@
 menuconfig ICC
 	bool "icc driver"
 	default y
-	depends on !SMP && !BFIN_L2_DCACHEABLE
+	depends on !SMP
 	help
 	  the icc driver is a device driver that control the DSP devices,
 	  and bridges the the program runing on DSPs and linux user applications
