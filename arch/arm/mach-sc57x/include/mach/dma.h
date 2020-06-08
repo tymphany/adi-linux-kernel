@@ -329,9 +329,8 @@ static inline void clear_dma_irqstat(unsigned int channel)
 		&dma_ch[channel].regs->irq_status);
 }
 
-void *dma_memcpy(void *dest, const void *src, size_t count);
-void *dma_memcpy_nocache(void *dest, const void *src, size_t count);
-void *safe_dma_memcpy(void *dest, const void *src, size_t count);
+dma_addr_t dma_memcpy(dma_addr_t dest, const dma_addr_t src, size_t count);
+dma_addr_t safe_dma_memcpy(dma_addr_t dest, const dma_addr_t src, size_t count);
 void early_dma_memcpy(void *dest, const void *src, size_t count);
 void early_dma_memcpy_done(void);
 
