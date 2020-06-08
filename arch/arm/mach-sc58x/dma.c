@@ -17,6 +17,7 @@
 #include <linux/spinlock.h>
 #include <linux/platform_device.h>
 #include <linux/dma-direction.h>
+#include <linux/dma-mapping.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/vmalloc.h>
@@ -314,27 +315,15 @@ extern struct static_vm *find_static_vm_vaddr(void *vaddr);
  * Handle all the high level steps before we touch the MDMA registers.  So
  * handle direction, tweaking of sizes, and formatting of addresses.
  */
-static void *_dma_memcpy(void *pdst, const void *psrc, size_t size)
+static dma_addr_t _dma_memcpy(dma_addr_t pdst, dma_addr_t psrc, size_t size)
 {
 	u32 conf, shift;
 	s16 mod;
-	phys_addr_t dst, src;
-	struct vm_struct *vm;
-
-	vm = (struct vm_struct *)find_static_vm_vaddr(pdst);
-	if (vm)
-		dst = (u32)pdst - (u32)vm->addr + vm->phys_addr;
-	else
-		dst = __pa(pdst);
-
-	vm = (struct vm_struct *)find_static_vm_vaddr((void *)psrc);
-	if (vm)
-		src = (u32)psrc - (u32)vm->addr + vm->phys_addr;
-	else
-		src = __pa(psrc);
+	dma_addr_t dst = pdst;
+	dma_addr_t src = psrc;
 
 	if (size == 0)
-		return NULL;
+		return (dma_addr_t)NULL;
 
 	if (dst % 4 == 0 && src % 4 == 0 && size % 4 == 0) {
 		conf = WDSIZE_32;
@@ -361,65 +350,38 @@ static void *_dma_memcpy(void *pdst, const void *psrc, size_t size)
 
 	__dma_memcpy(dst, mod, src, mod, size, conf);
 
-	return pdst;
+	return dst;
 }
 
-/* jchen11 TODO: comment out below for BU since no "dmac_map_area" support in Linux v4.16 */
-#if 0
 /**
- *	dma_memcpy - DMA memcpy under mutex lock
+ * dma_memcpy -	DMA memcpy between two DMA/bus adresses
+ * @pdst: destn address
+ * @psrc: src address
+ * @size: DMA transfer len
  *
- * Do not check arguments before starting the DMA memcpy.  Break the transfer
- * up into two pieces.  The first transfer is in multiples of 64k and the
- * second transfer is the piece smaller than 64k.
+ * Perform a DMA memcpy between two DMA/bus addresses.
  */
-void *dma_memcpy(void *pdst, const void *psrc, size_t size)
-{
-	void *ret;
-
-	dmac_map_area(psrc, size, DMA_TO_DEVICE);
-	dmac_map_area((const void *)pdst, size, DMA_FROM_DEVICE);
-
-	ret = _dma_memcpy(pdst, psrc, size);
-
-	dmac_unmap_area(psrc, size, DMA_TO_DEVICE);
-	dmac_unmap_area((const void *)pdst, size, DMA_FROM_DEVICE);
-
-	return ret;
-}
-EXPORT_SYMBOL(dma_memcpy);
-#endif
-/**
- *	dma_memcpy_nocache - DMA memcpy under mutex lock
- *	- No cache flush/invalidate
- *
- * Do not check arguments before starting the DMA memcpy.  Break the transfer
- * up into two pieces.  The first transfer is in multiples of 64k and the
- * second transfer is the piece smaller than 64k.
- */
-void *dma_memcpy_nocache(void *pdst, const void *psrc, size_t size)
+dma_addr_t dma_memcpy(dma_addr_t pdst, const dma_addr_t psrc, size_t size)
 {
 	return _dma_memcpy(pdst, psrc, size);
 }
-EXPORT_SYMBOL(dma_memcpy_nocache);
+EXPORT_SYMBOL(dma_memcpy);
 
-/* jchen11 TODO: comment out below for BU since no "dmac_map_area" support in Linux v4.16 */
-#if 0
 /**
  *	safe_dma_memcpy - DMA memcpy w/argument checking
  *
  * Verify arguments are safe before heading to dma_memcpy().
  */
-void *safe_dma_memcpy(void *dst, const void *src, size_t size)
+dma_addr_t safe_dma_memcpy(dma_addr_t dst, const dma_addr_t src, size_t size)
 {
 	if (!access_ok(VERIFY_WRITE, dst, size))
-		return NULL;
+		return (dma_addr_t)NULL;
 	if (!access_ok(VERIFY_READ, src, size))
-		return NULL;
+		return (dma_addr_t)NULL;
 	return dma_memcpy(dst, src, size);
 }
 EXPORT_SYMBOL(safe_dma_memcpy);
-#endif
+
 #ifdef CONFIG_OF
 static const struct of_device_id adi_dma_of_match[] = {
 	{
