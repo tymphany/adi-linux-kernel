@@ -52,13 +52,19 @@
 /* =========================
         WDOG0
    ========================= */
-#define REG_WDOG0_CTL                   0x31008000         /* WDOG0 Control Register */
+#define REG_WDOG0_CTL               0x31008000         /* WDOG0 Control Register */
 
 /* =========================
         WDOG1
    ========================= */
-#define REG_WDOG1_CTL                   0x31009000         /* WDOG1 Control Register */
+#define REG_WDOG1_CTL               0x31009000         /* WDOG1 Control Register */
 
+/*  =========================
+ *         CRC0 MMR
+ *  ========================= */
+#define REG_CRC0_CTL				0x310A5000         /* CRC0 Control Register */
+#define REG_CRC0_DCNT				0x310A5004	       /* CRC0 Data Word Count Register */
+#define REG_CRC0_FILLVAL			0x310A5018	       /* CRC0 Fill Value Register */
 
 /* ==================================================
         DMA Channel Registers
@@ -101,6 +107,7 @@
 #define SEC_CCTL		0x0         /* SEC Core Control Register n */
 #define SEC_CSID		0x1C        /* SEC Core IRQ Source ID Register n */
 
+
 /* ---------------------------------------------------------------
    SEC Fault Management Interface (SFI) Register Definitions
    --------------------------------------------------------------- */
@@ -111,11 +118,17 @@
    --------------------------------------------------------------- */
 #define SEC_GCTL					0x0	/* SEC Global Control Register */
 #define SEC_RAISE					0x8	/* SEC Global Raise Register */
+#define SEC_END						0x0C /* SEC Global End Register */
 
 /* ---------------------------------------------------------------
-        SEC_SCTL                        Pos/Masks     Description
+        SEC_CCTL						Pos/Masks		 Description
    --------------------------------------------------------------- */
-#define SEC_SCTL_CTG				0x0F000000    /* Core Target Select */
+#define SEC_CCTL_EN						0x00000001		/* SCI Enable */
+
+/* ---------------------------------------------------------------
+        SEC_SCTL						Pos/Masks     Description
+   --------------------------------------------------------------- */
+#define SEC_SCTL_CTG					0x0F000000    /* Core Target Select */
 
 /* ---------------------------------------------------------------
    SEC Source Interface (SSI) Register Definitions
@@ -123,7 +136,7 @@
 #define SEC_SCTL0					0x0	/* SEC Source Control Register n */
 
 /* ---------------------------------------------------------------
-        SEC_SCTL                             Pos/Masks     Description
+        SEC_SCTL                        Pos/Masks     Description
    --------------------------------------------------------------- */
 #define SEC_SCTL_SRC_EN                 0x00000004    /* SEN: Enable */
 #define SEC_SCTL_FAULT_EN               0x00000002    /* FEN: Enable */
