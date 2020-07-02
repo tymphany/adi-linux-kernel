@@ -33,8 +33,8 @@ struct rcu_reg {
 	uint32_t reg_rcu_sidis;							/* 0x10 */
 	/* RCU0 System Interface Status Register */
 	uint32_t reg_rcu_sistat;						/* 0x14 */
-	/* reg pad from 0x18 to 0x1b */
-	uint8_t	 pad_0x18_0x1b[0x1c - 0x18];			/* 0x18 ~ 0x1b */
+	/* RCU0 SVECT Lock Register */
+	uint32_t reg_rcu_svect_lck;						/* 0x18 */
 	/* RCU0 Boot Code Register */
 	uint32_t reg_rcu_bcode;							/* 0x1c */
 	/* Software Vector Register 0 to 2 */
@@ -42,9 +42,13 @@ struct rcu_reg {
 	uint32_t reg_rcu_svect1;						/* 0x24 */
 	uint32_t reg_rcu_svect2;						/* 0x28 */
 	/* reg pad from 0x2c to 0x63 */
-	uint8_t	 pad_0x2c_0x63[0x64 - 0x2c];			/* 0x2c ~ 0x63 */
+	uint8_t	 pad_0x2c_0x59[0x60 - 0x2c];			/* 0x2c ~ 0x59 */
+	/* RCU0 Message Register */
+	uint32_t reg_rcu_msg;							/* 0x60 */
 	/* RCU0 Message Set Bits Register */
 	uint32_t reg_rcu_msg_set;						/* 0x64 */
+	/* RCU0 Message Clear Bits Register */
+	uint32_t reg_rcu_msg_clr;						/* 0x68 */
 };
 
 void platform_send_ipi_cpu(unsigned int cpu, int irq);

@@ -29,8 +29,10 @@ struct rcu_reg {
 	uint32_t reg_rcu_crctl;							/* 0x08 */
 	/* RCU0 Core Reset Status Register */
 	uint32_t reg_rcu_crstat;						/* 0x0c */
-	/* reg pad from 0x10 to 0x1b */
-	uint8_t	 pad_0x10_0x1b[0x1c - 0x10];			/* 0x10 ~ 0x1b */
+	/* reg pad from 0x10 to 0x17 */
+	uint8_t	 pad_0x10_0x17[0x18 - 0x10];			/* 0x10 ~ 0x17 */
+	/* RCU0 System Reset Status Register */
+	uint32_t reg_rcu_srrqstat;						/* 0x18 */
 	/* RCU0 System Interface Disable Register */
 	uint32_t reg_rcu_sidis;							/* 0x1c */
 	/* RCU0 System Interface Status Register */
@@ -43,10 +45,14 @@ struct rcu_reg {
 	uint32_t reg_rcu_svect0;						/* 0x2c */
 	uint32_t reg_rcu_svect1;						/* 0x30 */
 	uint32_t reg_rcu_svect2;						/* 0x34 */
-	/* reg pad from 0x38 to 0x6f */
-	uint8_t	 pad_0x38_0x6f[0x70 - 0x38];			/* 0x38 ~ 0x6f */
+	/* reg pad from 0x38 to 0x6b */
+	uint8_t	 pad_0x38_0x6b[0x6C - 0x38];			/* 0x38 ~ 0x6b */
+	/* RCU0 Message Register */
+	uint32_t reg_rcu_msg;							/* 0x6C */
 	/* RCU0 Message Set Bits Register */
 	uint32_t reg_rcu_msg_set;						/* 0x70 */
+	/* RCU0 Message Clear Bits Register */
+	uint32_t reg_rcu_msg_clr;						/* 0x74 */
 };
 
 void platform_send_ipi_cpu(unsigned int cpu, int irq);

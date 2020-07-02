@@ -60,6 +60,12 @@
    ========================= */
 #define REG_WDOG1_CTL                   0x31009000         /* WDOG1 Control Register */
 
+/* =========================
+       CRC0 MMR
+   ========================= */
+#define REG_CRC0_CTL			0x31001200	/* CRC0 Control Register */
+#define REG_CRC0_DCNT			0x31001204	/* CRC0 Data Word Count Register */
+#define REG_CRC0_FILLVAL		0x31001218	/* CRC0 Fill Value Register */
 
 /* ==================================================
         DMA Channel Registers
@@ -75,8 +81,6 @@
 #define REG_DMA19_DSCPTR_NXT            0x31028180         /* DMA19 Pointer to Next Initial Descriptor */
 #define REG_DMA19_CFG                   0x31028188         /* DMA19 Configuration Register */
 #define REG_DMA19_STAT                  0x310281B0         /* DMA19 Status Register */
-
-
 
 /* =========================
         L2CTL0
@@ -105,6 +109,7 @@
 #define SEC_CCTL	0x0         /* SEC Core Control Register n */
 #define SEC_CSID	0x1C        /* SEC Core IRQ Source ID Register n */
 
+#define SEC_CCTL_EN	0x00000001    /* SEC Core Control Register Enable bit */
 /* ---------------------------------------------------------------
    SEC Fault Management Interface (SFI) Register Definitions
    --------------------------------------------------------------- */
@@ -115,7 +120,7 @@
    --------------------------------------------------------------- */
 #define SEC_GCTL                   0x0	/* SEC Global Control Register */
 #define SEC_RAISE                  0x8	/* SEC Global Raise Register */
-
+#define SEC_END					   0x0C /* SEC Global End Register*/
 
 /* ---------------------------------------------------------------
         SEC_SCTL                        Pos/Masks     Description
@@ -174,7 +179,7 @@
 
 
 /* =========================
-   PADS0
+		PADS0
    ========================= */
 #define REG_PADS0_BASE                  0x31004400         /* PADS Base Register */
 #define REG_PADS0_PCFG0                 0x31004404         /* PADS0 Peripheral Configuration0 Register */
