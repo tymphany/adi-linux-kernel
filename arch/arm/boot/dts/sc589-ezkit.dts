@@ -58,12 +58,29 @@
 			button_gpio = <80>;
 			led_gpio = <77>;
 		};
+
 		button1: button@1 {
 			compatible = "adi,button-led";
 			en-pins = <&ssw1 1 GPIO_ACTIVE_LOW>,	/* PUSHBUTTON2_EN */
 			          <&ssw1 3 GPIO_ACTIVE_LOW>;	/* LED11_EN */
 			button_gpio = <81>;
 			led_gpio = <78>;
+		};
+
+		core1-rproc@0x3108b000 {
+			compatible = "adi,remoteproc";
+			reg = <0x3108b000 0x70>;
+			core-id = <1>;
+			core-irq = <76>;
+			firmware-name = "adi_adsp_core1_fw.ldr";
+		};
+
+		core2-rproc@0x3108b000 {
+			compatible = "adi,remoteproc";
+			reg = <0x3108b000 0x70>;
+			core-id = <2>;
+			core-irq = <77>;
+			firmware-name = "adi_adsp_core2_fw.ldr";
 		};
 
 		sound {
