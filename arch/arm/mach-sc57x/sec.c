@@ -1,7 +1,7 @@
 /*
  * sc57x SEC
  *
- * Copyright 2014 - 2018 Analog Devices Inc.
+ * Copyright 2014 - 2020 Analog Devices Inc.
  *
  * Licensed under the GPL-2 or later.
  */
@@ -75,8 +75,7 @@ void sec_init(void __iomem *common_base, void __iomem *sci_base,
 
 #ifdef CONFIG_ADI_WATCHDOG
 	/* enable SEC fault source for watchdog0 */
-	sec_enable_sci(3, true);
-	sec_enable_ssi(3);
+	sec_enable_ssi(3, true, true);
 #endif
 }
 
@@ -91,7 +90,7 @@ void sec_raise_irq(unsigned int irq)
 	spin_unlock_irqrestore(&lock, flags);
 }
 
-void sec_enable_sci(unsigned int sid, bool fault)
+void sec_enable_ssi(unsigned int sid, bool fault, bool source)
 {
 	unsigned long flags;
 	uint32_t reg_sctl;
@@ -100,27 +99,32 @@ void sec_enable_sci(unsigned int sid, bool fault)
 	spin_lock_irqsave(&lock, flags);
 
 	reg_sctl = readl(sec->ssi_base + 8 * sid);
+
 	if (fault)
 		reg_sctl |= SEC_SCTL_FAULT_EN;
 	else
 		reg_sctl |= SEC_SCTL_INT_EN;
+
+	if (source)
+		reg_sctl |= SEC_SCTL_SRC_EN;
+
 	writel(reg_sctl, sec->ssi_base + 8 * sid);
 
 	spin_unlock_irqrestore(&lock, flags);
 }
 
-void sec_enable_ssi(unsigned int sid)
+void sec_enable_sci(unsigned int coreid)
 {
 	unsigned long flags;
-	uint32_t reg_sctl;
+	uint32_t reg_cctl;
+	unsigned int id = coreid - 1 ;
 	struct sec_chip_data *sec = &sec_data;
 
 	spin_lock_irqsave(&lock, flags);
-	reg_sctl = readl(sec->ssi_base + 8 * sid);
+	reg_cctl = readl(sec->sci_base + 8 * id);
 
-	reg_sctl |= SEC_SCTL_SRC_EN;
-	writel(reg_sctl, sec->ssi_base + 8 * sid);
-
+	reg_cctl |= SEC_CCTL_EN;
+	writel(reg_cctl, sec->sci_base + 8 * id);
 	spin_unlock_irqrestore(&lock, flags);
 }
 
