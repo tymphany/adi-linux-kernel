@@ -121,10 +121,10 @@ void sec_enable_sci(unsigned int coreid)
 	struct sec_chip_data *sec = &sec_data;
 
 	spin_lock_irqsave(&lock, flags);
-	reg_cctl = readl(sec->sci_base + 8 * id);
+	reg_cctl = readl(sec->sci_base + 0x40 * id);
 
 	reg_cctl |= SEC_CCTL_EN;
-	writel(reg_cctl, sec->sci_base + 8 * id);
+	writel(reg_cctl, sec->sci_base + 0x40 * id);
 	spin_unlock_irqrestore(&lock, flags);
 }
 
