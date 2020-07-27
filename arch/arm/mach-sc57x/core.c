@@ -533,7 +533,6 @@ static int gptmr_set_state_oneshot(struct clock_event_device *evt)
 {
 	int id = timer_event->id;
 
-	while(1);
 	disable_gptimers(1 << id);
 	set_gptimer_config(timer_event, TIMER_OUT_DIS | TIMER_MODE_PWM
 			| TIMER_PULSE_HI | TIMER_IRQ_WID_DLY);
@@ -583,7 +582,7 @@ static struct clock_event_device clockevent_gptmr = {
 	.name           = "sc57x_gptimer0",
 	.rating         = 300,
 	.shift          = 32,
-	.features       = CLOCK_EVT_FEAT_PERIODIC,
+	.features       = CLOCK_EVT_FEAT_PERIODIC | CLOCK_EVT_FEAT_ONESHOT,
 	.set_next_event = gptmr_set_next_event,
 	.set_state_periodic  = gptmr_set_state_periodic,
 	.set_state_oneshot = gptmr_set_state_oneshot,
