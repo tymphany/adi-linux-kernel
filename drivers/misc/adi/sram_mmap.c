@@ -18,6 +18,7 @@
 #include <linux/platform_device.h>
 #include <mach/cpu.h>
 #include <mach/hardware.h>
+#include <linux/ioctl.h>
 #ifdef CONFIG_ARCH_SC58X
 #include <mach/sc58x.h>
 #elif defined(CONFIG_ARCH_SC57X)
@@ -25,6 +26,10 @@
 #endif
 
 #define SRAM_MMAP_DRV_NAME		"sram_mmap"
+
+#define PHYSADDR _IOR(0x6B,0x01,unsigned long)
+
+unsigned long paddr = 0;
 
 struct adi_sram_mmap {
 	struct miscdevice miscdev;
@@ -68,7 +73,6 @@ static int sram_mmap(struct file *fp, struct vm_area_struct *vma)
 				struct adi_sram_mmap, miscdev);
 	struct mmap_private_data *pdata;
 	size_t sram_size = vma->vm_end - vma->vm_start;
-	unsigned long paddr;
 	int ret = 0;
 
 	/*  Allocate private pdata */
@@ -109,8 +113,27 @@ out_free:
 	return ret;
 }
 
+static long sram_ioctl(struct file *file,unsigned int cmd, unsigned long arg)
+{
+	int err=0;
+
+	if(_IOC_DIR(cmd) & _IOC_READ)
+		err = !access_ok(VERIFY_WRITE, (void __user *)arg, _IOC_SIZE(cmd));
+
+	switch (cmd)
+	{
+	case PHYSADDR:
+		put_user(paddr,(unsigned long __user *)arg);
+		break;
+	
+	default:
+		break;
+	}
+}
+
 static const struct file_operations sram_fops = {
 	.mmap		= sram_mmap,
+	.unlocked_ioctl = sram_ioctl,
 };
 
 static const struct of_device_id adi_sram_mmap_of_match[] = {
