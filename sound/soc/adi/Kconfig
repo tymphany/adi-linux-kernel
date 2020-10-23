@@ -23,7 +23,7 @@ config SND_SOC_ADI_AXI_SPDIF
 
 config SND_SC5XX_PCM
 	tristate "SoC Audio for the ADI SC5XX chip"
-	depends on ARCH_SC58X || ARCH_SC57X
+	depends on ARCH_SC59X || ARCH_SC58X || ARCH_SC57X
 	select SND_SC5XX_SPORT
 	help
 	  Say Y or M if you want to add support for codecs attached to
@@ -63,7 +63,7 @@ config SND_SC5XX_ADAU1962
 
 config SND_SC5XX_SPORT
 	tristate
-	depends on ARCH_SC58X || ARCH_SC57X
+	depends on ARCH_SC59X || ARCH_SC58X || ARCH_SC57X
 	help
 	SPORT interface driver for SC5XX audio, audio data are sent and
 	received through the SPORT DMA buffers
@@ -72,7 +72,7 @@ config SND_SC5XX_SPORT
 
 config SND_SOC_ADI_SC5XX_I2S
 	tristate
-	depends on ARCH_SC58X || ARCH_SC57X
+	depends on ARCH_SC59X || ARCH_SC58X || ARCH_SC57X
 	help
 	Describes the Digital Audio Interface format, which is physcally
 	built on the SPORT
@@ -81,7 +81,7 @@ config SND_SOC_ADI_SC5XX_I2S
 
 config SND_SC5XX_MACHINE
 	tristate
-	depends on ARCH_SC58X || ARCH_SC57X
+	depends on ARCH_SC59X || ARCH_SC58X || ARCH_SC57X
 	help
 	Describes the ASoC Machine driver for ADI SC5XX based boards
 	Audio devices on SC5xx requires this

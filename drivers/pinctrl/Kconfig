@@ -33,7 +33,7 @@ config DEBUG_PINCTRL
 
 config PINCTRL_ADI2
 	bool "ADI pin controller driver"
-	depends on (BF54x || BF60x || ARCH_SC58X || ARCH_SC57X)
+	depends on (BF54x || BF60x || ARCH_SC59X || ARCH_SC58X || ARCH_SC57X)
 	depends on !GPIO_ADI
 	select PINMUX
 	select IRQ_DOMAIN
@@ -78,13 +78,9 @@ config PINCTRL_AXP209
 	  selected.
 	  Say yes to enable pinctrl and GPIO support for the AXP209 PMIC
 
-config PINCTRL_BF54x
-	def_bool y if BF54x
-	select PINCTRL_ADI2
-
-config PINCTRL_BF60x
-	def_bool y if BF60x
-	select PINCTRL_ADI2
+config PINCTRL_SC59x
+        def_bool y if ARCH_SC59X
+        select PINCTRL_ADI2
 
 config PINCTRL_SC58x
 	def_bool y if ARCH_SC58X

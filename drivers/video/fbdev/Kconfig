@@ -614,7 +614,7 @@ config FB_BFIN_7393
 
 config FB_ADI_NL8048
 	tristate "NEC NL8048HL WVGA LCD for ADI SC5XX boards"
-	depends on FB && ARCH_SC58X && SPI_MASTER
+	depends on FB && ARCH_SC59X || ARCH_SC58X && SPI_MASTER
 	select FB_CFB_FILLRECT
 	select FB_CFB_COPYAREA
 	select FB_CFB_IMAGEBLIT
