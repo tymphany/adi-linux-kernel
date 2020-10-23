@@ -33,7 +33,9 @@
 #include <mach/dma.h>
 #include <mach/gpio.h>
 #include "adi_uart4.h"
-#ifdef CONFIG_ARCH_SC58X
+#ifdef CONFIG_ARCH_SC59X
+#include <mach/sc59x.h>
+#elif defined(CONFIG_ARCH_SC58X)
 #include <mach/sc58x.h>
 #elif defined(CONFIG_ARCH_SC57X)
 #include <mach/sc57x.h>
@@ -1123,6 +1125,8 @@ static int adi_uart4_serial_resume(struct platform_device *pdev)
 
 static int adi_uart4_serial_probe(struct platform_device *pdev)
 {
+	printk(KERN_ERR "Serial probe\r\n");
+
 	struct resource *res;
 	struct clk* clk;
 	struct adi_uart4_serial_port *uart = NULL;

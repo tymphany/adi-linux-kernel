@@ -96,7 +96,7 @@ config CAN_AT91
 	  and AT91SAM9X5 processors.
 
 config CAN_SC5XX
-	depends on ARCH_SC58X || ARCH_SC57X
+	depends on ARCH_SC59X || ARCH_SC58X || ARCH_SC57X
 	tristate "Analog Devices SC5xx on-chip CAN"
 	---help---
 	  Driver for the Analog Devices SC5xx on-chip CAN controllers
