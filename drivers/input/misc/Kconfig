@@ -689,7 +689,7 @@ config INPUT_DM355EVM
 
 config INPUT_ADI_ROTARY
 	tristate "ADI Rotary support"
-	depends on ARCH_SC58X || ARCH_SC57X
+	depends on ARCH_SC59X || ARCH_SC58X || ARCH_SC57X
 	default n
 	help
 	  Say Y here if you want to use the ADI Rotary.

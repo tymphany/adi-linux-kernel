@@ -537,6 +537,25 @@ config ARCH_OMAP1
 	help
 	  Support for older TI OMAP1 (omap7xx, omap15xx or omap16xx)
 
+config ARCH_SC59X
+        bool "ADI Ltd. sc59x family"
+        select ARM_GIC
+        select CPU_V7
+        select VFP
+        select NEON
+        select MIGHT_HAVE_CACHE_L2X0
+        select HAVE_CLK
+        select CLKDEV_LOOKUP
+        select GENERIC_CLOCKEVENTS
+        select IRQ_DOMAIN
+        select HAVE_MACH_CLKDEV
+        select NEED_MACH_GPIO_H
+        select SPARSE_IRQ
+        select ARCH_REQUIRE_GPIOLIB
+        select PINCTRL
+        help
+          This enables support for ADI Ltd sc59x board.
+
 config ARCH_SC58X
 	bool "ADI Ltd. sc58x family"
 	select ARM_GIC
@@ -787,6 +806,7 @@ source "arch/arm/mach-zx/Kconfig"
 
 source "arch/arm/mach-zynq/Kconfig"
 
+source "arch/arm/mach-sc59x/Kconfig"
 source "arch/arm/mach-sc58x/Kconfig"
 source "arch/arm/mach-sc57x/Kconfig"
 
