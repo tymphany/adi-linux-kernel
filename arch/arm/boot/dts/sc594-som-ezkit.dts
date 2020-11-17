@@ -156,62 +156,80 @@
 &spi2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&spi2_quad>;
-	status = "disabled";
+	status = "okay";
 
-	flash: w25q32@0 {
+	flash: mx66lm1g45@0 {
 		#address-cells = <1>;
 		#size-cells = <1>;
-		compatible = "winbond,w25q32";
-		en-pins = <&ssw0 12 GPIO_ACTIVE_LOW>,	/* SP2IFLASH_CS_EN */
-		          <&ssw0 13 GPIO_ACTIVE_LOW>;	/* SPI2D2_D3_EN */
+		compatible = "mx66lm1g45", "jedec,spi-nor";
+		/*en-pins = <&ssw0 12 GPIO_ACTIVE_LOW>,	 SP2IFLASH_CS_EN */
+		/*          <&ssw0 13 GPIO_ACTIVE_LOW>;	 SPI2D2_D3_EN */
 		spi-max-frequency = <5000000>;
-		reg = <38>;
+		reg = <5>;
 		spi-cpol;
 		spi-cpha;
 		spi-rx-bus-width = <4>;
-		dma-mode;
+		/*dma-mode;*/
 
 		partition@0 {
-			label = "uboot (spi)";
+			label = "uboot (mx66)";
 			reg = <0x0 0x80000>;
 		};
+
 		partition@1 {
-			label = "kernel (spi)";
-			reg = <0x80000 0x580000>;
+			label = "uboot environment (mx66)";
+			reg = <0x80000 0x10000>;
 		};
-		partition@2 {
-			label = "root file system (spi)";
-			reg = <0x600000 0xa00000>;
+
+                partition@2 {
+                        label = "kernel image (mx66)";
+                        reg = <0x90000 0x1000000>;
+                };
+
+                partition@3 {
+                        label = "kernel device tree (mx66)";
+                        reg = <0x1090000 0x100000>;
+                };
+
+		partition@4 {
+			label = "rfs (mx66)";
+			reg = <0x1190000 0x6E70000>;
 		};
 	};
 };
 
 &i2c0 {
-	status = "disabled";
+	status = "okay";
+
 	ssw0: gpio@0x21 {
 		compatible = "microchip,mcp23017";
 		gpio-controller;
 		#gpio-cells = <2>;
 		reg = <0x21>;
 	};
+
 	ssw1: gpio@0x22 {
 		compatible = "microchip,mcp23017";
 		gpio-controller;
 		#gpio-cells = <2>;
 		reg = <0x22>;
 	};
-	adau1979: adau1979@0x11 {
-		compatible = "adi,adau1977";
-		reg = <0x11>;
-		enable-pin = <&ssw1 7 GPIO_ACTIVE_LOW>;	/* ADAU1979_EN */
-		reset-gpio = <&gpa 14 0>;
-	};
-	adau1962: adau1962@0x4 {
-		compatible = "adi,adau1962";
-		reg = <0x4>;
-		enable-pin = <&ssw1 6 GPIO_ACTIVE_LOW>;	/* ADAU1962_EN */
-		reset-gpio = <&gpa 14 0>;
-	};
+
+        adau1979: adau1979@0x11 {
+                compatible = "adi,adau1977";
+                reg = <0x11>;
+                enable-pin = <&ssw1 7 GPIO_ACTIVE_LOW>; /* ADAU1979_EN */
+                reset-gpio = <&gpa 14 0>;
+		status = "disabled";
+        };
+
+        adau1962: adau1962@0x4 {
+                compatible = "adi,adau1962";
+                reg = <0x4>;
+                enable-pin = <&ssw1 6 GPIO_ACTIVE_LOW>; /* ADAU1962_EN */
+                reset-gpio = <&gpa 14 0>;
+		status = "disabled";
+        };
 };
 
 &i2c1 {

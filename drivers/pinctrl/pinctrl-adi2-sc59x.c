@@ -211,11 +211,11 @@ static const unsigned spi1_pins[] = {
 };
 
 static const unsigned spi2_pins[] = {
-	GPIO_PC1, GPIO_PC2, GPIO_PC3,
+	GPIO_PA4, GPIO_PA0, GPIO_PA1,
 };
 
 static const unsigned spi2_quad_pins[] = {
-	GPIO_PC1, GPIO_PC2, GPIO_PC3, GPIO_PC4, GPIO_PC5,
+	GPIO_PA4, GPIO_PA0, GPIO_PA1, GPIO_PA2, GPIO_PA3,
 };
 
 static const unsigned can0_pins[] = {
