@@ -108,6 +108,7 @@
 			sram-ecc-err@31080000 {
 				compatible = "adi,sram-ecc-err";
 				reg = <0x31080000 0x100>;
+				interrupts = <GIC_SPI 8 IRQ_TYPE_LEVEL_HIGH>;
 			};
 		};
 
