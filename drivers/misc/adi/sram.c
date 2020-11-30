@@ -11,6 +11,7 @@
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/of_device.h>
+#include <linux/of_irq.h>
 #include <linux/genalloc.h>
 #include <linux/device.h>
 #include <linux/interrupt.h>
@@ -103,8 +104,8 @@ static int adi_sram_show(struct seq_file *s, void *data)
 		pool_size = gen_pool_size(sram_pool);
 		avail = gen_pool_avail(sram_pool);
 		used = pool_size - avail;
-		seq_printf(s,"\tTotal size: %d KB\n\tUsed sram: %d KB\n\tAvail sram: %d KB\n",
-			pool_size / 1024, used / 1024, avail / 1024);
+		seq_printf(s,"\tTotal size: %d B\n\tUsed sram: %d B\n\tAvail sram: %d B\n",
+			pool_size, used, avail);
 
 		of_node_put(sram_node);
 	}
@@ -132,7 +133,9 @@ MODULE_DEVICE_TABLE(of, adi_sram_of_match);
 static int adi_sram_probe(struct platform_device *pdev)
 {
 	int ret = 0;
+	int irq;
 	struct proc_dir_entry *d;
+	struct device *dev = &pdev->dev;
 	struct device_node *child;
 	const struct of_device_id *match;
 	const __be32 *l2_ctl_phys;
@@ -145,24 +148,34 @@ static int adi_sram_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	/* sram-ecc-err */
-	match = of_match_device(of_match_ptr(adi_sram_of_match), &pdev->dev);
-	if (match) {
-		child = of_get_child_by_name(pdev->dev.of_node, "sram-ecc-err");
-		if (child) {
-			l2_ctl_phys = of_get_address(child, 0, NULL, NULL);
-			l2_ctl_vaddr = ioremap(be32_to_cpu(*l2_ctl_phys), 0x100);
-		} else
-			l2_ctl_vaddr = ioremap(L2CTL0_CTL, 0x100);
+	match = of_match_device(of_match_ptr(adi_sram_of_match), dev);
+	if (!match) {
+		dev_err(dev, "No sram-controller dts node specified\n");
+		return -ENOENT;
 	}
+	child = of_get_child_by_name(pdev->dev.of_node, "sram-ecc-err");
+	if (!child) {
+		dev_err(dev, "No sram-ecc-err dts node specified\n");
+		return -ENOENT;
+	}
+
+	irq = irq_of_parse_and_map(child, 0);
+	if (!irq) {
+		dev_err(dev, "invalid irq from dts node\n");
+		return -ENOENT;
+	}
+	l2_ctl_phys = of_get_address(child, 0, NULL, NULL);
+	l2_ctl_vaddr = devm_ioremap(dev, be32_to_cpu(*l2_ctl_phys), 0x100);
+
 
 	writel(readl(l2_ctl_vaddr + L2CTL0_STAT_OFFSET),
 				(l2_ctl_vaddr + L2CTL0_STAT_OFFSET));
 
-	ret = request_irq(IRQ_L2CTL0_ECC_ERR, sram_ecc_err, 0,
-			"sram-ecc-err", NULL);
+	ret = devm_request_irq(dev, irq, sram_ecc_err, 0,
+			"sram-ecc-err", dev);
 	if (unlikely(ret < 0)) {
 		iounmap(l2_ctl_vaddr);
-		pr_err("Fail to request SRAM ECC error interrupt.\n");
+		pr_err("Fail to request SRAM ECC error interrupt.ret:%d\n", ret);
 	}
 
 	return ret;
@@ -170,8 +183,6 @@ static int adi_sram_probe(struct platform_device *pdev)
 
 static int adi_sram_remove(struct platform_device *pdev)
 {
-	free_irq(IRQ_L2CTL0_ECC_ERR, NULL);
-	iounmap(l2_ctl_vaddr);
 	remove_proc_entry("sraminfo", NULL);
 	return 0;
 }
