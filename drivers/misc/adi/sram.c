@@ -139,6 +139,7 @@ static int adi_sram_probe(struct platform_device *pdev)
 	struct device_node *child;
 	const struct of_device_id *match;
 	const __be32 *l2_ctl_phys;
+	resource_size_t res_size = 0x100;
 
 	sram_dev = &pdev->dev;
 
@@ -165,7 +166,7 @@ static int adi_sram_probe(struct platform_device *pdev)
 		return -ENOENT;
 	}
 	l2_ctl_phys = of_get_address(child, 0, NULL, NULL);
-	l2_ctl_vaddr = devm_ioremap(dev, be32_to_cpu(*l2_ctl_phys), 0x100);
+	l2_ctl_vaddr = devm_ioremap(dev, be32_to_cpu(*l2_ctl_phys), res_size);
 
 
 	writel(readl(l2_ctl_vaddr + L2CTL0_STAT_OFFSET),
@@ -174,7 +175,6 @@ static int adi_sram_probe(struct platform_device *pdev)
 	ret = devm_request_irq(dev, irq, sram_ecc_err, 0,
 			"sram-ecc-err", dev);
 	if (unlikely(ret < 0)) {
-		iounmap(l2_ctl_vaddr);
 		pr_err("Fail to request SRAM ECC error interrupt.ret:%d\n", ret);
 	}
 
