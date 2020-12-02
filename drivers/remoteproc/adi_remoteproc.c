@@ -270,8 +270,15 @@ static void ldr_load(struct adi_rproc_data *rproc_data)
 				memset(remap_addr, block_hdr->argument, block_hdr->byte_count);
 				iounmap(remap_addr);
 			} else { /* normal */
-				dma_memcpy(block_hdr->target_addr,
-						phybuf + sizeof(LDR_Ehdr_t), block_hdr->byte_count);
+
+				/* DMA Memcpy not yet supported on SC59X */
+				#ifdef CONFIG_ARCH_SC59X
+					remap_addr = ioremap_nocache(block_hdr->target_addr, block_hdr->byte_count);
+					memcpy(remap_addr, virbuf + sizeof(LDR_Ehdr_t), block_hdr->byte_count);
+					iounmap(remap_addr);
+				#else
+					dma_memcpy(block_hdr->target_addr, phybuf + sizeof(LDR_Ehdr_t), block_hdr->byte_count);
+				#endif
 
 #if defined(VERIFY_LDR_DATA)
 				pCompareBuffer = virbuf + sizeof(LDR_Ehdr_t);
