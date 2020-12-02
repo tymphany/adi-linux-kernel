@@ -70,19 +70,19 @@
 			led_gpio = <78>;
 		};
 
-		core1-rproc@0x3108b000 {
+		core1-rproc@0x3108c000 {
 			compatible = "adi,remoteproc";
-			reg = <0x3108b000 0x70>;
+			reg = <0x3108c000 0x70>;
 			core-id = <1>;
-			core-irq = <76>;
+			core-irq = <74>; /* was 77 */
 			firmware-name = "adi_adsp_core1_fw.ldr";
 		};
 
-		core2-rproc@0x3108b000 {
+		core2-rproc@0x3108c000 {
 			compatible = "adi,remoteproc";
-			reg = <0x3108b000 0x70>;
+			reg = <0x3108c000 0x70>;
 			core-id = <2>;
-			core-irq = <77>;
+			core-irq = <75>; /* was 78 */
 			firmware-name = "adi_adsp_core2_fw.ldr";
 		};
 
@@ -117,7 +117,7 @@
 };
 
 &rtc0 {
-	status = "okay";
+	status = "disabled";
 };
 
 &spi0 {
@@ -337,7 +337,7 @@
 };
 
 &icc0 {
-	status = "disabled";
+	status = "okay";
 };
 
 &video_decoder {

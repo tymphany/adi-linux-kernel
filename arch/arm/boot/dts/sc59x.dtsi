@@ -76,20 +76,20 @@
 		cache-level = <2>;
 	};
 
-	sram0: sram-icc@20080000 { /* ICC SRAM 4KB */
+	sram0: sram-icc@20000000 { /* ICC SRAM 4KB */
 		compatible = "mmio-sram";
 		#address-cells = <1>;
 		#size-cells = <1>;
-		reg = <0x20080000 0x1000>;
-		ranges = <0 0x20080000 0x1000>;
+		reg = <0x20000000 0x1000>;
+		ranges = <0 0x20000000 0x1000>;
 	};
 
-	sram1: sram-reserved@20084000 {
+	sram1: sram-reserved@20004000 {
 		compatible = "mmio-sram";
 		#address-cells = <1>;
 		#size-cells = <1>;
-		reg = <0x20084000 0x3B000>;
-		ranges = <0 0x20084000 0x3B000>;
+		reg = <0x20004000 0x3B000>;
+		ranges = <0 0x20004000 0x3B000>;
 	};
 
 	scb {
@@ -98,7 +98,7 @@
 		#size-cells = <1>;
 		ranges;
 
-		sram-controller@20080000 {
+		sram-controller@20000000 {
 			compatible = "adi,sram-controller";
 			#address-cells = <1>;
 			#size-cells = <1>;
@@ -116,11 +116,11 @@
 			adi,sram = <&sram1>;
 			status = "disabled";
 		};
-
+		
 		rtc0: rtc@0x310C8000 {
 			compatible = "adi,rtc2";
 			reg = <0x310C8000 0x100>;
-			interrupts = <GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>;
+			/*interrupts = <GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>;*/
 			calibration = /bits/ 8 <0>;
 			status = "disabled";
 		};
@@ -338,10 +338,10 @@
 
 		icc0: icc@0 {
 			compatible = "adi,icc";
-			reg = <0x20080000 0x1000>;
+			reg = <0x20000000 0x1000>;
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI 251 IRQ_TYPE_EDGE_RISING>;
-			peerinfo = <1 97>, <2 98>;
+			interrupts = <GIC_SPI 165 IRQ_TYPE_EDGE_RISING>;
+			peerinfo = <1 140>, <2 141>;
 			status = "disabled";
 		};
 
@@ -349,7 +349,7 @@
 			compatible = "adi,core_ctrl";
 			#address-cells = <1>;
 			#size-cells = <1>;
-			reg = <0x3108B000 0x80>; /* RCU0 control reg base */
+			reg = <0x3108C000 0x80>; /* RCU0 control reg base */
 			adi,icc_mem = <&icc0>;
 		};
 

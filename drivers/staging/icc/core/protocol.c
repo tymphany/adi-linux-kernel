@@ -29,6 +29,10 @@
 
 #define DRIVER_NAME "icc"
 
+#ifdef CONFIG_ARCH_SC59X
+void __iomem *core0_mcapi_sram_addr = NULL;
+#endif
+
 static struct adi_icc {
 	struct miscdevice mdev;
 	void __iomem *base;
@@ -144,6 +148,10 @@ int sm_send_session_packet_ack(struct sm_session *session, uint32_t remote_ep,
 static int fill_user_buffer_from_message(struct sm_session *session,
 	struct sm_message *message, void *user_buf, uint32_t *buf_len)
 {
+#ifdef CONFIG_ARCH_SC59X
+	void __iomem *remap_addr = NULL;
+#endif
+
 	if (session == NULL || message == NULL || buf_len == NULL) {
 		sm_debug("%s, please check session(0x%p), message(0x%p), buf_len(0x%p)\n",
 				__func__, session, message, buf_len);
@@ -152,9 +160,16 @@ static int fill_user_buffer_from_message(struct sm_session *session,
 	if (message->msg.length < *buf_len)
 		*buf_len = message->msg.length;
 	if (message->msg.length && user_buf) {
-		if (copy_to_user(user_buf,
-			    (void *)IO_ADDRESS(message->msg.payload), *buf_len))
-			return -EFAULT;
+		#ifdef CONFIG_ARCH_SC59X
+			remap_addr = ioremap_nocache(message->msg.payload, *buf_len);
+			if (copy_to_user(user_buf, (void *)remap_addr, *buf_len))
+				return -EFAULT;
+			iounmap(remap_addr);
+		#else
+			if (copy_to_user(user_buf,
+				    (void *)IO_ADDRESS(message->msg.payload), *buf_len))
+				return -EFAULT;
+		#endif
 	}
 	if (message->msg.type == SM_PACKET_READY)
 		sm_send_packet_ack(session, message->msg.src_ep, message->src,
@@ -660,6 +675,7 @@ sm_send_packet(uint32_t session_idx, uint32_t dst_ep, uint32_t dst_cpu,
 	void *payload_buf = NULL;
 	dma_addr_t dma_handle;
 	int ret = -EAGAIN;
+
 	*payload = 0;
 	if (session_idx < 0 || session_idx >= MAX_SESSIONS)
 		return -EINVAL;
@@ -687,8 +703,22 @@ sm_send_packet(uint32_t session_idx, uint32_t dst_ep, uint32_t dst_cpu,
 		m->msg.type = SM_PACKET_READY;
 
 	if (m->msg.length) {
-		payload_buf = dma_alloc_coherent(NULL, m->msg.length,
-						&dma_handle, GFP_KERNEL);
+
+		#ifdef CONFIG_ARCH_SC59X
+			//On the SC59x
+			//dma_alloc_coherent appears to be allocating RAM
+			//which is cached on the SHARC cores
+			//Rather than flushing... let's use the uncached SRAM region
+			//16KB @ 0x20001000
+
+			core0_mcapi_sram_addr = ioremap_nocache(0x20001000, 0x1000);
+			payload_buf = core0_mcapi_sram_addr;
+			m->msg.payload = 0x20001000;
+		#else
+			payload_buf = dma_alloc_coherent(NULL, m->msg.length,
+				&dma_handle, GFP_KERNEL);
+			m->msg.payload = dma_handle;
+		#endif
 
 		if (!payload_buf) {
 			ret = -ENOMEM;
@@ -696,8 +726,6 @@ sm_send_packet(uint32_t session_idx, uint32_t dst_ep, uint32_t dst_cpu,
 		}
 		m->vbuf = payload_buf;
 		sm_debug("alloc buffer %x\n", (uint32_t)payload_buf);
-
-		m->msg.payload = dma_handle;
 
 		if (copy_from_user((void *)payload_buf, buf, m->msg.length)) {
 			ret = -EFAULT;
@@ -744,7 +772,11 @@ sm_send_packet(uint32_t session_idx, uint32_t dst_ep, uint32_t dst_cpu,
 		}
 		if (nonblock) {
 			ret = -EAGAIN;
-			*payload = dma_handle;
+			#ifdef CONFIG_ARCH_SC59X
+				*payload = 0x20001000;
+			#else
+				*payload = dma_handle;
+			#endif
 			goto out;
 		} else {
 			sm_debug(">>>>2 sleep on send queue\n");
@@ -769,6 +801,10 @@ fail3:
 fail2:
 	if (dma_handle)
 		dma_free_coherent(NULL, m->msg.length, payload_buf, dma_handle);
+	if (core0_mcapi_sram_addr){
+		iounmap(core0_mcapi_sram_addr);
+		core0_mcapi_sram_addr = NULL;
+	}
 fail1:
 	if (m)
 		kfree(m);
@@ -973,8 +1009,15 @@ sm_wait_request_finish(uint32_t session_idx, void *user_buf, uint32_t dst_cpu,
 				mutex_lock(&adi_icc->sessions_table->lock);
 				list_del(&message->next);
 				if (payload)
-					dma_free_coherent(NULL, message->msg.length,
-							message->vbuf, payload);
+					#ifdef CONFIG_ARCH_SC59X
+						if(core0_mcapi_sram_addr){
+							iounmap(core0_mcapi_sram_addr);
+							core0_mcapi_sram_addr = NULL;
+						}
+					#else
+						dma_free_coherent(NULL, message->msg.length,
+								message->vbuf, payload);
+					#endif
 				if (message)
 					kfree(message);
 				mutex_unlock(&adi_icc->sessions_table->lock);
@@ -1035,8 +1078,15 @@ sm_wait_request_finish(uint32_t session_idx, void *user_buf, uint32_t dst_cpu,
 			mutex_lock(&adi_icc->sessions_table->lock);
 			list_del(&message->next);
 			if (payload)
-				dma_free_coherent(NULL, message->msg.length,
-							message->vbuf, payload);
+				#ifdef CONFIG_ARCH_SC59X
+					if(core0_mcapi_sram_addr){
+						iounmap(core0_mcapi_sram_addr);
+						core0_mcapi_sram_addr = NULL;
+					}
+				#else
+					dma_free_coherent(NULL, message->msg.length,
+								message->vbuf, payload);
+				#endif
 			if (message)
 				kfree(message);
 			mutex_unlock(&adi_icc->sessions_table->lock);
