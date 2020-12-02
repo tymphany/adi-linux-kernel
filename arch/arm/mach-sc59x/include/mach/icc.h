@@ -29,26 +29,30 @@ struct rcu_reg {
 	uint32_t reg_rcu_crctl;							/* 0x08 */
 	/* RCU0 Core Reset Status Register */
 	uint32_t reg_rcu_crstat;						/* 0x0c */
+	/* reg pad from 0x10 to 0x17 */
+	uint8_t	 pad_0x10_0x17[0x18 - 0x10];			/* 0x10 ~ 0x17 */
+	/* RCU0 System Reset Status Register */
+	uint32_t reg_rcu_srrqstat;						/* 0x18 */
 	/* RCU0 System Interface Disable Register */
-	uint32_t reg_rcu_sidis;							/* 0x10 */
+	uint32_t reg_rcu_sidis;							/* 0x1c */
 	/* RCU0 System Interface Status Register */
-	uint32_t reg_rcu_sistat;						/* 0x14 */
-	/* RCU0 SVECT Lock Register */
-	uint32_t reg_rcu_svect_lck;						/* 0x18 */
+	uint32_t reg_rcu_sistat;						/* 0x20 */
+	/* reg pad from 0x24 to 0x27 */
+	uint8_t	 pad_0x24_0x27[0x28 - 0x24];			/* 0x24 ~ 0x27 */
 	/* RCU0 Boot Code Register */
-	uint32_t reg_rcu_bcode;							/* 0x1c */
+	uint32_t reg_rcu_bcode;							/* 0x28 */
 	/* Software Vector Register 0 to 2 */
-	uint32_t reg_rcu_svect0;						/* 0x20 */
-	uint32_t reg_rcu_svect1;						/* 0x24 */
-	uint32_t reg_rcu_svect2;						/* 0x28 */
-	/* reg pad from 0x2c to 0x63 */
-	uint8_t	 pad_0x2c_0x59[0x60 - 0x2c];			/* 0x2c ~ 0x59 */
+	uint32_t reg_rcu_svect0;						/* 0x2c */
+	uint32_t reg_rcu_svect1;						/* 0x30 */
+	uint32_t reg_rcu_svect2;						/* 0x34 */
+	/* reg pad from 0x38 to 0x6b */
+	uint8_t	 pad_0x38_0x6b[0x6C - 0x38];			/* 0x38 ~ 0x6b */
 	/* RCU0 Message Register */
-	uint32_t reg_rcu_msg;							/* 0x60 */
+	uint32_t reg_rcu_msg;							/* 0x6C */
 	/* RCU0 Message Set Bits Register */
-	uint32_t reg_rcu_msg_set;						/* 0x64 */
+	uint32_t reg_rcu_msg_set;						/* 0x70 */
 	/* RCU0 Message Clear Bits Register */
-	uint32_t reg_rcu_msg_clr;						/* 0x68 */
+	uint32_t reg_rcu_msg_clr;						/* 0x74 */
 };
 
 void platform_send_ipi_cpu(unsigned int cpu, int irq);

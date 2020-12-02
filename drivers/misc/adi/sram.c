@@ -21,13 +21,14 @@
 #include <mach/irqs.h>
 #include <mach/hardware.h>
 #include <asm/io.h>
-#ifdef CONFIG_ARCH_SC58X
+#ifdef CONFIG_ARCH_SC59X
+#include <mach/sc59x.h>
+#elif defined(CONFIG_ARCH_SC58X)
 #include <mach/sc58x.h>
-#include <mach/sram.h>
 #elif defined(CONFIG_ARCH_SC57X)
 #include <mach/sc57x.h>
-#include <mach/sram.h>
 #endif
+#include <mach/sram.h>
 
 #define SRAM_DRV_NAME		"sram_controller"
 
