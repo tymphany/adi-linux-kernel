@@ -158,42 +158,96 @@
 	pinctrl-0 = <&spi2_quad>;
 	status = "okay";
 
+
+/* mx66lm1g45 and is25lp512 are mutually exclusive */
+
+/*
 	flash: mx66lm1g45@0 {
 		#address-cells = <1>;
 		#size-cells = <1>;
 		compatible = "mx66lm1g45", "jedec,spi-nor";
-		/*en-pins = <&ssw0 12 GPIO_ACTIVE_LOW>,	 SP2IFLASH_CS_EN */
-		/*          <&ssw0 13 GPIO_ACTIVE_LOW>;	 SPI2D2_D3_EN */
 		spi-max-frequency = <5000000>;
 		reg = <5>;
 		spi-cpol;
 		spi-cpha;
 		spi-rx-bus-width = <4>;
-		/*dma-mode;*/
 
 		partition@0 {
-			label = "uboot (mx66)";
-			reg = <0x0 0x80000>;
+			label = "unallocated (mx66)";
+			reg = <0x0 0x2000000>;
 		};
 
-		partition@1 {
-			label = "uboot environment (mx66)";
-			reg = <0x80000 0x10000>;
+	};
+*/
+
+	flash: is25lp512@0 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "is25lp512", "jedec,spi-nor";
+		spi-max-frequency = <5000000>;
+		reg = <5>;
+		spi-cpol;
+		spi-cpha;
+		spi-rx-bus-width = <4>;
+
+		partition@0 {
+			label = "unallocated (is25lp512)";
+			reg = <0x0 0x2000000>;
 		};
 
-                partition@2 {
-                        label = "kernel image (mx66)";
-                        reg = <0x90000 0x1000000>;
-                };
+	};
 
-                partition@3 {
-                        label = "kernel device tree (mx66)";
-                        reg = <0x1090000 0x100000>;
-                };
+};
 
-		partition@4 {
-			label = "rfs (mx66)";
-			reg = <0x1190000 0x6E70000>;
+&ospi {
+	status = "okay";
+
+	flash0: is25lx256@0 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "is25lx256";
+		reg = <0>;
+		spi-max-frequency = <112000000>;
+
+		/*m25p,fast-read;*/
+
+		cdns,page-size = <256>;
+		cdns,block-size = <16>;
+		cdns,read-delay = <4>;
+		cdns,tshsl-ns = <50>;
+		cdns,tsd2d-ns = <50>;
+		cdns,tchsh-ns = <4>;
+		cdns,tslch-ns = <4>;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			ospi_0: partition@0 {
+				label = "U-Boot";
+				reg = <0x0 0x80000>;
+			};
+
+			ospi_1: partition@1 {
+				label = "U-Boot Environment";
+				reg = <0x80000 0x20000>;
+			};
+
+			ospi_2: partition@2 {
+				label = "Device Tree Blob";
+				reg = <0xA0000 0x20000>;
+			};
+
+			ospi_3: partition@3 {
+				label = "Kernel zImage";
+				reg = <0xC0000 0x600000>;
+			};
+
+			ospi_4: partition@4 {
+				label = "JFFS2 Formatted RFS";
+				reg = <0x6C0000 0x1940000>;
+			};
 		};
 	};
 };
