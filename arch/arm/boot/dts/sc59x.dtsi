@@ -308,6 +308,20 @@
 			status = "disabled";
 		};
 
+		ospi: spi@31027000 {
+			compatible = "cdns,qspi-nor";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x31027000 0x1000>,
+				  <0x30400000 0x1000>;
+			interrupts = <0 151 4>;
+			cdns,is-decoded-cs;
+			cdns,fifo-depth = <128>;
+			cdns,fifo-width = <4>;
+			cdns,trigger-address = <0x00000000>;
+			status = "disabled";
+		};
+
 		emac0: ethernet@0x31040000 {
 			compatible = "adi,dwmac", "snps,dwmac-3.710", "snps,dwmac";
 			reg = <0x31040000 0x2000>;
