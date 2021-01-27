@@ -356,11 +356,11 @@
 };
 
 &emac1 {
-	enable-pin = <&ssw0 4 GPIO_ACTIVE_LOW>;	/* ETH1_EN */
+	/* enable-pin = <&ssw0 4 GPIO_ACTIVE_LOW>; ETH1_EN */
 	phy-mode = "rmii";
 	pinctrl-names = "default";
 	pinctrl-0 = <&eth1_default>;
-	status = "disabled";
+	status = "okay";
 };
 
 &usb0_phy {

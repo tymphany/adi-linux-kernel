@@ -198,8 +198,8 @@ static const unsigned eth0_ptp_pins[] = {
 };
 
 static const unsigned eth1_pins[] = {
-	GPIO_PF13, GPIO_PF14, GPIO_PF15, GPIO_PG0, GPIO_PG1, GPIO_PG2,
-	GPIO_PG3, GPIO_PG4, GPIO_PG5,
+	GPIO_PF3, GPIO_PF2, GPIO_PF1, GPIO_PE11, GPIO_PE12, GPIO_PE13,
+	GPIO_PE14, GPIO_PE15, GPIO_PF0,
 };
 
 static const unsigned spi0_pins[] = {
