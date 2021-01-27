@@ -1025,19 +1025,22 @@
 			spu_securep_id = <140>;
 		};
 
+/*
 		dma41: dma@41 {
 			compatible = "adi,dma2";
 			reg = <0x3109C200 0x7F>;
-			interrupts = <GIC_SPI 151 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI ??? IRQ_TYPE_LEVEL_HIGH>;
 			spu_securep_id = <142>;
 		};
+
 
 		dma42: dma@42 {
 			compatible = "adi,dma2";
 			reg = <0x3109C400 0x7F>;
-			interrupts = <GIC_SPI 150 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI ??? IRQ_TYPE_LEVEL_HIGH>;
 			spu_securep_id = <142>;
 		};
+*/
 
 		dma43: dma@43 {
 			compatible = "adi,dma2";
