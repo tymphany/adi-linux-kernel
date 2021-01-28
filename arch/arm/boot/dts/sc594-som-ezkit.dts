@@ -30,7 +30,7 @@
 			boot-pins = <&ssw0 0 GPIO_ACTIVE_LOW>,	 /* LED */
 			            <&ssw0 1 GPIO_ACTIVE_LOW>,	 /* LED */
 			            <&ssw0 2 GPIO_ACTIVE_LOW>,	 /* LED */
-			            <&ssw0 3 GPIO_ACTIVE_LOW>,	 /* SPI2FLASH_CS */
+			            <&ssw0 3 GPIO_ACTIVE_HIGH>,	 /* SPI2FLASH_CS */
 			            <&ssw0 4 GPIO_ACTIVE_LOW>,	 /* SPI2D2_D3_EN */
 			            <&ssw0 5 GPIO_ACTIVE_LOW>,	 /* UART0_EN */
 			            <&ssw0 6 GPIO_ACTIVE_LOW>,	 /* UART0_FLOW_EN */
