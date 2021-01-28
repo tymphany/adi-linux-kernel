@@ -239,13 +239,13 @@ static const unsigned smc0_pins[] = {
 };
 
 static const unsigned lp0_pins[] = {
-	GPIO_PD2, GPIO_PD3, GPIO_PD4, GPIO_PD5, GPIO_PD6, GPIO_PD7,
-	GPIO_PD8, GPIO_PD9, GPIO_PD10, GPIO_PD11,
+	GPIO_PB7, GPIO_PB8, GPIO_PB9, GPIO_PB10, GPIO_PB11,
+	GPIO_PB12, GPIO_PB13, GPIO_PB14, GPIO_PB6, GPIO_PB4,
 };
 
 static const unsigned lp1_pins[] = {
-	GPIO_PB7, GPIO_PB8, GPIO_PB9, GPIO_PB10, GPIO_PB11, GPIO_PB12,
-	GPIO_PB13, GPIO_PB14, GPIO_PC0, GPIO_PB15,
+	GPIO_PB15, GPIO_PC0, GPIO_PC1, GPIO_PC2, GPIO_PC3,
+	GPIO_PC4, GPIO_PC5, GPIO_PC6, GPIO_PC7, GPIO_PB2,
 };
 
 static const unsigned ppi0_8b_pins[] = {

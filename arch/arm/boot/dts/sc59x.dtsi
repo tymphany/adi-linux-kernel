@@ -552,8 +552,8 @@
 		lp0: linkport@0 {
 			compatible = "linkport0";
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI 77 IRQ_TYPE_LEVEL_HIGH>,
-			             <GIC_SPI 78 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 117 IRQ_TYPE_LEVEL_HIGH>,
+			             <GIC_SPI 118 IRQ_TYPE_LEVEL_HIGH>;
 			clock-div = <1>;
 			status = "disabled";
 		};
@@ -561,8 +561,8 @@
 		lp1: linkport@1 {
 			compatible = "linkport1";
 			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI 79 IRQ_TYPE_LEVEL_HIGH>,
-			             <GIC_SPI 80 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 119 IRQ_TYPE_LEVEL_HIGH>,
+			             <GIC_SPI 120 IRQ_TYPE_LEVEL_HIGH>;
 			clock-div = <1>;
 			status = "disabled";
 		};

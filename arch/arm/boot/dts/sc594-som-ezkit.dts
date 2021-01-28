@@ -394,13 +394,13 @@
 &lp0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&lp0_default>;
-	status = "disabled";
+	status = "okay";
 };
 
 &lp1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&lp1_default>;
-	status = "disabled";
+	status = "okay";
 };
 
 &sram_mmap {
