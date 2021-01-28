@@ -54,6 +54,22 @@
 			              <&ssw0 4 GPIO_ACTIVE_LOW>;	/* SPI2D2_D3_EN */
 		};
 
+/* The button GPIO conflicts with OSPI0_D4 for this
+		button0: button@0 {
+			compatible = "adi,button-led";
+			en-pins = <&ssw1 1 GPIO_ACTIVE_LOW>;	/* PUSHBUTTON_EN
+			button_gpio = <48>; /* PD_00
+			led_gpio = <35>; /* PC_03 / LED9 / LED1_KIT
+		};
+*/
+
+		button1: button@1 {
+			compatible = "adi,button-led";
+			en-pins = <&ssw1 1 GPIO_ACTIVE_HIGH>;	/* PUSHBUTTON_EN */
+			button_gpio = <112>; /* PH_00 */
+			led_gpio = <34>; /* PC_02 / LED8 / LED2_KIT */
+		};
+
 		core1-rproc@0x3108c000 {
 			compatible = "adi,remoteproc";
 			reg = <0x3108c000 0x70>;

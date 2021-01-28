@@ -9,7 +9,7 @@ source "drivers/tty/Kconfig"
 
 config BUTTON_LED
 	tristate "Button interrupt trigger LED driver"
-	depends on (ARCH_SC58X || ARCH_SC57X)
+	depends on (ARCH_SC59X || ARCH_SC58X || ARCH_SC57X)
 	default n
 	help
 	  This is a hardware driver for SC5XX. It is added to trigger LED
