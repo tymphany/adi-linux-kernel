@@ -570,37 +570,49 @@
 		pint0: pint@0x31005000 {
 			compatible = "adi,pint";
 			reg = <0x31005000 0xFF>;
-			interrupts = <GIC_SPI 38 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 65 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
 		pint1: pint@0x31005100 {
 			compatible = "adi,pint";
 			reg = <0x31005100 0xFF>;
-			interrupts = <GIC_SPI 39 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 66 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
 		pint2: pint@0x31005200 {
 			compatible = "adi,pint";
 			reg = <0x31005200 0xFF>;
-			interrupts = <GIC_SPI 40 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 67 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
 		pint3: pint@0x31005300 {
 			compatible = "adi,pint";
 			reg = <0x31005300 0xFF>;
-			interrupts = <GIC_SPI 41 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 68 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
 		pint4: pint@0x31005400 {
 			compatible = "adi,pint";
 			reg = <0x31005400 0xFF>;
-			interrupts = <GIC_SPI 42 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
 		pint5: pint@0x31005500 {
 			compatible = "adi,pint";
 			reg = <0x31005500 0xFF>;
-			interrupts = <GIC_SPI 43 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 70 IRQ_TYPE_LEVEL_HIGH>;
+		};
+
+		pint6: pint@0x31005600 {
+			compatible = "adi,pint";
+			reg = <0x31005600 0xFF>;
+			interrupts = <GIC_SPI 71 IRQ_TYPE_LEVEL_HIGH>;
+		};
+
+		pint7: pint@0x31005700 {
+			compatible = "adi,pint";
+			reg = <0x31005700 0xFF>;
+			interrupts = <GIC_SPI 72 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
 		gpa: gport@0x31004000 {
@@ -682,9 +694,33 @@
 			#gpio-cells = <2>;
 			reg = <0x31004300 0x7F>;
 			port_gpio_base = <96>;
-			port_width = <6>;
-			gpio-ranges = <&pinctrl0 0 96 6>;
+			port_width = <16>;
+			gpio-ranges = <&pinctrl0 0 96 16>;
 			pint_id = /bits/ 8 <5>;
+			pint_map = /bits/ 8 <1>;
+		};
+
+		gph: gport@0x31004380 {
+			compatible = "adi,gport";
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <0x31004380 0x7F>;
+			port_gpio_base = <112>;
+			port_width = <16>;
+			gpio-ranges = <&pinctrl0 0 112 16>;
+			pint_id = /bits/ 8 <6>;
+			pint_map = /bits/ 8 <1>;
+		};
+
+		gpi: gport@0x31004400 {
+			compatible = "adi,gport";
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <0x31004400 0x7F>;
+			port_gpio_base = <128>;
+			port_width = <16>;
+			gpio-ranges = <&pinctrl0 0 128 16>;
+			pint_id = /bits/ 8 <7>;
 			pint_map = /bits/ 8 <1>;
 		};
 
