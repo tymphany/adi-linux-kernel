@@ -39,8 +39,8 @@
 			            <&ssw1 1 GPIO_ACTIVE_LOW>,	 /* PB_EN */
 			            <&ssw1 2 GPIO_ACTIVE_LOW>,	 /* MICROSD_SPI */
 			            <&ssw1 5 GPIO_ACTIVE_LOW>,	 /* ADAU_RESET */
-			            <&ssw1 6 GPIO_ACTIVE_LOW>,	 /* ADAU1962_EN */
-			            <&ssw1 7 GPIO_ACTIVE_LOW>,	 /* ADAU1979_EN */
+			            <&ssw1 6 GPIO_ACTIVE_HIGH>,	 /* ADAU1962_EN */
+			            <&ssw1 7 GPIO_ACTIVE_HIGH>,	 /* ADAU1979_EN */
 			            <&ssw1 8 GPIO_ACTIVE_LOW>,	 /* OCTAL_SPI_CS_EN */
 			            <&ssw1 9 GPIO_ACTIVE_LOW>,	 /* SPDIF_DIGITAL_EN */
 			            <&ssw1 10 GPIO_ACTIVE_LOW>,	 /* SPDIF_OPTICAL_EN */
@@ -254,22 +254,6 @@
 
 &i2c0 {
 	status = "disabled";
-
-	adau1979: adau1979@0x11 {
-		compatible = "adi,adau1977";
-		reg = <0x11>;
-		enable-pin = <&ssw1 7 GPIO_ACTIVE_LOW>; /* ADAU1979_EN */
-		reset-gpio = <&gpa 14 0>;
-		status = "disabled";
-	};
-
-	adau1962: adau1962@0x4 {
-		compatible = "adi,adau1962";
-		reg = <0x4>;
-		enable-pin = <&ssw1 6 GPIO_ACTIVE_LOW>; /* ADAU1962_EN */
-		reset-gpio = <&gpa 14 0>;
-		status = "disabled";
-	};
 };
 
 &i2c1 {
@@ -292,14 +276,28 @@
 		#gpio-cells = <2>;
 		reg = <0x22>;
 	};
+
+	adau1979: adau1979@0x11 {
+		compatible = "adi,adau1977";
+		reg = <0x11>;
+		enable-pin = <&ssw1 7 GPIO_ACTIVE_LOW>; /* ADAU1979_EN */
+		/* reset-gpio = <&ssw1 5 GPIO_ACTIVE_LOW>;  ADAU_RESET */
+	};
+
+	adau1962: adau1962@0x4 {
+		compatible = "adi,adau1962";
+		reg = <0x4>;
+		enable-pin = <&ssw1 6 GPIO_ACTIVE_LOW>; /* ADAU1962_EN */
+		/* reset-gpio = <&ssw1 5 GPIO_ACTIVE_LOW>;  ADAU_RESET */
+	};
 };
 
 &i2s0 {
 	reg = <0x31002400 0x80>, <0x31002480 0x80>;
-	interrupts = <GIC_SPI 61 IRQ_TYPE_LEVEL_HIGH>,
-			<GIC_SPI 63 IRQ_TYPE_LEVEL_HIGH>;
+	interrupts = <GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 100 IRQ_TYPE_LEVEL_HIGH>;
 	dma-channel = <10>, <11>;
-	status = "disabled";
+	status = "okay";
 };
 
 &crc0 {

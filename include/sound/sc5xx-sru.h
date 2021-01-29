@@ -30,6 +30,8 @@
 		(*(u32 *)(IO_ADDRESS(in##_REG)) & sru##n##_mask(out, in))); \
 	} while (0)
 
+#define SRU_DIRECT(addr, value) (*(u32 *)(IO_ADDRESS(addr)) = value);
+
 /*
 **   Macro: sru_field
 **   Creates the bit field for a given input and output signal.
