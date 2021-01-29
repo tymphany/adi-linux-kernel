@@ -54,42 +54,83 @@
 #define REG_DAI0_PIN_STAT	0x310C92E4
 
 /*	DAI1	*/
-#define REG_DAI1_CLK0          0x310CB0C0
-#define REG_DAI1_CLK1          0x310CB0C4
-#define REG_DAI1_CLK2          0x310CB0C8
-#define REG_DAI1_CLK3          0x310CB0CC
-#define REG_DAI1_CLK4          0x310CB0D0
-#define REG_DAI1_CLK5          0x310CB0D4
-#define REG_DAI1_DAT0          0x310CB100
-#define REG_DAI1_DAT1          0x310CB104
-#define REG_DAI1_DAT2          0x310CB108
-#define REG_DAI1_DAT3          0x310CB10C
-#define REG_DAI1_DAT4          0x310CB110
-#define REG_DAI1_DAT5          0x310CB114
-#define REG_DAI1_DAT6          0x310CB118
-#define REG_DAI1_FS0           0x310CB140
-#define REG_DAI1_FS1           0x310CB144
-#define REG_DAI1_FS2           0x310CB148
-#define REG_DAI1_FS4           0x310CB150
-#define REG_DAI1_PIN0          0x310CB180
-#define REG_DAI1_PIN1          0x310CB184
-#define REG_DAI1_PIN2          0x310CB188
-#define REG_DAI1_PIN3          0x310CB18C
-#define REG_DAI1_PIN4          0x310CB190
-#define REG_DAI1_MISC0         0x310CB1C0
-#define REG_DAI1_MISC1         0x310CB1C4
-#define REG_DAI1_PBEN0         0x310CB1E0
-#define REG_DAI1_PBEN1         0x310CB1E4
-#define REG_DAI1_PBEN2         0x310CB1E8
-#define REG_DAI1_PBEN3         0x310CB1EC
-#define REG_DAI1_IMSK_FE       0x310CB200
-#define REG_DAI1_IMSK_RE       0x310CB204
-#define REG_DAI1_IMSK_PRI      0x310CB210
-#define REG_DAI1_IRPTL_H       0x310CB220
-#define REG_DAI1_IRPTL_L       0x310CB224
-#define REG_DAI1_IRPTL_HS      0x310CB230
-#define REG_DAI1_IRPTL_LS      0x310CB234
-#define REG_DAI1_PIN_STAT      0x310CB2E4
+#ifndef CONFIG_ARCH_SC59X
+	#define REG_DAI1_CLK0          0x310CB0C0
+	#define REG_DAI1_CLK1          0x310CB0C4
+	#define REG_DAI1_CLK2          0x310CB0C8
+	#define REG_DAI1_CLK3          0x310CB0CC
+	#define REG_DAI1_CLK4          0x310CB0D0
+	#define REG_DAI1_CLK5          0x310CB0D4
+	#define REG_DAI1_DAT0          0x310CB100
+	#define REG_DAI1_DAT1          0x310CB104
+	#define REG_DAI1_DAT2          0x310CB108
+	#define REG_DAI1_DAT3          0x310CB10C
+	#define REG_DAI1_DAT4          0x310CB110
+	#define REG_DAI1_DAT5          0x310CB114
+	#define REG_DAI1_DAT6          0x310CB118
+	#define REG_DAI1_FS0           0x310CB140
+	#define REG_DAI1_FS1           0x310CB144
+	#define REG_DAI1_FS2           0x310CB148
+	#define REG_DAI1_FS4           0x310CB150
+	#define REG_DAI1_PIN0          0x310CB180
+	#define REG_DAI1_PIN1          0x310CB184
+	#define REG_DAI1_PIN2          0x310CB188
+	#define REG_DAI1_PIN3          0x310CB18C
+	#define REG_DAI1_PIN4          0x310CB190
+	#define REG_DAI1_MISC0         0x310CB1C0
+	#define REG_DAI1_MISC1         0x310CB1C4
+	#define REG_DAI1_PBEN0         0x310CB1E0
+	#define REG_DAI1_PBEN1         0x310CB1E4
+	#define REG_DAI1_PBEN2         0x310CB1E8
+	#define REG_DAI1_PBEN3         0x310CB1EC
+	#define REG_DAI1_IMSK_FE       0x310CB200
+	#define REG_DAI1_IMSK_RE       0x310CB204
+	#define REG_DAI1_IMSK_PRI      0x310CB210
+	#define REG_DAI1_IRPTL_H       0x310CB220
+	#define REG_DAI1_IRPTL_L       0x310CB224
+	#define REG_DAI1_IRPTL_HS      0x310CB230
+	#define REG_DAI1_IRPTL_LS      0x310CB234
+	#define REG_DAI1_PIN_STAT      0x310CB2E4
+#endif
+
+#ifdef CONFIG_ARCH_SC59X
+	#define REG_DAI1_CLK0          0x310CA0C0
+	#define REG_DAI1_CLK1          0x310CA0C4
+	#define REG_DAI1_CLK2          0x310CA0C8
+	#define REG_DAI1_CLK3          0x310CA0CC
+	#define REG_DAI1_CLK4          0x310CA0D0
+	#define REG_DAI1_CLK5          0x310CA0D4
+	#define REG_DAI1_DAT0          0x310CA100
+	#define REG_DAI1_DAT1          0x310CA104
+	#define REG_DAI1_DAT2          0x310CA108
+	#define REG_DAI1_DAT3          0x310CA10C
+	#define REG_DAI1_DAT4          0x310CA110
+	#define REG_DAI1_DAT5          0x310CA114
+	#define REG_DAI1_DAT6          0x310CA118
+	#define REG_DAI1_FS0           0x310CA140
+	#define REG_DAI1_FS1           0x310CA144
+	#define REG_DAI1_FS2           0x310CA148
+	#define REG_DAI1_FS4           0x310CA150
+	#define REG_DAI1_PIN0          0x310CA180
+	#define REG_DAI1_PIN1          0x310CA184
+	#define REG_DAI1_PIN2          0x310CA188
+	#define REG_DAI1_PIN3          0x310CA18C
+	#define REG_DAI1_PIN4          0x310CA190
+	#define REG_DAI1_MISC0         0x310CA1C0
+	#define REG_DAI1_MISC1         0x310CA1C4
+	#define REG_DAI1_PBEN0         0x310CA1E0
+	#define REG_DAI1_PBEN1         0x310CA1E4
+	#define REG_DAI1_PBEN2         0x310CA1E8
+	#define REG_DAI1_PBEN3         0x310CA1EC
+	#define REG_DAI1_IMSK_FE       0x310CA200
+	#define REG_DAI1_IMSK_RE       0x310CA204
+	#define REG_DAI1_IMSK_PRI      0x310CA210
+	#define REG_DAI1_IRPTL_H       0x310CA220
+	#define REG_DAI1_IRPTL_L       0x310CA224
+	#define REG_DAI1_IRPTL_HS      0x310CA230
+	#define REG_DAI1_IRPTL_LS      0x310CA234
+	#define REG_DAI1_PIN_STAT      0x310CA2E4
+#endif
 
 /* Pads init function for dai  */
 void pads_init(void);

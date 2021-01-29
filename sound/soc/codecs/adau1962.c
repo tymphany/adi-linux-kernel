@@ -101,7 +101,10 @@ struct adau1962 {
 	enum adau1962_sysclk_src sysclk_src;
 	unsigned int enable_pin;
 	unsigned int enable_pin_active_low;
-	int reset_gpio;
+
+	#ifndef CONFIG_ARCH_SC59X
+		int reset_gpio;
+	#endif
 
 	struct snd_pcm_hw_constraint_list constraints;
 
@@ -792,36 +795,40 @@ int adau1962_probe(struct device *dev, struct regmap *regmap,
 				return -EINVAL;
 		}
 
-		adau1962->reset_gpio =
-				of_get_named_gpio(dev->of_node, "reset-gpio", 0);
-		if (!gpio_is_valid(adau1962->reset_gpio)) {
-			dev_err(dev, "invalid reset-gpio: %d\n", adau1962->reset_gpio);
-			return -EINVAL;
-		}
+		#ifndef CONFIG_ARCH_SC59X
+			adau1962->reset_gpio =
+					of_get_named_gpio(dev->of_node, "reset-gpio", 0);
+			if (!gpio_is_valid(adau1962->reset_gpio)) {
+				dev_err(dev, "invalid reset-gpio: %d\n", adau1962->reset_gpio);
+				return -EINVAL;
+			}
+		#endif
 	}
 
 	dev_set_drvdata(dev, adau1962);
 
-	if (adau1962->reset_gpio) {
-		ret = devm_gpio_request_one(dev, adau1962->reset_gpio,
-						GPIOF_OUT_INIT_HIGH, "adau1962");
-		/* Return -EBUSY will not be failed to avoid hardware
-		 * pin conflict for sc589-ezkit */
-		if (ret == -EBUSY)
-			dev_warn(dev, "busy to request reset-gpio %d \n",
-						adau1962->reset_gpio);
-		else if (ret) {
-			dev_err(dev, "can't request reset-gpio %d, err: %d\n",
-						adau1962->reset_gpio, ret);
-			return ret;
+	#ifndef CONFIG_ARCH_SC59X
+		if (adau1962->reset_gpio) {
+			ret = devm_gpio_request_one(dev, adau1962->reset_gpio,
+							GPIOF_OUT_INIT_HIGH, "adau1962");
+			/* Return -EBUSY will not be failed to avoid hardware
+			 * pin conflict for sc589-ezkit */
+			if (ret == -EBUSY)
+				dev_warn(dev, "busy to request reset-gpio %d \n",
+							adau1962->reset_gpio);
+			else if (ret) {
+				dev_err(dev, "can't request reset-gpio %d, err: %d\n",
+							adau1962->reset_gpio, ret);
+				return ret;
+			}
+			/* Hardware power-on reset */
+			gpio_set_value(adau1962->reset_gpio, 0);
+			gpio_set_value(adau1962->reset_gpio, 1);
+			/* After asserting the PU/RST pin high, ADAU1962
+			 * requires 300ms to stabilize */
+			msleep(300);
 		}
-		/* Hardware power-on reset */
-		gpio_set_value(adau1962->reset_gpio, 0);
-		gpio_set_value(adau1962->reset_gpio, 1);
-		/* After asserting the PU/RST pin high, ADAU1962
-		 * requires 300ms to stabilize */
-		msleep(300);
-	}
+	#endif
 
 	regmap_update_bits(adau1962->regmap, ADAU1962_REG_PLL_CLK_CTRL0,
 				ADAU1962_PLL_CLK_PUP, ADAU1962_PLL_CLK_PUP);
