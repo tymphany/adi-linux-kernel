@@ -117,7 +117,11 @@ struct adau1977 {
 	enum adau1977_sysclk_src sysclk_src;
 	unsigned int enable_pin;
 	unsigned int enable_pin_active_low;
-	int reset_gpio;
+
+	#ifndef CONFIG_ARCH_SC59X	
+		int reset_gpio;
+	#endif
+
 	enum adau1977_type type;
 
 	struct regulator *avdd_reg;
@@ -956,36 +960,40 @@ int adau1977_probe(struct device *dev, struct regmap *regmap,
 				return -EINVAL;
 		}
 
-		adau1977->reset_gpio =
-				of_get_named_gpio(dev->of_node, "reset-gpio", 0);
-		if (!gpio_is_valid(adau1977->reset_gpio)) {
-			dev_err(dev, "invalid reset-gpio: %d\n", adau1977->reset_gpio);
-			return -EINVAL;
-		}
+		#ifndef CONFIG_ARCH_SC59X
+			adau1977->reset_gpio =
+					of_get_named_gpio(dev->of_node, "reset-gpio", 0);
+			if (!gpio_is_valid(adau1977->reset_gpio)) {
+				dev_err(dev, "invalid reset-gpio: %d\n", adau1977->reset_gpio);
+				return -EINVAL;
+			}
+		#endif
 	}
 
 	dev_set_drvdata(dev, adau1977);
 
-	if (adau1977->reset_gpio) {
-		ret = devm_gpio_request_one(dev, adau1977->reset_gpio,
-						GPIOF_OUT_INIT_HIGH, "adau1977");
-		/* Return -EBUSY will not be failed to avoid hardware
-		 * pin conflict for sc589-ezkit */
-		if (ret == -EBUSY)
-			dev_warn(dev, "busy to request reset-gpio: %d \n",
-						adau1977->reset_gpio);
-		else if (ret) {
-			dev_err(dev, "can't request reset-gpio: %d, err: %d\n",
-						adau1977->reset_gpio, ret);
-			return ret;
+	#ifndef CONFIG_ARCH_SC59X
+		if (adau1977->reset_gpio) {
+			ret = devm_gpio_request_one(dev, adau1977->reset_gpio,
+							GPIOF_OUT_INIT_HIGH, "adau1977");
+			/* Return -EBUSY will not be failed to avoid hardware
+			 * pin conflict for sc589-ezkit */
+			if (ret == -EBUSY)
+				dev_warn(dev, "busy to request reset-gpio: %d \n",
+							adau1977->reset_gpio);
+			else if (ret) {
+				dev_err(dev, "can't request reset-gpio: %d, err: %d\n",
+							adau1977->reset_gpio, ret);
+				return ret;
+			}
+			/* Hardware power-on reset */
+			udelay(200);    /* Tc time */
+			gpio_set_value(adau1977->reset_gpio, 0);
+			msleep(38);     /* Td time */
+			gpio_set_value(adau1977->reset_gpio, 1);
+			udelay(200);
 		}
-		/* Hardware power-on reset */
-		udelay(200);    /* Tc time */
-		gpio_set_value(adau1977->reset_gpio, 0);
-		msleep(38);     /* Td time */
-		gpio_set_value(adau1977->reset_gpio, 1);
-		udelay(200);
-	}
+	#endif
 
 	ret = adau1977_power_enable(adau1977);
 	if (ret)

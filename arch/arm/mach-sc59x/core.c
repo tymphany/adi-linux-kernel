@@ -455,9 +455,7 @@ void __init sc59x_init(void)
 				sc59x_auxdata_lookup, NULL);
 #endif
 	sc59x_init_ethernet();
-/*
 	platform_add_devices(ezkit_devices, ARRAY_SIZE(ezkit_devices));
-*/
 }
 
 static void __iomem *spu_base;
