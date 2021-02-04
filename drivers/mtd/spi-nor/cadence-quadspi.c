@@ -1672,16 +1672,29 @@ static int cqspi_adi_direct_read_execute(struct spi_nor *nor, u_char *buf,
 
     /* Perform the transfer */
     uint32_t count = 0;
-    uint8_t *pReadBuffer = buf;
+    uint64_t *pReadBuffer = (uint64_t*)buf;
     loff_t address = (loff_t)OSPI0_MMAP_ADDRESS;
     address += from;
 
-    uint8_t *pFlashAddress = (uint8_t *)ioremap_nocache(address, len);
+    uint64_t *pFlashAddress = (uint64_t *)ioremap_nocache(address, len);
 
-    for (count = 0U; count < len; count++)
+    uint8_t *pReadBuffer8;
+    uint8_t *pFlashAddress8;
+
+    for (count = 0U; count < (len / 8); count++)
     {
-        *(uint8_t*)buf++ = *(uint8_t*)pFlashAddress++;
+        *(uint64_t*)pReadBuffer++ = *(uint64_t*)pFlashAddress++;
     }
+
+	if(len % 8){
+		pReadBuffer8 = (uint8_t*)pReadBuffer;
+		pFlashAddress8 = (uint8_t*)pFlashAddress;
+
+		for (count = 0U; count < (len % 8); count++)
+		{
+			*(uint8_t*)pReadBuffer8++ = *(uint8_t*)pFlashAddress8++;
+		}
+	}
 
     iounmap(pFlashAddress);
 }
