@@ -36,7 +36,7 @@
 			            <&ssw0 6 GPIO_ACTIVE_LOW>,	 /* UART0_FLOW_EN */
 			            <&ssw0 7 GPIO_ACTIVE_HIGH>,	 /* OSPIFLASH_CS */
 			            <&ssw1 0 GPIO_ACTIVE_LOW>,	 /* EEPROM_EN */
-			            <&ssw1 1 GPIO_ACTIVE_LOW>,	 /* PB_EN */
+			            <&ssw1 1 GPIO_ACTIVE_HIGH>,	 /* PB_EN */
 			            <&ssw1 2 GPIO_ACTIVE_LOW>,	 /* MICROSD_SPI */
 			            <&ssw1 5 GPIO_ACTIVE_LOW>,	 /* ADAU_RESET */
 			            <&ssw1 6 GPIO_ACTIVE_HIGH>,	 /* ADAU1962_EN */
@@ -63,12 +63,15 @@
 		};
 */
 
+/* This also appears to interfere with the OSPI somehow...
+   possible trace noise/interference?
 		button1: button@1 {
 			compatible = "adi,button-led";
-			en-pins = <&ssw1 1 GPIO_ACTIVE_HIGH>;	/* PUSHBUTTON_EN */
-			button_gpio = <112>; /* PH_00 */
-			led_gpio = <34>; /* PC_02 / LED8 / LED2_KIT */
+			en-pins = <&ssw1 1 GPIO_ACTIVE_HIGH>; /* PUSHBUTTON_EN
+			button_gpio = <112>; /* PH_00
+			led_gpio = <34>; /* PC_02 / LED8 / LED2_KIT
 		};
+*/
 
 		core1-rproc@0x3108c000 {
 			compatible = "adi,remoteproc";
