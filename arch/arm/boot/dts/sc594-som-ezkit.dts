@@ -203,6 +203,9 @@
 };
 
 &ospi {
+	pinctrl-names = "default";
+	pinctrl-0 = <&ospi_default>;
+
 	status = "okay";
 
 	flash0: is25lx256@0 {

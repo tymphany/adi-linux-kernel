@@ -1670,6 +1670,9 @@ static int cqspi_adi_direct_read_execute(struct spi_nor *nor, u_char *buf,
     writel(curVal, reg_base + CQSPI_REG_RD_INSTR);
 #endif
 
+#ifdef ADI_OCTAL_USE_DMA
+	//todo
+#else
     /* Perform the transfer */
     uint32_t count = 0;
     uint64_t *pReadBuffer = (uint64_t*)buf;
@@ -1697,8 +1700,9 @@ static int cqspi_adi_direct_read_execute(struct spi_nor *nor, u_char *buf,
 	}
 
     iounmap(pFlashAddress);
-}
+#endif
 
+}
 
 static int cqspi_adi_direct_write_execute(struct spi_nor *nor, loff_t to,
 			   size_t len, const u_char *buf){
@@ -1733,23 +1737,25 @@ static int cqspi_adi_direct_write_execute(struct spi_nor *nor, loff_t to,
     curVal &= (~BITM_OSPI_DRICTL_INSTRTYP);
     writel(curVal, reg_base + CQSPI_REG_RD_INSTR);
 
-
     /* Configure the opcode */
-/*
     curVal = readl(reg_base + CQSPI_REG_WR_INSTR);
-    curVal |= (((uint32_t)(0x02) << BITP_OSPI_DWICTL_OPCODEWR) & BITM_OSPI_DWICTL_OPCODEWR) |
-              (((uint32_t)(0x10) << BITP_OSPI_DWICTL_DMYWR) & BITM_OSPI_DWICTL_DMYWR);
-    writel(curVal, reg_base + CQSPI_REG_WR_INSTR);
-*/
-
-    /* Configure the opcode */
-    curVal = (((uint32_t)(0x02) << BITP_OSPI_DWICTL_OPCODEWR) & BITM_OSPI_DWICTL_OPCODEWR);
+#ifdef ADI_OCTAL
+	curVal |= (((uint32_t)(0x82) << BITP_OSPI_DWICTL_OPCODEWR) & BITM_OSPI_DWICTL_OPCODEWR);    
+#else
+	curVal |= (((uint32_t)(0x02) << BITP_OSPI_DWICTL_OPCODEWR) & BITM_OSPI_DWICTL_OPCODEWR);
+#endif
     writel(curVal, reg_base + CQSPI_REG_WR_INSTR);
 
+    curVal = readl(reg_base + CQSPI_REG_WR_INSTR);
+#ifdef ADI_OCTAL
+    /* OSPI Octal Mode */
+    curVal |= (3UL << BITP_OSPI_DWICTL_ADDRTRNSFR) |
+              (3UL << BITP_OSPI_DWICTL_DATATRNSFR);
+#else    
     /* OSPI Single Mode */
-    curVal = readl(reg_base + CQSPI_REG_WR_INSTR);
     curVal |= (0UL << BITP_OSPI_DWICTL_ADDRTRNSFR) |
               (0UL << BITP_OSPI_DWICTL_DATATRNSFR);
+#endif
     writel(curVal, reg_base + CQSPI_REG_WR_INSTR);
 
     /* Clear the DTR mode bits */
@@ -1763,7 +1769,12 @@ static int cqspi_adi_direct_write_execute(struct spi_nor *nor, loff_t to,
 
     /*! Data transfer with Command, Address and data transffered in STR mode */
     curVal = readl(reg_base + CQSPI_REG_RD_INSTR);
+#ifdef ADI_OCTAL    
     curVal |= (0UL << BITP_OSPI_DRICTL_DDREN);
+    //curVal |= (1UL << BITP_OSPI_DRICTL_DDREN);
+#else
+    curVal |= (0UL << BITP_OSPI_DRICTL_DDREN);
+#endif
     writel(curVal, reg_base + CQSPI_REG_RD_INSTR);
 
     /* Make sure the dual op-code is not enabled */
@@ -1776,19 +1787,42 @@ static int cqspi_adi_direct_write_execute(struct spi_nor *nor, loff_t to,
     curVal |= BITM_OSPI_CTL_DACEN;
     writel(curVal, reg_base + CQSPI_REG_CONFIG);
 
+#ifdef ADI_OCTAL 
+    /* Update the DRIR register here to support Octal IO Read mode - Not supported by existing driver */
+    curVal = readl(reg_base + CQSPI_REG_WR_INSTR);
+    curVal &= ~((3UL << BITP_OSPI_DRICTL_ADDRTRNSFR));
+    writel(curVal, reg_base + CQSPI_REG_WR_INSTR);
+#endif
+
+#ifdef ADI_OCTAL_USE_DMA
+	//todo
+#else
     /* Perform the transfer */
     uint32_t count = 0;
-    uint8_t *pWriteBuffer = buf;
+    uint64_t *pWriteBuffer = (uint64_t *)buf;
     loff_t address = (loff_t)OSPI0_MMAP_ADDRESS;
     address += to;    
-    uint8_t *pFlashAddress = (uint8_t *)ioremap_nocache(address, len);
+    uint64_t *pFlashAddress = (uint64_t *)ioremap_nocache(address, len);
+    uint8_t *pWriteBuffer8;
+    uint8_t *pFlashAddress8;
 
-    for (count = 0U; count < len; count++)
+    for (count = 0U; count < (len / 8); count++)
     {
-        *(uint8_t*)pFlashAddress++ = *(uint8_t*)pWriteBuffer++;
+        *(uint64_t*)pFlashAddress++ = *(uint64_t*)pWriteBuffer++;
     }
 
+    if(len % 8){
+		pWriteBuffer8 = (uint8_t*)pWriteBuffer;
+		pFlashAddress8 = (uint8_t*)pFlashAddress;
+
+	    for (count = 0U; count < (len % 8); count++)
+	    {
+	        *(uint8_t*)pFlashAddress8++ = *(uint8_t*)pWriteBuffer8++;
+	    }
+	}
+
     iounmap(pFlashAddress);
+#endif
 
     return len;
 }
