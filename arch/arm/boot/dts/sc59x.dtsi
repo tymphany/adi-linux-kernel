@@ -504,6 +504,13 @@
 					adi,function = "lp1";
 				};
 			};
+
+			ospi {
+				ospi_default: ospi@0 {
+					adi,group = "ospigrp";
+					adi,function = "ospi";
+				};
+			};
 		};
 
 		mmc0: mmc@0x31010000 {
