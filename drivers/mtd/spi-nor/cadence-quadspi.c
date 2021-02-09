@@ -31,6 +31,9 @@
 
 #ifdef CONFIG_ARCH_SC59X
 	#include "adi-sc594-quadspi.h"
+	#include <linux/dma-mapping.h>
+	#include <linux/dma-direct.h>
+	#include <mach/dma.h>
 #endif
 
 #define CQSPI_NAME			"cadence-qspi"
@@ -1568,6 +1571,7 @@ MODULE_AUTHOR("Graham Moore <grmoore@opensource.altera.com>");
 #define OSPI0_MMAP_ADDRESS 0x60000000
 
 #define ADI_OCTAL
+#define ADI_OCTAL_USE_DMA
 
 static int cqspi_adi_direct_read_execute(struct spi_nor *nor, u_char *buf,
 				     loff_t from, size_t len){
@@ -1671,7 +1675,32 @@ static int cqspi_adi_direct_read_execute(struct spi_nor *nor, u_char *buf,
 #endif
 
 #ifdef ADI_OCTAL_USE_DMA
-	//todo
+	dma_addr_t dma_dest = NULL;
+	u_char * tempbuf = NULL;
+	loff_t address = (loff_t)OSPI0_MMAP_ADDRESS;
+	address += from;
+
+	//Check that the address is somewhere in lowmem and can therefore
+	//be transferred to via DMA
+	if(buf >= 0xC0000000 && buf <= 0xFFFFFFFF){
+		dma_dest = dma_map_single(nor->dev, buf, len, DMA_DEV_TO_MEM);
+	}else{
+		//Not in lowmem, we need a new temporary buffer
+		tempbuf = kmalloc(len, GFP_KERNEL);
+		dma_dest = dma_map_single(nor->dev, tempbuf, len, DMA_DEV_TO_MEM);
+	}
+
+	if (dma_mapping_error(nor->dev, dma_dest)) {
+		dev_err(nor->dev, "dma mapping failed\n");
+	}
+	dma_memcpy(dma_dest, address, len);
+	dma_unmap_single(nor->dev, dma_dest, len, DMA_DEV_TO_MEM);
+
+	if(tempbuf){
+		memcpy(buf, tempbuf, len);
+		kfree(tempbuf);
+		tempbuf = NULL;
+	}
 #else
     /* Perform the transfer */
     uint32_t count = 0;
@@ -1795,7 +1824,32 @@ static int cqspi_adi_direct_write_execute(struct spi_nor *nor, loff_t to,
 #endif
 
 #ifdef ADI_OCTAL_USE_DMA
-	//todo
+	dma_addr_t dma_src = NULL;
+	u_char * tempbuf = NULL;
+	loff_t address = (loff_t)OSPI0_MMAP_ADDRESS;
+	address += to;
+
+	//Check that the address is somewhere in lowmem and can therefore
+	//be transferred to via DMA
+	if(buf >= 0xC0000000 && buf <= 0xFFFFFFFF){
+		dma_src = dma_map_single(nor->dev, buf, len, DMA_MEM_TO_DEV);
+	}else{
+		//Not in lowmem, we need a new temporary buffer
+		tempbuf = kmalloc(len, GFP_KERNEL);
+		memcpy(tempbuf, buf, len);
+		dma_src = dma_map_single(nor->dev, tempbuf, len, DMA_MEM_TO_DEV);
+	}
+
+	if (dma_mapping_error(nor->dev, dma_src)) {
+		dev_err(nor->dev, "dma mapping failed\n");
+	}
+	dma_memcpy(address, dma_src, len);
+	dma_unmap_single(nor->dev, dma_src, len, DMA_MEM_TO_DEV);
+
+	if(tempbuf){
+		kfree(tempbuf);
+		tempbuf = NULL;
+	}
 #else
     /* Perform the transfer */
     uint32_t count = 0;
