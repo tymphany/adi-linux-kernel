@@ -325,7 +325,16 @@ static dma_addr_t _dma_memcpy(dma_addr_t pdst, dma_addr_t psrc, size_t size)
 	if (size == 0)
 		return (dma_addr_t)NULL;
 
-	if (dst % 4 == 0 && src % 4 == 0 && size % 4 == 0) {
+	if (dst % 32 == 0 && src % 32 == 0 && size % 32 == 0) {
+		conf = WDSIZE_256;
+		shift = 5;
+	} else if (dst % 16 == 0 && src % 16 == 0 && size % 16 == 0) {
+		conf = WDSIZE_128;
+		shift = 4;
+	} else if (dst % 8 == 0 && src % 8 == 0 && size % 8 == 0) {
+		conf = WDSIZE_64;
+		shift = 3;
+	} else if (dst % 4 == 0 && src % 4 == 0 && size % 4 == 0) {
 		conf = WDSIZE_32;
 		shift = 2;
 	} else if (dst % 2 == 0 && src % 2 == 0 && size % 2 == 0) {
