@@ -246,6 +246,7 @@ static void ldr_load(struct adi_rproc_data *rproc_data)
 	uint8_t* virbuf = (uint8_t*) rproc_data->mem_virt;
 	uint8_t* phybuf = (uint8_t*) rproc_data->mem_handle;
 	void __iomem *remap_addr;
+	int offset;
 #if defined(VERIFY_LDR_DATA)
 	int i;
 	uint32_t verfied = 0;
@@ -304,7 +305,7 @@ static void ldr_load(struct adi_rproc_data *rproc_data)
 		if (block_hdr->bcode_flag.bFlag_final == 0x1)
 			break;
 
-		int offset = sizeof(LDR_Ehdr_t) + (block_hdr->bcode_flag.bFlag_fill ?
+		offset = sizeof(LDR_Ehdr_t) + (block_hdr->bcode_flag.bFlag_fill ?
 							0 : block_hdr->byte_count);
 		virbuf += offset;
 		phybuf += offset;
@@ -350,9 +351,10 @@ static int adi_ldr_load(struct adi_rproc_data *rproc_data,
 
 	rproc_data->fw_size = fw->size;
 	if (!rproc_data->mem_virt) {
-		rproc_data->mem_virt = dma_zalloc_coherent(rproc_data->dev,
-								fw->size * MEMORY_COUNT, &rproc_data->mem_handle,
-								GFP_KERNEL);
+		rproc_data->mem_virt = dma_alloc_coherent(rproc_data->dev,
+							  fw->size * MEMORY_COUNT,
+							  &rproc_data->mem_handle,
+							  GFP_KERNEL);
 		if (rproc_data->mem_virt == NULL) {
 			dev_err(rproc_data->dev, "Unable to allocate memory\n");
 			return -ENOMEM;
@@ -367,7 +369,7 @@ static int adi_ldr_load(struct adi_rproc_data *rproc_data,
 		ldr_load(rproc_data);
 		disable_spu();
 	} else {
-		printk("## No ldr image at address 0x%x\n", rproc_data->mem_virt);
+		printk("## No ldr image at address 0x%x\n", (unsigned long)rproc_data->mem_virt);
 		dma_free_coherent(rproc_data->dev, rproc_data->fw_size * MEMORY_COUNT,
 						rproc_data->mem_virt, rproc_data->mem_handle);
 		rproc_data->mem_virt = NULL;

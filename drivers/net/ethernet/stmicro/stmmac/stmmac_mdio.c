@@ -329,14 +329,11 @@ int stmmac_mdio_register(struct net_device *ndev)
 	if (mdio_bus_data->irqs)
 		memcpy(new_bus->irq, mdio_bus_data->irqs, sizeof(new_bus->irq));
 
-<<<<<<< HEAD
-=======
 #ifdef CONFIG_OF
 	if (priv->device->of_node)
 		mdio_bus_data->reset_gpio = -1;
 #endif
 
->>>>>>> [LINUX-1516] Enable Ethernet for sc58x boards
 	new_bus->name = "stmmac";
 
 	if (priv->plat->has_xgmac) {
