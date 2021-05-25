@@ -374,9 +374,9 @@ EXPORT_SYMBOL(dma_memcpy);
  */
 dma_addr_t safe_dma_memcpy(dma_addr_t dst, const dma_addr_t src, size_t size)
 {
-	if (!access_ok(VERIFY_WRITE, dst, size))
+	if (!access_ok(dst, size))
 		return (dma_addr_t)NULL;
-	if (!access_ok(VERIFY_READ, src, size))
+	if (!access_ok(src, size))
 		return (dma_addr_t)NULL;
 	return dma_memcpy(dst, src, size);
 }
