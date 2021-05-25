@@ -801,10 +801,12 @@ fail3:
 fail2:
 	if (dma_handle)
 		dma_free_coherent(NULL, m->msg.length, payload_buf, dma_handle);
+#ifdef CONFIG_ARCH_SC59X
 	if (core0_mcapi_sram_addr){
 		iounmap(core0_mcapi_sram_addr);
 		core0_mcapi_sram_addr = NULL;
 	}
+#endif
 fail1:
 	if (m)
 		kfree(m);
