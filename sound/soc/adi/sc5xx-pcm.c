@@ -180,8 +180,9 @@ static int sc5xx_pcm_new(struct snd_soc_pcm_runtime *rtd)
 	if (ret)
 		return ret;
 
-	return snd_pcm_lib_preallocate_pages_for_all(rtd->pcm,
+	snd_pcm_lib_preallocate_pages_for_all(rtd->pcm,
 				SNDRV_DMA_TYPE_DEV, card->dev, size, size);
+	return 0;
 }
 
 static struct snd_soc_component_driver sc5xx_soc_component = {

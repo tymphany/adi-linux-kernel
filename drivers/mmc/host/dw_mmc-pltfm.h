@@ -8,7 +8,7 @@
 #ifndef _DW_MMC_PLTFM_H_
 #define _DW_MMC_PLTFM_H_
 
-#include <dw_mmc.h>
+#include "dw_mmc.h"
 
 extern int dw_mci_pltfm_register(struct platform_device *pdev,
 				const struct dw_mci_drv_data *drv_data);
