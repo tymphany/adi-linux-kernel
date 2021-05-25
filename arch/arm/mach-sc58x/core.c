@@ -50,9 +50,7 @@ static struct sc58x_gptimer *timer_clock, *timer_event;
 
 void __init sc58x_init_irq(void)
 {
-	gic_init(0, 32,
-		__io_address(SC58X_GIC_PORT0),
-		__io_address(SC58X_GIC_PORT1));
+	gic_init(__io_address(SC58X_GIC_PORT0), __io_address(SC58X_GIC_PORT1));
 }
 
 static struct map_desc sc58x_io_desc[] __initdata __maybe_unused = {
