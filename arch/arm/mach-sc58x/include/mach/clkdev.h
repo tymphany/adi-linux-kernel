@@ -8,19 +8,19 @@
 
 #include <linux/clk.h>
 
-#ifdef CONFIG_CCLK_DIV_1
+#ifdef CONFIG_SC58X_CCLK_DIV_1
 # define CONFIG_CCLK_DIV 1
 #endif
 
-#ifdef CONFIG_CCLK_DIV_2
+#ifdef CONFIG_SC58X_CCLK_DIV_2
 # define CONFIG_CCLK_DIV 2
 #endif
 
-#ifdef CONFIG_CCLK_DIV_4
+#ifdef CONFIG_SC58X_CCLK_DIV_4
 # define CONFIG_CCLK_DIV 4
 #endif
 
-#ifdef CONFIG_CCLK_DIV_8
+#ifdef CONFIG_SC58X_CCLK_DIV_8
 # define CONFIG_CCLK_DIV 8
 #endif
 
