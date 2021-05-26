@@ -36,22 +36,22 @@ config ARCH_SC58X_SLAVECORE_COUNT
 	  This sets the slave core count in sc58x processor.
 
 choice
-	prompt "Core Clock Divider"
-	default CCLK_DIV_1
+	prompt "SC58X Core Clock Divider"
+	default SC58X_CCLK_DIV_1
 	help
 	  This sets the frequency of the core. It can be 1, 2, 4 or 8
 	  Core Frequency = (PLL frequency) / (this setting)
 
-	config CCLK_DIV_1
+config SC58X_CCLK_DIV_1
 		bool "1"
 
-	config CCLK_DIV_2
+config SC58X_CCLK_DIV_2
 		bool "2"
 
-	config CCLK_DIV_4
+config SC58X_CCLK_DIV_4
 		bool "4"
 
-	config CCLK_DIV_8
+config SC58X_CCLK_DIV_8
 		bool "8"
 
 endchoice
