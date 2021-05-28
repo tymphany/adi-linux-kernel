@@ -395,10 +395,12 @@
 
 			uart {
 				uart0_default: uart0@0 {
+					pinctrl-use-default;
 					adi,group = "uart0grp";
 					adi,function = "uart0";
 				};
 				uart0_hwflow: uart0@1 {
+					pinctrl-use-default;
 					adi,group = "uart0_hwflowgrp";
 					adi,function = "uart0";
 				};

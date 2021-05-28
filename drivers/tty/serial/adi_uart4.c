@@ -1163,15 +1163,16 @@ static int adi_uart4_serial_probe(struct platform_device *pdev)
 		struct pinctrl *pctrl;
 		struct pinctrl_state *pstate;
 
-		pctrl = devm_pinctrl_get(&pdev->dev);
-		pstate = pinctrl_lookup_state(pctrl, PINCTRL_STATE_DEFAULT);
-		if (IS_ERR(pstate))
-			return ret;
+		pctrl = NULL;//devm_pinctrl_get(&pdev->dev);
+		if (pctrl) {
+			pstate = pinctrl_lookup_state(pctrl, PINCTRL_STATE_DEFAULT);
+			if (IS_ERR(pstate))
+				return ret;
 
-		ret = pinctrl_select_state(pctrl, pstate);
-		if (ret)
-			return ret;
-
+			ret = pinctrl_select_state(pctrl, pstate);
+			if (ret)
+				return ret;
+		}
 		uart = kzalloc(sizeof(*uart), GFP_KERNEL);
 		if (!uart) {
 			dev_err(&pdev->dev,
@@ -1210,8 +1211,8 @@ static int adi_uart4_serial_probe(struct platform_device *pdev)
 			return -ENXIO;
 		}
 
-		uart->tx_dma_channel = tx_dma_channel;
-		uart->rx_dma_channel = rx_dma_channel;
+		uart->tx_dma_channel = 0;//tx_dma_channel;
+		uart->rx_dma_channel = 0;//rx_dma_channel;
 		spin_lock_init(&uart->rx_lock);
 		uart->tx_done	    = 1;
 		uart->tx_count	    = 0;
@@ -1224,7 +1225,7 @@ static int adi_uart4_serial_probe(struct platform_device *pdev)
 		else
 			uart->hwflow_mode = ADI_UART_NO_HWFLOW;
 
-		if (uart->hwflow_mode == ADI_UART_HWFLOW_PERI) {
+		if (pctrl && uart->hwflow_mode == ADI_UART_HWFLOW_PERI) {
 			pstate = pinctrl_lookup_state(pctrl, "hwflow");
 			ret = pinctrl_select_state(pctrl, pstate);
 			if (ret)
