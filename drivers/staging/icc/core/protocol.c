@@ -14,7 +14,6 @@
 #include <linux/slab.h>
 #include <linux/irq.h>
 #include <linux/gpio.h>
-#include <icc.h>
 #include <linux/poll.h>
 #include <linux/proc_fs.h>
 #include <linux/wait.h>
@@ -23,6 +22,7 @@
 #include <linux/interrupt.h>
 #include <linux/of_irq.h>
 #include <asm/dma.h>
+#include <include/icc.h>
 #include <mach/icc.h>
 #include <mach/hardware.h>
 #include <mach/cpu.h>
