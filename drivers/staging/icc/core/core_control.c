@@ -19,9 +19,11 @@
 #include <linux/device.h>
 #include <linux/delay.h>
 #include <mach/hardware.h>
+
+#include <include/icc.h>
 #include <mach/icc.h>
+
 #include <asm/io.h>
-#include <icc.h>
 
 #define VALID_CORE_MIN			1
 #define VALID_CORE_MAX			2
