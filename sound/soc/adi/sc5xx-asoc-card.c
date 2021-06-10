@@ -299,7 +299,7 @@ static struct snd_soc_dai_link_component cpus[] = {
 
 /* Digital audio interface glue - connect codec <--> CPU */
 static struct snd_soc_dai_link sc5xx_asoc_dai_links[] = {
-#ifdef CONFIG_SND_SC5XX_ADAU1962
+#if IS_ENABLED(CONFIG_SND_SC5XX_ADAU1962)
 	{
 		.name = "adau1962",
 		.stream_name = "ADAU1962",
@@ -311,7 +311,7 @@ static struct snd_soc_dai_link sc5xx_asoc_dai_links[] = {
 		.ops = &adau1962_ops,
 	},
 #endif
-#ifdef CONFIG_SND_SC5XX_ADAU1979
+#if IS_ENABLED(CONFIG_SND_SC5XX_ADAU1979)
 	{
 		.name = "adau1979",
 		.stream_name = "ADAU1979",
@@ -323,7 +323,7 @@ static struct snd_soc_dai_link sc5xx_asoc_dai_links[] = {
 		.ops = &adau1979_ops,
 	},
 #endif
-#ifdef CONFIG_SND_SC5XX_ADAU1761
+#if IS_ENABLED(CONFIG_SND_SC5XX_ADAU1761)
 	{
 		.name = "adau1761",
 		.stream_name = "adau1761",
@@ -358,19 +358,19 @@ static int sc5xx_asoc_probe(struct platform_device *pdev)
 #if 0
 	int id = 0;
 
-#ifdef CONFIG_SND_SC5XX_ADAU1962
+#if IS_ENABLED(CONFIG_SND_SC5XX_ADAU1962)
 	sc5xx_asoc_dai_links[id].cpu_of_node =
 			of_parse_phandle(pdev->dev.of_node, "adi,cpu-dai", 0);
 	sc5xx_asoc_dai_links[id++].codec_of_node =
 			of_parse_phandle(pdev->dev.of_node, "adi,codec", 0);
 #endif
-#ifdef CONFIG_SND_SC5XX_ADAU1979
+#if IS_ENABLED(CONFIG_SND_SC5XX_ADAU1979)
 	sc5xx_asoc_dai_links[id].cpu_of_node =
 			of_parse_phandle(pdev->dev.of_node, "adi,cpu-dai", 0);
 	sc5xx_asoc_dai_links[id++].codec_of_node =
 			of_parse_phandle(pdev->dev.of_node, "adi,codec", 1);
 #endif
-#ifdef CONFIG_SND_SC5XX_ADAU1761
+#if IS_ENABLED(CONFIG_SND_SC5XX_ADAU1761)
 	sc5xx_asoc_dai_links[id].cpu_of_node =
 			of_parse_phandle(pdev->dev.of_node, "adi,cpu-dai", 0);
 	sc5xx_asoc_dai_links[id++].codec_of_node =
