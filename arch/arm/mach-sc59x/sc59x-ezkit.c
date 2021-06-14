@@ -562,8 +562,8 @@ static int __init sc59x_softconfig_init(void)
 	if (!np)
 		return -ENODEV;
 	printk("%s %p\n", __func__, np);
-	//ret = softconfig_of_set_group_active_pins_output(
-	//					NULL, np, "boot-pins", false);
+	ret = softconfig_of_set_group_active_pins_output(
+						NULL, np, "boot-pins", false);
 	of_node_put(np);
 
 	return ret;
