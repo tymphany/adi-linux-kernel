@@ -339,7 +339,7 @@
 	snps,reset-active-low;
 	snps,reset-delays-us = <0 200 500>;
 	phy-handle = <&dp83867>;
-	phy-mode = "rgmii";
+	phy-mode = "rgmii-id";
 	pinctrl-names = "default";
 	pinctrl-0 = <&eth0_default>;
 	status = "okay";
