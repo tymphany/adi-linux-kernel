@@ -192,9 +192,9 @@ static const unsigned eth0_pins[] = {
 };
 
 static const unsigned eth0_ptp_pins[] = {
-        GPIO_PH3, GPIO_PH4, GPIO_PH5, GPIO_PH6, GPIO_PH7, GPIO_PH8,
-        GPIO_PH9, GPIO_PH10, GPIO_PH11, GPIO_PH12, GPIO_PH13, GPIO_PH14,
-        GPIO_PH15, GPIO_PI0,
+	GPIO_PH3, GPIO_PH4, GPIO_PH5, GPIO_PH6, GPIO_PH7, GPIO_PH8,
+	GPIO_PH9, GPIO_PH10, GPIO_PH11, GPIO_PH12, GPIO_PH13, GPIO_PH14,
+	GPIO_PH15, GPIO_PI0,
 };
 
 static const unsigned eth1_pins[] = {
@@ -203,15 +203,15 @@ static const unsigned eth1_pins[] = {
 };
 
 static const unsigned spi0_pins[] = {
-	GPIO_PC9, GPIO_PC10, GPIO_PC11,
+	GPIO_PA6, GPIO_PA7, GPIO_PA8,
 };
 
 static const unsigned spi1_pins[] = {
-	GPIO_PE13, GPIO_PE14, GPIO_PE15,
+	GPIO_PA10, GPIO_PA11, GPIO_PA12,
 };
 
 static const unsigned ospi_pins[] = {
-	GPIO_PC8, GPIO_PC10, GPIO_PC9, GPIO_PD0, GPIO_PC15, 
+	GPIO_PC8, GPIO_PC10, GPIO_PC9, GPIO_PD0, GPIO_PC15,
 	GPIO_PC14, GPIO_PC13, GPIO_PD4, GPIO_PC12, GPIO_PC11,
 	GPIO_PD1
 };
