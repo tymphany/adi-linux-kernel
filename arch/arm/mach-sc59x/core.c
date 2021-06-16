@@ -444,10 +444,10 @@ void __init sc59x_init(void)
 #endif
 
 	pr_info("%s: registering device resources\n", __func__);
-/*
+
 	sec_init(__io_address(SEC_COMMON_BASE), __io_address(SEC_SCI_BASE),
 			__io_address(SEC_SSI_BASE));
-*/
+
 #ifdef CONFIG_OF
 	of_platform_populate(NULL, sc59x_of_bus_ids,
 				sc59x_auxdata_lookup, NULL);
