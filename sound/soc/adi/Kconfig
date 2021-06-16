@@ -24,12 +24,26 @@ config SND_SOC_ADI_AXI_SPDIF
 config SND_SC5XX_PCM
 	tristate "SoC Audio for the ADI SC5XX chip"
 	depends on ARCH_SC59X || ARCH_SC58X || ARCH_SC57X
-	select SND_SC5XX_SPORT
 	help
 	  Say Y or M if you want to add support for codecs attached to
 	  the SC5XX SPORT (synchronous serial ports) interface in I2S
 	  or TDM mode.
 	  You will also need to select the audio interfaces to support below.
+
+choice
+	prompt "SPORT data feed"
+	depends on SND_SC5XX_PCM && I2C
+	default SND_SC5XX_SPORT
+
+	config SND_SC5XX_SPORT
+		bool "Regular SPORT operation"
+
+	config SND_SC5XX_SPORT_SHARC
+		bool "SHARC process SPORT data"
+		help
+		  Say Y if you want to process audio data in SHARC core,
+		  requires "SHARC ALSA" firmware running on a SHARC core.
+endchoice
 
 config SND_SC5XX_ADAU1761
 	tristate "Support for the ADAU1761 Machine driver on SHARC Audio board"

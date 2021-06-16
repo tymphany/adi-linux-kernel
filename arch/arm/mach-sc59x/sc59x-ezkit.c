@@ -91,7 +91,7 @@
 #define REG_DAI1_GBL_SP_EN                   0x310CA2E8            /*  DAI1 Global SPORT Enable Register */
 #define REG_DAI1_GBL_INT_EN                  0x310CA2EC            /*  DAI1 Global SPORT Interrupt Grouping Register */
 
-#if IS_ENABLED(CONFIG_SND_SC5XX_SPORT)
+#if IS_ENABLED(CONFIG_SND_SC5XX_SPORT) || IS_ENABLED(CONFIG_SND_SC5XX_SPORT_SHARC)
 void sru_init(void)
 {
 		/* set DAI1_PIN05 to input */
