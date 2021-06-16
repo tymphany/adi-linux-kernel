@@ -141,7 +141,7 @@ void sec_set_ssi_coreid(unsigned int sid, unsigned int coreid)
 
 	reg_sctl = readl(sec->ssi_base + 8 * sid);
 	reg_sctl &= ((uint32_t)~SEC_SCTL_CTG);
-	reg_sctl |= ((coreid << 24) & SEC_SCTL_CTG),
+	reg_sctl |= ((coreid << 24) & SEC_SCTL_CTG);
 	writel(reg_sctl, sec->ssi_base + 8 * sid);
 
 	spin_unlock_irqrestore(&lock, flags);
