@@ -14,6 +14,7 @@ void platform_send_ipi_cpu(unsigned int cpu, int irq)
 	BUG_ON(cpu > 2);
 	writel(cpu + TRGM_SOFT3, __io_address(REG_TRU0_MTR));
 }
+EXPORT_SYMBOL(platform_send_ipi_cpu);
 
 void platform_send_ipi(cpumask_t callmap, int irq)
 {

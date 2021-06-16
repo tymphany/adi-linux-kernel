@@ -2328,12 +2328,16 @@ static int adi_icc_probe(struct platform_device *pdev)
 
 	}
 
+/* FIXME:
+ * the TRU interrupt is used by sc5xx-sharc-sport.c, biring the interrupt back after
+ * sc5xx-sharc-sport.c uses rpmsg or MCAPI protocol.
 	ret = devm_request_irq(dev, icc->irq, ipi_handler_int0, icc->irq_type,
 			"ICC receive IRQ", icc);
 	if (ret) {
 		dev_err(dev, "Fail to request ICC receive IRQ\n");
 		return -ENOENT;
 	}
+*/
 
 	for (i = 0, icc_info = icc->icc_info; i < icc->peer_count;
 				i++, icc_info++) {
