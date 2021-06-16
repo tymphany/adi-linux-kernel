@@ -22,7 +22,7 @@
 
 #include "core.h"
 
-#if IS_ENABLED(CONFIG_SND_SC5XX_SPORT)
+#if IS_ENABLED(CONFIG_SND_SC5XX_SPORT) || IS_ENABLED(CONFIG_SND_SC5XX_SPORT_SHARC)
 void sru_init(void)
 {
 	/* set DAI0_PIN02 to input */
