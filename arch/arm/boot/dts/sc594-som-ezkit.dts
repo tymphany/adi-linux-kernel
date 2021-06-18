@@ -156,6 +156,18 @@
 	};
 };
 
+&spi1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi1_default>;
+	status = "okay";
+
+	spidev@13{
+		compatible = "rohm,dh2228fv";
+		spi-max-frequency = <5000000>;
+		reg = <13>;
+	};
+};
+
 &spi2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&spi2_quad>;

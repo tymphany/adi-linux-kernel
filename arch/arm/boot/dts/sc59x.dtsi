@@ -275,22 +275,22 @@
 			timeout-sec = <30>;
 		};
 
-		spi0: spi@0x31042000 {
+		spi0: spi@0x3102e000 {
 			#address-cells = <1>;
 			#size-cells = <0>;
 			compatible = "adi,spi3";
-			reg = <0x31042000 0xFF>;
+			reg = <0x3102e000 0xFF>;
 			interrupts = <GIC_SPI 109 IRQ_TYPE_LEVEL_HIGH>;
 			num-cs = <128>;
 			dma-channel = <22>, <23>;
 			status = "disabled";
 		};
 
-		spi1: spi@0x31043000 {
+		spi1: spi@0x3102f000 {
 			#address-cells = <1>;
 			#size-cells = <0>;
 			compatible = "adi,spi3";
-			reg = <0x31043000 0xFF>;
+			reg = <0x3102f000 0xFF>;
 			interrupts = <GIC_SPI 113 IRQ_TYPE_LEVEL_HIGH>;
 			num-cs = <128>;
 			dma-channel = <24>, <25>;

@@ -323,33 +323,40 @@ static const unsigned short uart2_hwflow_mux[] = {
 };
 
 static const unsigned short spi0_mux[] = {
-	P_SPI0_SCK, P_SPI0_MISO, P_SPI0_MOSI, 0
+	P_SPI0_SCK, P_SPI0_MISO, P_SPI0_MOSI,
+	0
 };
 
 static const unsigned short spi1_mux[] = {
-	P_SPI1_SCK, P_SPI1_MISO, P_SPI1_MOSI, 0
+	P_SPI1_SCK, P_SPI1_MISO, P_SPI1_MOSI, P_SPI1_SSEL1,
+	0
 };
 
 static const unsigned short ospi_mux[] = {
 	P_OSPI0_CLK, P_OSPI0_D2, P_OSPI0_D3, P_OSPI0_D4,
 	P_OSPI0_D5, P_OSPI0_D6, P_OSPI0_D7, P_OSPI0_DQS,
-	P_OSPI0_MISO, P_OSPI0_MOSI, P_OSPI0_SEL1
+	P_OSPI0_MISO, P_OSPI0_MOSI, P_OSPI0_SEL1,
+	0
 };
 
 static const unsigned short spi2_mux[] = {
-	P_SPI2_SCK, P_SPI2_MISO, P_SPI2_MOSI, 0
+	P_SPI2_SCK, P_SPI2_MISO, P_SPI2_MOSI, P_SPI2_SSEL1,
+	0
 };
 
 static const unsigned short spi2_quad_mux[] = {
-	P_SPI2_SCK, P_SPI2_MISO, P_SPI2_MOSI, P_SPI2_D2, P_SPI2_D3, 0
+	P_SPI2_SCK, P_SPI2_MISO, P_SPI2_MOSI, P_SPI2_D2, P_SPI2_D3,
+	0
 };
 
 static const unsigned short can0_mux[] = {
-	P_CAN0_RX, P_CAN0_TX, 0
+	P_CAN0_RX, P_CAN0_TX,
+	0
 };
 
 static const unsigned short can1_mux[] = {
-	P_CAN1_RX, P_CAN1_TX, 0
+	P_CAN1_RX, P_CAN1_TX,
+	0
 };
 
 static const unsigned short smc0_mux[] = {
@@ -362,6 +369,7 @@ static const unsigned short smc0_mux[] = {
 	P_SMC_D10, P_SMC_D11, P_SMC_D12, P_SMC_D13, P_SMC_D14, P_SMC_D15,
 	P_SMC_AMS0, P_SMC_AMS1, P_SMC_AMS2, P_SMC_AMS3, P_SMC_AWE, P_SMC_ARE,
 	P_SMC_AOE, P_SMC_ABE0, P_SMC_ABE1,
+	0
 };
 
 static const unsigned short lp0_mux[] = {
