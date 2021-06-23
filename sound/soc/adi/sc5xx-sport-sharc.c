@@ -306,20 +306,20 @@ int sport_config_tx_dma(struct sport_device *sport, void *buf,
 	union sharc_msg_payload payload;
 
 	if (sport->tx_desc)
-		dma_free_coherent(NULL, sport->tx_desc_size,
+		dma_free_coherent(&sport->pdev->dev, sport->tx_desc_size,
 				sport->tx_desc, sport->tx_desc_phy);
 
 	//TODO make sport->tx_frags configurable in api, allocate acording dma buf size and tx_desc count
 	//sport->tx_frags = SHARC_DMA_PLAYBACK_BUF_FRAGMENTS;
 
-	sport->tx_desc = dma_alloc_coherent(NULL, fragcount * sizeof(struct dmasg), &sport->tx_desc_phy, 0);
+	sport->tx_desc = dma_alloc_coherent(&sport->pdev->dev, fragcount * sizeof(struct dmasg), &sport->tx_desc_phy, GFP_KERNEL);
 	sport->tx_desc_size = fragcount * sizeof(struct dmasg);
 	if (!sport->tx_desc)
 		return -ENOMEM;
 
 	if (sport->sharc_tx_buf)
-		dma_free_coherent(NULL, sport->tx_buf_size, sport->sharc_tx_buf, sport->sharc_tx_buf_phy);
-	sport->sharc_tx_buf = dma_alloc_coherent(NULL, fragsize * fragcount, &sport->sharc_tx_buf_phy, 0);
+		dma_free_coherent(&sport->pdev->dev, sport->tx_buf_size, sport->sharc_tx_buf, sport->sharc_tx_buf_phy);
+	sport->sharc_tx_buf = dma_alloc_coherent(&sport->pdev->dev, fragsize * fragcount, &sport->sharc_tx_buf_phy, GFP_KERNEL);
 	if (!sport->sharc_tx_buf)
 		return -ENOMEM;
 
@@ -617,15 +617,15 @@ void sport_delete(struct sport_device *sport)
 {
 
 	if (sport->sharc_tx_buf)
-		dma_free_coherent(NULL, sport->tx_buf_size, sport->sharc_tx_buf, sport->sharc_tx_buf_phy);
+		dma_free_coherent(&sport->pdev->dev, sport->tx_buf_size, sport->sharc_tx_buf, sport->sharc_tx_buf_phy);
 	if (sport->sharc_rx_buf)
-		dma_free_coherent(NULL, sport->rx_buf_size, sport->sharc_rx_buf, sport->sharc_rx_buf_phy);
+		dma_free_coherent(&sport->pdev->dev, sport->rx_buf_size, sport->sharc_rx_buf, sport->sharc_rx_buf_phy);
 
 	if (sport->tx_desc)
-		dma_free_coherent(NULL, sport->tx_desc_size,
+		dma_free_coherent(&sport->pdev->dev, sport->tx_desc_size,
 				sport->tx_desc, sport->tx_desc_phy);
 	if (sport->rx_desc)
-		dma_free_coherent(NULL, sport->rx_desc_size,
+		dma_free_coherent(&sport->pdev->dev, sport->rx_desc_size,
 				sport->rx_desc, sport->rx_desc_phy);
 	sport_free_resource(sport);
 	kfree(sport);
