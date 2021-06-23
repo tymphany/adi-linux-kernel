@@ -161,12 +161,12 @@ int sport_config_tx_dma(struct sport_device *sport, void *buf,
 	unsigned int cfg;
 
 	if (sport->tx_desc)
-		dma_free_coherent(NULL, sport->tx_desc_size,
+		dma_free_coherent(&sport->pdev->dev, sport->tx_desc_size,
 				sport->tx_desc, sport->tx_desc_phy);
 
-	sport->tx_desc = dma_alloc_coherent(NULL,
+	sport->tx_desc = dma_alloc_coherent(&sport->pdev->dev,
 			fragcount * sizeof(struct dmasg),
-			&sport->tx_desc_phy, 0);
+			&sport->tx_desc_phy, GFP_KERNEL);
 	sport->tx_desc_size = fragcount * sizeof(struct dmasg);
 	if (!sport->tx_desc)
 		return -ENOMEM;
@@ -189,12 +189,12 @@ int sport_config_rx_dma(struct sport_device *sport, void *buf,
 	unsigned int cfg;
 
 	if (sport->rx_desc)
-		dma_free_coherent(NULL, sport->rx_desc_size,
+		dma_free_coherent(&sport->pdev->dev, sport->rx_desc_size,
 				sport->rx_desc, sport->rx_desc_phy);
 
-	sport->rx_desc = dma_alloc_coherent(NULL,
+	sport->rx_desc = dma_alloc_coherent(&sport->pdev->dev,
 			fragcount * sizeof(struct dmasg),
-			&sport->rx_desc_phy, 0);
+			&sport->rx_desc_phy, GFP_KERNEL);
 	sport->rx_desc_size = fragcount * sizeof(struct dmasg);
 	if (!sport->rx_desc)
 		return -ENOMEM;
@@ -422,10 +422,10 @@ EXPORT_SYMBOL(sport_create);
 void sport_delete(struct sport_device *sport)
 {
 	if (sport->tx_desc)
-		dma_free_coherent(NULL, sport->tx_desc_size,
+		dma_free_coherent(&sport->pdev->dev, sport->tx_desc_size,
 				sport->tx_desc, sport->tx_desc_phy);
 	if (sport->rx_desc)
-		dma_free_coherent(NULL, sport->rx_desc_size,
+		dma_free_coherent(&sport->pdev->dev, sport->rx_desc_size,
 				sport->rx_desc, sport->rx_desc_phy);
 	sport_free_resource(sport);
 	kfree(sport);
