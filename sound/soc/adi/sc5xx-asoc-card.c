@@ -289,48 +289,86 @@ static int __maybe_unused sc5xx_adau1979_init(struct snd_soc_pcm_runtime *rtd)
 			ADAU1977_SYSCLK_SRC_MCLK, 24576000, SND_SOC_CLOCK_IN);
 }
 
-static struct snd_soc_dai_link_component cpus[] = {
+static struct snd_soc_dai_link_component adau1962_codec_component[] = {
 	{
-		.name = "sc5xx-pcm-audio",
+		.name = NULL,
 		.of_node = NULL,
 		.dai_name = "adau1962-hifi",
 	},
 };
 
+static struct snd_soc_dai_link_component adau1979_codec_component[] = {
+	{
+		.name = NULL,
+		.of_node = NULL,
+		.dai_name = "adau1977-hifi",
+	},
+};
+
+static struct snd_soc_dai_link_component adau1961_codec_component[] = {
+	{
+		.name = NULL,
+		.of_node = NULL,
+		.dai_name = "adau-hifi",
+	},
+};
+
+static struct snd_soc_dai_link_component sc5xx_platform_component[] = {
+	{
+		.name = "sc5xx-pcm-audio",
+		.of_node = NULL,
+		.dai_name = NULL,
+	},
+};
+
+static struct snd_soc_dai_link_component sc5xx_cpu_component[] = {
+	{
+		.name = NULL,
+		.of_node = NULL,
+		.dai_name = NULL,
+	},
+};
+
 /* Digital audio interface glue - connect codec <--> CPU */
 static struct snd_soc_dai_link sc5xx_asoc_dai_links[] = {
-#ifdef CONFIG_SND_SC5XX_ADAU1962
+#if IS_ENABLED(CONFIG_SND_SC5XX_ADAU1962)
 	{
 		.name = "adau1962",
 		.stream_name = "ADAU1962",
-		//.codec_dai_name = "adau1962-hifi",
-		//.platform_name = "sc5xx-pcm-audio",
-		.cpus = cpus,
-		.num_cpus = ARRAY_SIZE(cpus),
+		.cpus = sc5xx_cpu_component,
+		.num_cpus = ARRAY_SIZE(sc5xx_cpu_component),
+		.codecs = adau1962_codec_component,
+		.num_codecs = ARRAY_SIZE(adau1962_codec_component),
+		.platforms = sc5xx_platform_component,
+		.num_platforms = ARRAY_SIZE(sc5xx_platform_component),
 		.init = sc5xx_adau1962_init,
 		.ops = &adau1962_ops,
 	},
 #endif
-#ifdef CONFIG_SND_SC5XX_ADAU1979
+#if IS_ENABLED(CONFIG_SND_SC5XX_ADAU1979)
 	{
 		.name = "adau1979",
 		.stream_name = "ADAU1979",
-		//.codec_dai_name = "adau1977-hifi",
-		//.platform_name = "sc5xx-pcm-audio",
-		.cpus = cpus,
-		.num_cpus = ARRAY_SIZE(cpus),
+		.cpus = sc5xx_cpu_component,
+		.num_cpus = ARRAY_SIZE(sc5xx_cpu_component),
+		.codecs = adau1979_codec_component,
+		.num_codecs = ARRAY_SIZE(adau1979_codec_component),
+		.platforms = sc5xx_platform_component,
+		.num_platforms = ARRAY_SIZE(sc5xx_platform_component),
 		.init = sc5xx_adau1979_init,
 		.ops = &adau1979_ops,
 	},
 #endif
-#ifdef CONFIG_SND_SC5XX_ADAU1761
+#if IS_ENABLED(CONFIG_SND_SC5XX_ADAU1761)
 	{
 		.name = "adau1761",
 		.stream_name = "adau1761",
-		//.codec_dai_name = "adau-hifi",
-		//.platform_name = "sc5xx-pcm-audio",
-		.cpus = cpus,
-		.num_cpus = ARRAY_SIZE(cpus),
+		.cpus = sc5xx_cpu_component,
+		.num_cpus = ARRAY_SIZE(sc5xx_cpu_component),
+		.codecs = adau1961_codec_component,
+		.num_codecs = ARRAY_SIZE(adau1961_codec_component),
+		.platforms = sc5xx_platform_component,
+		.num_platforms = ARRAY_SIZE(sc5xx_platform_component),
 		.ops = &sc5xx_adau1761_ops,
 		.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBM_CFM,
 	},
@@ -355,28 +393,19 @@ static struct snd_soc_card sc5xx_asoc_card = {
 static int sc5xx_asoc_probe(struct platform_device *pdev)
 {
 	sc5xx_asoc_card.dev = &pdev->dev;
-#if 0
 	int id = 0;
 
-#ifdef CONFIG_SND_SC5XX_ADAU1962
-	sc5xx_asoc_dai_links[id].cpu_of_node =
-			of_parse_phandle(pdev->dev.of_node, "adi,cpu-dai", 0);
-	sc5xx_asoc_dai_links[id++].codec_of_node =
-			of_parse_phandle(pdev->dev.of_node, "adi,codec", 0);
+	sc5xx_cpu_component->of_node = of_parse_phandle(pdev->dev.of_node, "adi,cpu-dai", 0);
+#if IS_ENABLED(CONFIG_SND_SC5XX_ADAU1962)
+	sc5xx_asoc_dai_links[id++].codecs[0].of_node = of_parse_phandle(pdev->dev.of_node, "adi,codec", 0);
 #endif
-#ifdef CONFIG_SND_SC5XX_ADAU1979
-	sc5xx_asoc_dai_links[id].cpu_of_node =
-			of_parse_phandle(pdev->dev.of_node, "adi,cpu-dai", 0);
-	sc5xx_asoc_dai_links[id++].codec_of_node =
-			of_parse_phandle(pdev->dev.of_node, "adi,codec", 1);
+#if IS_ENABLED(CONFIG_SND_SC5XX_ADAU1979)
+	sc5xx_asoc_dai_links[id++].codecs[0].of_node = of_parse_phandle(pdev->dev.of_node, "adi,codec", 1);
 #endif
-#ifdef CONFIG_SND_SC5XX_ADAU1761
-	sc5xx_asoc_dai_links[id].cpu_of_node =
-			of_parse_phandle(pdev->dev.of_node, "adi,cpu-dai", 0);
-	sc5xx_asoc_dai_links[id++].codec_of_node =
-			of_parse_phandle(pdev->dev.of_node, "adi,codec", 0);
+#if IS_ENABLED(CONFIG_SND_SC5XX_ADAU1761)
+	sc5xx_asoc_dai_links[id++].codec_of_node = of_parse_phandle(pdev->dev.of_node, "adi,codec", 0);
 #endif
-#endif
+
 	return devm_snd_soc_register_card(&pdev->dev, &sc5xx_asoc_card);
 }
 

@@ -131,6 +131,24 @@ struct sport_device {
 
 	unsigned int tx_map[TDM_MAX_SLOTS];
 	unsigned int rx_map[TDM_MAX_SLOTS];
+
+	spinlock_t icc_spinlock;
+	int icc_irq;
+	int icc_irq_type;
+	struct sharc_msg *messages;
+	int message_queue_pointer;
+	struct sharc_msg *received_messages;
+	int receive_message_queue_pointer;
+
+	unsigned char *sharc_tx_buf;
+	dma_addr_t sharc_tx_buf_phy;
+	size_t tx_buf_size;
+	size_t sharc_tx_buf_pos;
+
+	unsigned char *sharc_rx_buf;
+	dma_addr_t sharc_rx_buf_phy;
+	size_t rx_buf_size;
+	size_t sharc_rx_buf_pos;
 };
 
 struct sport_params {
