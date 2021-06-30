@@ -144,6 +144,9 @@
 /* ===================================
        Trigger Master Definitions
    =================================== */
+#define TRGM_SOFT0                            136           /* Software-driven Trigger 3 */
+#define TRGM_SOFT1                            137           /* Software-driven Trigger 3 */
+#define TRGM_SOFT2                            138           /* Software-driven Trigger 4 */
 #define TRGM_SOFT3                            139           /* Software-driven Trigger 3 */
 #define TRGM_SOFT4                            140           /* Software-driven Trigger 4 */
 #define TRGM_SOFT5                            141           /* Software-driven Trigger 5 */
