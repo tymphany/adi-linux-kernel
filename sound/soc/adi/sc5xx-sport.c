@@ -66,7 +66,7 @@ static int compute_wdsize(size_t wdsize)
 	}
 }
 
-void sport_tx_start(struct sport_device *sport)
+int sport_tx_start(struct sport_device *sport)
 {
 	set_dma_next_desc_addr(sport->tx_dma_chan,
 			(void *)sport->tx_desc_phy);
@@ -75,10 +75,11 @@ void sport_tx_start(struct sport_device *sport)
 	enable_dma(sport->tx_dma_chan);
 	iowrite32(ioread32(&sport->tx_regs->spctl) | SPORT_CTL_SPENPRI,
 			&sport->tx_regs->spctl);
+	return 0;
 }
 EXPORT_SYMBOL(sport_tx_start);
 
-void sport_rx_start(struct sport_device *sport)
+int sport_rx_start(struct sport_device *sport)
 {
 	set_dma_next_desc_addr(sport->rx_dma_chan,
 			(void *)sport->rx_desc_phy);
@@ -87,22 +88,25 @@ void sport_rx_start(struct sport_device *sport)
 	enable_dma(sport->rx_dma_chan);
 	iowrite32(ioread32(&sport->rx_regs->spctl) | SPORT_CTL_SPENPRI,
 			&sport->rx_regs->spctl);
+	return 0;
 }
 EXPORT_SYMBOL(sport_rx_start);
 
-void sport_tx_stop(struct sport_device *sport)
+int sport_tx_stop(struct sport_device *sport)
 {
 	iowrite32(ioread32(&sport->tx_regs->spctl) & ~SPORT_CTL_SPENPRI,
 			&sport->tx_regs->spctl);
 	disable_dma(sport->tx_dma_chan);
+	return 0;
 }
 EXPORT_SYMBOL(sport_tx_stop);
 
-void sport_rx_stop(struct sport_device *sport)
+int sport_rx_stop(struct sport_device *sport)
 {
 	iowrite32(ioread32(&sport->rx_regs->spctl) & ~SPORT_CTL_SPENPRI,
 			&sport->rx_regs->spctl);
 	disable_dma(sport->rx_dma_chan);
+	return 0;
 }
 EXPORT_SYMBOL(sport_rx_stop);
 
@@ -133,11 +137,11 @@ static void setup_desc(struct sport_device *sport, int fragcount,
 	if (tx) {
 		desc = sport->tx_desc;
 		desc_phy = (unsigned long)sport->tx_desc_phy;
-		buf = sport->tx_buf;
+		buf = (void *)sport->tx_buf;
 	} else {
 		desc = sport->rx_desc;
 		desc_phy = (unsigned long)sport->rx_desc_phy;
-		buf = sport->rx_buf;
+		buf = (void *)sport->rx_buf;
 	}
 
 	for (i = 0; i < fragcount; ++i) {
@@ -156,7 +160,7 @@ static void setup_desc(struct sport_device *sport, int fragcount,
 }
 
 int sport_config_tx_dma(struct sport_device *sport, void *buf,
-		int fragcount, size_t fragsize)
+		int fragcount, size_t fragsize, struct snd_pcm_substream *substream)
 {
 	unsigned int cfg;
 
@@ -171,7 +175,7 @@ int sport_config_tx_dma(struct sport_device *sport, void *buf,
 	if (!sport->tx_desc)
 		return -ENOMEM;
 
-	sport->tx_buf = buf;
+	sport->tx_buf = (dma_addr_t)buf;
 	sport->tx_fragsize = fragsize;
 	sport->tx_frags = fragcount;
 	cfg = DMAFLOW_LIST | DI_EN | compute_wdsize(sport->wdsize)
@@ -179,12 +183,14 @@ int sport_config_tx_dma(struct sport_device *sport, void *buf,
 
 	setup_desc(sport, fragcount, fragsize, cfg, 1);
 
+	sport->tx_substream = substream;
+
 	return 0;
 }
 EXPORT_SYMBOL(sport_config_tx_dma);
 
 int sport_config_rx_dma(struct sport_device *sport, void *buf,
-		int fragcount, size_t fragsize)
+		int fragcount, size_t fragsize, struct snd_pcm_substream *substream)
 {
 	unsigned int cfg;
 
@@ -199,13 +205,15 @@ int sport_config_rx_dma(struct sport_device *sport, void *buf,
 	if (!sport->rx_desc)
 		return -ENOMEM;
 
-	sport->rx_buf = buf;
+	sport->rx_buf = (dma_addr_t)buf;
 	sport->rx_fragsize = fragsize;
 	sport->rx_frags = fragcount;
 	cfg = DMAFLOW_LIST | DI_EN | compute_wdsize(sport->wdsize)
 		| WNR | NDSIZE_6 | DMAEN;
 
 	setup_desc(sport, fragcount, fragsize, cfg, 0);
+
+	sport->rx_substream = substream;
 
 	return 0;
 }
@@ -215,7 +223,7 @@ unsigned long sport_curr_offset_tx(struct sport_device *sport)
 {
 	unsigned long curr = get_dma_curr_addr(sport->tx_dma_chan);
 
-	return (unsigned char *)curr - sport->tx_buf;
+	return curr - (unsigned long)sport->tx_buf;
 }
 EXPORT_SYMBOL(sport_curr_offset_tx);
 
@@ -223,7 +231,7 @@ unsigned long sport_curr_offset_rx(struct sport_device *sport)
 {
 	unsigned long curr = get_dma_curr_addr(sport->rx_dma_chan);
 
-	return (unsigned char *)curr - sport->rx_buf;
+	return curr - (unsigned long)sport->rx_buf;
 }
 EXPORT_SYMBOL(sport_curr_offset_rx);
 
