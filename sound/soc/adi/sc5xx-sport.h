@@ -146,8 +146,8 @@ struct sport_device {
 
 #if IS_ENABLED(CONFIG_SND_SC5XX_SPORT_SHARC)
 
-	u32 tx_dma_frags[SHARC_CORES_NUM];
-	u32 rx_dma_frags[SHARC_CORES_NUM];
+	s32 tx_frags_in_dma[SHARC_CORES_NUM];
+	s32 rx_frags_in_dma[SHARC_CORES_NUM];
 
 	spinlock_t icc_spinlock;
 	int icc_irq;
