@@ -19,6 +19,7 @@
 #include <linux/platform_device.h>
 #include <linux/workqueue.h>
 #include <linux/completion.h>
+#include <sound/pcm_params.h>
 
 #define TDM_MAX_SLOTS 8
 #define SHARC_CORES_NUM 2
@@ -138,10 +139,15 @@ struct sport_device {
 	struct snd_pcm_substream * tx_substream;
 	struct snd_pcm_substream * rx_substream;
 
+	struct snd_pcm_hw_params tx_hw_params;
+	struct snd_pcm_hw_params rx_hw_params;
+
+	unsigned int dai_format;
+
 #if IS_ENABLED(CONFIG_SND_SC5XX_SPORT_SHARC)
 
-	u32 tx_dma_frags[SHARC_CORES_NUM];
-	u32 rx_dma_frags[SHARC_CORES_NUM];
+	s32 tx_frags_in_dma[SHARC_CORES_NUM];
+	s32 rx_frags_in_dma[SHARC_CORES_NUM];
 
 	spinlock_t icc_spinlock;
 	int icc_irq;
