@@ -47,7 +47,7 @@ static int compute_wdsize(size_t wdsize)
 }
 
 // TODO make the constants configurable, SHARC_MAX_MSG in kconfig, SHARC_DMA_X_BUF_FRAGMENTS in api
-#define SHARC_MAX_MSG 64
+#define SHARC_MAX_MSG 32
 #define SHARC_MSG_TIMEOUT usecs_to_jiffies(1000)
 
 // 2 is minimum form smooth playback/record
@@ -93,11 +93,20 @@ enum sharc_msg_id{
 	SHARC_MSG_RECORD_OVERRUN_ACK  = 68,
 };
 
+struct sharc_audio_buf_format {
+	u32 frame_size;
+	u32 channels;
+	u32 pcm_format;
+	u32 pcm_rate;
+};
+
 struct sharc_audio_buf {
 	void *buf;
 	u32 offset;
 	u32 buf_size;
 	u32 frag_size;
+	u32 frames_per_frag;
+	struct sharc_audio_buf_format format;
 };
 
 union sharc_msg_payload{
@@ -534,15 +543,27 @@ int sport_config_tx_dma(struct sport_device *sport, void *buf,
 
 	sport->tx_substream = substream;
 
+	// Set buffer size and pointer
 	payload.audio_buf[0].buf = buf;
 	payload.audio_buf[0].offset = 0;
 	payload.audio_buf[0].buf_size = fragsize * fragcount;
 	payload.audio_buf[0].frag_size = fragsize;
+	payload.audio_buf[0].frames_per_frag = bytes_to_frames(substream->runtime, fragsize);
+	// Set audio data format
+	payload.audio_buf[0].format.channels = params_channels(&sport->tx_hw_params);
+	payload.audio_buf[0].format.pcm_format = params_format(&sport->tx_hw_params);
+	payload.audio_buf[0].format.frame_size = payload.audio_buf[0].format.channels * (snd_pcm_format_physical_width(payload.audio_buf[0].format.pcm_format)/8);
+	payload.audio_buf[0].format.pcm_rate = params_rate(&sport->tx_hw_params);
 
+	// Set buffer size and pointer
 	payload.audio_buf[1].buf = (void*)sport->sharc_tx_buf_phy;
 	payload.audio_buf[1].offset = 0;
 	payload.audio_buf[1].buf_size = fragsize * fragcount;
 	payload.audio_buf[1].frag_size = fragsize;
+	payload.audio_buf[1].frames_per_frag = bytes_to_frames(substream->runtime, fragsize);
+	// Set audio data format - same as ALSA buffer
+	payload.audio_buf[1].format = payload.audio_buf[0].format;
+
 
 	sport->tx_dma_frags[0] = 0; //TODO select core
 	return send_sharc_msg(sport, 0, SHARC_MSG_PLAYBACK_BUF, &payload); //TODO select core
@@ -754,7 +775,7 @@ static int sport_request_resource(struct sport_device *sport)
 	}
 
 	sport->messages = ioremap_nocache(0x20001000, sharc_msg_buf_size);
-	sport->received_messages = ioremap_nocache(0x20001000 + sharc_msg_buf_size, sharc_msg_buf_size);;
+	sport->received_messages = ioremap_nocache(0x20001000 + sharc_msg_buf_size, sharc_msg_buf_size);
 
 	reset_sharc_message_queue(sport); //TODO change fixed core number
 
