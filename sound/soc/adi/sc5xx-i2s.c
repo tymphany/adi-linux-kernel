@@ -110,12 +110,14 @@ static int sc5xx_dai_hw_params(struct snd_pcm_substream *substream,
 					& SPORT_MCTL_WSIZE);
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		sport->tx_hw_params = *params;
 		ret = sport_set_tx_params(sport, &param);
 		if (ret) {
 			dev_err(dev, "SPORT tx is busy!\n");
 			return ret;
 		}
 	} else {
+		sport->rx_hw_params = *params;
 		ret = sport_set_rx_params(sport, &param);
 		if (ret) {
 			dev_err(dev, "SPORT rx is busy!\n");
