@@ -25,22 +25,22 @@ config ARCH_SC59X_SLAVECORE_COUNT
 	This sets the slave core count in sc59x processor.
 
 choice
-	prompt "Core Clock Divider"
-	default CCLK_DIV_2
+	prompt "SC59X Core Clock Divider"
+	default SC59X_CCLK_DIV_2
 	help
 	This sets the frequency of the core. It can be 1, 2, 4 or 8
 	Core Frequency = (PLL frequency) / (this setting)
 
-config CCLK_DIV_1
+config SC59X_CCLK_DIV_1
 	bool "1"
 
-config CCLK_DIV_2
+config SC59X_CCLK_DIV_2
 	bool "2"
 
-config CCLK_DIV_4
+config SC59X_CCLK_DIV_4
 	bool "4"
 
-config CCLK_DIV_8
+config SC59X_CCLK_DIV_8
 	bool "8"
 endchoice
 

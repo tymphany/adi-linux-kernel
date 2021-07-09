@@ -110,12 +110,14 @@ static int sc5xx_dai_hw_params(struct snd_pcm_substream *substream,
 					& SPORT_MCTL_WSIZE);
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		sport->tx_hw_params = *params;
 		ret = sport_set_tx_params(sport, &param);
 		if (ret) {
 			dev_err(dev, "SPORT tx is busy!\n");
 			return ret;
 		}
 	} else {
+		sport->rx_hw_params = *params;
 		ret = sport_set_rx_params(sport, &param);
 		if (ret) {
 			dev_err(dev, "SPORT rx is busy!\n");
@@ -230,8 +232,18 @@ static int sc5xx_dai_probe(struct platform_device *pdev)
 	return 0;
 }
 
+static int sc5xx_dai_remove(struct platform_device *pdev)
+{
+	struct sport_device *sport = platform_get_drvdata(pdev);
+
+	sport_delete(sport);
+
+	return 0;
+}
+
 static struct platform_driver sc5xx_i2s_dai_driver = {
 	.probe  = sc5xx_dai_probe,
+	.remove = sc5xx_dai_remove,
 	.driver = {
 		.name = "sc5xx-i2s-dai",
 		.of_match_table = of_match_ptr(sc5xx_audio_of_match),
