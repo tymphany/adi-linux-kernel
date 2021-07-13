@@ -17,8 +17,12 @@
 #define _SC5XX_SPORT_H_
 
 #include <linux/platform_device.h>
+#include <linux/workqueue.h>
+#include <linux/completion.h>
+#include <sound/pcm_params.h>
 
 #define TDM_MAX_SLOTS 8
+#define SHARC_CORES_NUM 2
 
 #define SPORT_CTL_SPENPRI             0x00000001    /* Enable Primary Channel */
 #define SPORT_CTL_DTYPE               0x00000006    /* Data type select */
@@ -121,16 +125,67 @@ struct sport_device {
 	dma_addr_t rx_desc_phy;
 	unsigned int tx_desc_size;
 	unsigned int rx_desc_size;
-	unsigned char *tx_buf;
-	unsigned char *rx_buf;
-	unsigned int tx_fragsize;
-	unsigned int rx_fragsize;
+	dma_addr_t tx_buf;
+	dma_addr_t rx_buf;
+	size_t tx_fragsize;
+	size_t rx_fragsize;
 	unsigned int tx_frags;
 	unsigned int rx_frags;
 	unsigned int wdsize;
 
 	unsigned int tx_map[TDM_MAX_SLOTS];
 	unsigned int rx_map[TDM_MAX_SLOTS];
+
+	struct snd_pcm_substream * tx_substream;
+	struct snd_pcm_substream * rx_substream;
+
+	struct snd_pcm_hw_params tx_hw_params;
+	struct snd_pcm_hw_params rx_hw_params;
+
+	unsigned int dai_format;
+
+#if IS_ENABLED(CONFIG_SND_SC5XX_SPORT_SHARC)
+
+	s32 tx_frags_in_dma[SHARC_CORES_NUM];
+	s32 rx_frags_in_dma[SHARC_CORES_NUM];
+
+	spinlock_t icc_spinlock;
+	int icc_irq;
+	int icc_irq_type;
+	atomic_t in_interrupt;
+	struct sharc_msg *messages;
+	int message_queue_pointer;
+	struct sharc_msg *received_messages;
+	int receive_message_queue_pointer;
+
+	unsigned char *sharc_tx_buf;
+	dma_addr_t sharc_tx_buf_phy;
+	size_t tx_buf_size;
+	size_t sharc_tx_buf_pos;
+
+	unsigned char *sharc_rx_buf;
+	dma_addr_t sharc_rx_buf_phy;
+	size_t rx_buf_size;
+	size_t sharc_rx_buf_pos;
+
+	struct workqueue_struct *sharc_workqueue;
+
+	//can't be array due to container_of usage
+	struct work_struct sharc0_wait_playback_ack_work;
+	struct work_struct sharc0_wait_record_ack_work;
+	struct work_struct sharc1_wait_playback_ack_work;
+	struct work_struct sharc1_wait_record_ack_work;
+
+	struct work_struct sharc0_underrun_work;
+	struct work_struct sharc0_overrun_work;
+	struct work_struct sharc1_underrun_work;
+	struct work_struct sharc1_overrun_work;
+
+	struct completion sharc_playback_ack_complete[SHARC_CORES_NUM];
+	struct completion sharc_record_ack_complete[SHARC_CORES_NUM];
+	struct completion sharc_sync_ack_complete[SHARC_CORES_NUM];
+	int sharc_last_sync_msg[SHARC_CORES_NUM];
+#endif
 };
 
 struct sport_params {
@@ -146,18 +201,18 @@ int sport_set_tx_params(struct sport_device *sport,
 		struct sport_params *params);
 int sport_set_rx_params(struct sport_device *sport,
 		struct sport_params *params);
-void sport_tx_start(struct sport_device *sport);
-void sport_rx_start(struct sport_device *sport);
-void sport_tx_stop(struct sport_device *sport);
-void sport_rx_stop(struct sport_device *sport);
+int sport_tx_start(struct sport_device *sport);
+int sport_rx_start(struct sport_device *sport);
+int sport_tx_stop(struct sport_device *sport);
+int sport_rx_stop(struct sport_device *sport);
 void sport_set_tx_callback(struct sport_device *sport,
 	void (*tx_callback)(void *), void *tx_data);
 void sport_set_rx_callback(struct sport_device *sport,
 	void (*rx_callback)(void *), void *rx_data);
 int sport_config_tx_dma(struct sport_device *sport, void *buf,
-	int fragcount, size_t fragsize);
+	int fragcount, size_t fragsize, struct snd_pcm_substream *substream);
 int sport_config_rx_dma(struct sport_device *sport, void *buf,
-	int fragcount, size_t fragsize);
+	int fragcount, size_t fragsize, struct snd_pcm_substream *substream);
 unsigned long sport_curr_offset_tx(struct sport_device *sport);
 unsigned long sport_curr_offset_rx(struct sport_device *sport);
 
