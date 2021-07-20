@@ -49,36 +49,32 @@ enum sharc_msg_id{
 	SHARC_MSG_PLAYBACK_STOP  = 3,
 	SHARC_MSG_PLAYBACK_PAUSE  = 4,
 	SHARC_MSG_PLAYBACK_RESUME  = 5,
-	SHARC_MSG_PLAYBACK_BUF  = 6,
-	SHARC_MSG_PLAYBACK_FRAG_READY  = 7,
-	SHARC_MSG_PLAYBACK_UNDERRUN  = 8,
+	SHARC_MSG_PLAYBACK_FRAG_READY  = 6,
+	SHARC_MSG_PLAYBACK_UNDERRUN  = 7,
 
 	SHARC_MSG_RECORD_INIT  = 21,
 	SHARC_MSG_RECORD_START = 22,
 	SHARC_MSG_RECORD_STOP  = 23,
 	SHARC_MSG_RECORD_PAUSE  = 24,
 	SHARC_MSG_RECORD_RESUME  = 25,
-	SHARC_MSG_RECORD_BUF  = 26,
-	SHARC_MSG_RECORD_FRAG_READY  = 27,
-	SHARC_MSG_RECORD_OVERRUN  = 28,
+	SHARC_MSG_RECORD_FRAG_READY  = 26,
+	SHARC_MSG_RECORD_OVERRUN  = 27,
 
 	SHARC_MSG_PLAYBACK_INIT_ACK  = 41,
 	SHARC_MSG_PLAYBACK_START_ACK = 42,
 	SHARC_MSG_PLAYBACK_STOP_ACK  = 43,
 	SHARC_MSG_PLAYBACK_PAUSE_ACK  = 44,
 	SHARC_MSG_PLAYBACK_RESUME_ACK  = 45,
-	SHARC_MSG_PLAYBACK_BUF_ACK  = 46,
-	SHARC_MSG_PLAYBACK_FRAG_READY_ACK  = 47,
-	SHARC_MSG_PLAYBACK_UNDERRUN_ACK  = 48,
+	SHARC_MSG_PLAYBACK_FRAG_READY_ACK  = 46,
+	SHARC_MSG_PLAYBACK_UNDERRUN_ACK  = 47,
 
 	SHARC_MSG_RECORD_INIT_ACK  = 61,
 	SHARC_MSG_RECORD_START_ACK = 62,
 	SHARC_MSG_RECORD_STOP_ACK  = 63,
 	SHARC_MSG_RECORD_PAUSE_ACK  = 64,
 	SHARC_MSG_RECORD_RESUME_ACK  = 65,
-	SHARC_MSG_RECORD_BUF_ACK  = 66,
-	SHARC_MSG_RECORD_FRAG_READY_ACK  = 67,
-	SHARC_MSG_RECORD_OVERRUN_ACK  = 68,
+	SHARC_MSG_RECORD_FRAG_READY_ACK  = 66,
+	SHARC_MSG_RECORD_OVERRUN_ACK  = 67,
 };
 
 struct sharc_audio_buf_format {
@@ -236,6 +232,7 @@ int send_sharc_msg(struct sport_device *sport, int core, enum sharc_msg_id id, u
 	unsigned long flags;
 	int ret = 0;
 
+
 	spin_lock_irqsave(&sport->icc_spinlock, flags);
 
 	msg = &sport->messages[sport->message_queue_pointer];
@@ -331,13 +328,11 @@ void read_sharc_messages(struct sport_device *sport, int core){
 			case SHARC_MSG_PLAYBACK_STOP_ACK:
 			case SHARC_MSG_PLAYBACK_PAUSE_ACK:
 			case SHARC_MSG_PLAYBACK_RESUME_ACK:
-			case SHARC_MSG_PLAYBACK_BUF_ACK:
 			case SHARC_MSG_RECORD_INIT_ACK:
 			case SHARC_MSG_RECORD_START_ACK:
 			case SHARC_MSG_RECORD_STOP_ACK:
 			case SHARC_MSG_RECORD_PAUSE_ACK:
 			case SHARC_MSG_RECORD_RESUME_ACK:
-			case SHARC_MSG_RECORD_BUF_ACK:
 				complete(&sport->sharc_sync_ack_complete[core]);
 				break;
 			case SHARC_MSG_PLAYBACK_FRAG_READY_ACK:
@@ -352,7 +347,6 @@ void read_sharc_messages(struct sport_device *sport, int core){
 		}
 
 		//handle received message
-		dev_dbg(&sport->pdev->dev, "Got message id %d, payload ui %d\n", msg_local.id, msg_local.payload.ui);
 		switch(msg_local.id){
 			case SHARC_MSG_PLAYBACK_INIT_ACK:
 				break;
@@ -369,7 +363,9 @@ void read_sharc_messages(struct sport_device *sport, int core){
 				//update buffer pointer
 				spin_lock_irqsave(&sport->icc_spinlock, flags);
 				sport->sharc_tx_buf_pos += msg_local.payload.ui * sport->tx_fragsize;
-				sport->sharc_tx_buf_pos %= sport->tx_buf_size;
+				if(sport->sharc_tx_buf_pos >= sport->tx_buf_size){
+					sport->sharc_tx_buf_pos = sport->sharc_tx_buf_pos - sport->tx_buf_size;
+				}
 				sport->tx_frags_in_dma[core] += msg_local.payload.ui;
 				spin_unlock_irqrestore(&sport->icc_spinlock, flags);
 				if (sport->tx_callback)
@@ -381,16 +377,37 @@ void read_sharc_messages(struct sport_device *sport, int core){
 				break;
 			case SHARC_MSG_PLAYBACK_RESUME_ACK:
 				break;
-			case SHARC_MSG_PLAYBACK_BUF_ACK:
-				break;
 			case SHARC_MSG_PLAYBACK_FRAG_READY_ACK:
 				spin_lock_irqsave(&sport->icc_spinlock, flags);
 				sport->sharc_tx_buf_pos += msg_local.payload.ui * sport->tx_fragsize;
-				sport->sharc_tx_buf_pos %= sport->tx_buf_size;
+				if(sport->sharc_tx_buf_pos >= sport->tx_buf_size){
+					sport->sharc_tx_buf_pos = sport->sharc_tx_buf_pos - sport->tx_buf_size;
+				}
 				sport->tx_frags_in_dma[core] += msg_local.payload.ui;
 				spin_unlock_irqrestore(&sport->icc_spinlock, flags);
 				if (sport->tx_callback)
 					sport->tx_callback(sport->tx_data);
+				break;
+			case SHARC_MSG_RECORD_INIT_ACK:
+				break;
+			case SHARC_MSG_RECORD_START_ACK:
+				break;
+			case SHARC_MSG_RECORD_STOP_ACK:
+				break;
+			case SHARC_MSG_RECORD_PAUSE_ACK:
+				break;
+			case SHARC_MSG_RECORD_RESUME_ACK:
+				break;
+			case SHARC_MSG_RECORD_FRAG_READY_ACK:
+				spin_lock_irqsave(&sport->icc_spinlock, flags);
+				sport->sharc_rx_buf_pos += msg_local.payload.ui * sport->rx_fragsize;
+				if(sport->sharc_rx_buf_pos >= sport->rx_buf_size){
+					sport->sharc_rx_buf_pos = sport->sharc_rx_buf_pos - sport->rx_buf_size;
+				}
+				sport->rx_frags_in_dma[core] -= msg_local.payload.ui;
+				spin_unlock_irqrestore(&sport->icc_spinlock, flags);
+				if (sport->rx_callback)
+					sport->rx_callback(sport->rx_data);
 				break;
 			default:
 				BUG();
@@ -436,7 +453,14 @@ EXPORT_SYMBOL(sport_tx_start);
 
 int sport_rx_start(struct sport_device *sport)
 {
-	return -ENOTSUPP;
+	set_dma_next_desc_addr(sport->rx_dma_chan,
+			(void *)sport->rx_desc_phy);
+	set_dma_config(sport->rx_dma_chan, DMAFLOW_LIST | DI_EN | WNR
+			| compute_wdsize(sport->wdsize) | NDSIZE_6);
+	enable_dma(sport->rx_dma_chan);
+	iowrite32(ioread32(&sport->rx_regs->spctl) | SPORT_CTL_SPENPRI,
+			&sport->rx_regs->spctl);
+	return send_sharc_msg(sport, 0, SHARC_MSG_RECORD_START, NULL); //TODO select core;
 }
 EXPORT_SYMBOL(sport_rx_start);
 
@@ -451,7 +475,10 @@ EXPORT_SYMBOL(sport_tx_stop);
 
 int sport_rx_stop(struct sport_device *sport)
 {
-	return -ENOTSUPP;
+	iowrite32(ioread32(&sport->rx_regs->spctl) & ~SPORT_CTL_SPENPRI,
+			&sport->rx_regs->spctl);
+	disable_dma(sport->rx_dma_chan); //TODO ?? move to SHARC_MSG_RECORD_STOP_ACK or its timeout worker ??
+	return send_sharc_msg(sport, 0, SHARC_MSG_RECORD_STOP, NULL); //TODO select core;
 }
 EXPORT_SYMBOL(sport_rx_stop);
 
@@ -541,7 +568,7 @@ int sport_config_tx_dma(struct sport_device *sport, void *buf,
 
 	sport->tx_substream = substream;
 
-	// Set buffer size and pointer
+	// Set ALSA buffer size and pointer
 	payload.audio_buf[0].buf = buf;
 	payload.audio_buf[0].offset = 0;
 	payload.audio_buf[0].buf_size = fragsize * fragcount;
@@ -553,8 +580,8 @@ int sport_config_tx_dma(struct sport_device *sport, void *buf,
 	payload.audio_buf[0].format.frame_size = payload.audio_buf[0].format.channels * (snd_pcm_format_physical_width(payload.audio_buf[0].format.pcm_format)/8);
 	payload.audio_buf[0].format.pcm_rate = params_rate(&sport->tx_hw_params);
 
-	// Set buffer size and pointer
-	payload.audio_buf[1].buf = (void*)sport->sharc_tx_buf_phy;
+	// Set DMA buffer size and pointer
+	payload.audio_buf[1].buf = (void*)sport->sharc_tx_buf_phy;//TODO rename sharc_tx_buf_phy to DMA_tx_buf_phy
 	payload.audio_buf[1].offset = 0;
 	payload.audio_buf[1].buf_size = fragsize * fragcount;
 	payload.audio_buf[1].frag_size = fragsize;
@@ -564,7 +591,7 @@ int sport_config_tx_dma(struct sport_device *sport, void *buf,
 
 
 	sport->tx_frags_in_dma[0] = 0; //TODO select core
-	return send_sharc_msg(sport, 0, SHARC_MSG_PLAYBACK_BUF, &payload); //TODO select core
+	return send_sharc_msg(sport, 0, SHARC_MSG_PLAYBACK_INIT, &payload); //TODO select core
 
 }
 EXPORT_SYMBOL(sport_config_tx_dma);
@@ -572,7 +599,61 @@ EXPORT_SYMBOL(sport_config_tx_dma);
 int sport_config_rx_dma(struct sport_device *sport, void *buf,
 		int fragcount, size_t fragsize, struct snd_pcm_substream *substream)
 {
-	return -ENOTSUPP;
+	unsigned int cfg;
+	union sharc_msg_payload payload;
+
+	if (sport->rx_desc)
+		dma_free_coherent(&sport->pdev->dev, sport->rx_desc_size,
+				sport->rx_desc, sport->rx_desc_phy);
+
+	sport->rx_desc = dma_alloc_coherent(&sport->pdev->dev, fragcount * sizeof(struct dmasg), &sport->rx_desc_phy, GFP_KERNEL);
+	sport->rx_desc_size = fragcount * sizeof(struct dmasg);
+	if (!sport->rx_desc)
+		return -ENOMEM;
+
+	if (sport->sharc_rx_buf)
+		dma_free_coherent(&sport->pdev->dev, sport->rx_buf_size, sport->sharc_rx_buf, sport->sharc_rx_buf_phy);
+	sport->sharc_rx_buf = dma_alloc_coherent(&sport->pdev->dev, fragsize * fragcount, &sport->sharc_rx_buf_phy, GFP_KERNEL);
+	if (!sport->sharc_rx_buf)
+		return -ENOMEM;
+
+	sport->rx_buf = sport->sharc_rx_buf_phy;
+	sport->rx_fragsize = fragsize;
+	sport->rx_frags = fragcount;
+	sport->rx_buf_size = fragsize * fragcount;
+	sport->sharc_rx_buf_pos = 0;
+
+	cfg = DMAFLOW_LIST | DI_EN | compute_wdsize(sport->wdsize)
+		| WNR | NDSIZE_6 | DMAEN;
+
+	setup_desc(sport, fragcount, fragsize, cfg, 0);
+
+	sport->rx_substream = substream;
+
+	// Set ALSA buffer size and pointer
+	payload.audio_buf[1].buf = buf;
+	payload.audio_buf[1].offset = 0;
+	payload.audio_buf[1].buf_size = fragsize * fragcount;
+	payload.audio_buf[1].frag_size = fragsize;
+	payload.audio_buf[1].frames_per_frag = bytes_to_frames(substream->runtime, fragsize);
+	// Set audio data format
+	payload.audio_buf[1].format.channels = params_channels(&sport->rx_hw_params);
+	payload.audio_buf[1].format.pcm_format = params_format(&sport->rx_hw_params);
+	payload.audio_buf[1].format.frame_size = payload.audio_buf[1].format.channels * (snd_pcm_format_physical_width(payload.audio_buf[1].format.pcm_format)/8);
+	payload.audio_buf[1].format.pcm_rate = params_rate(&sport->rx_hw_params);
+
+	// Set DMA buffer size and pointer
+	payload.audio_buf[0].buf = (void*)sport->sharc_rx_buf_phy; //TODO rename sharc_rx_buf_phy to DMA_rx_buf_phy
+	payload.audio_buf[0].offset = 0;
+	payload.audio_buf[0].buf_size = fragsize * fragcount;
+	payload.audio_buf[0].frag_size = fragsize;
+	payload.audio_buf[0].frames_per_frag = bytes_to_frames(substream->runtime, fragsize);
+	// Set audio data format - same as ALSA buffer
+	payload.audio_buf[0].format = payload.audio_buf[1].format;
+
+
+	sport->rx_frags_in_dma[0] = 0; //TODO select core
+	return send_sharc_msg(sport, 0, SHARC_MSG_RECORD_INIT, &payload); //TODO select core
 }
 EXPORT_SYMBOL(sport_config_rx_dma);
 
@@ -670,12 +751,44 @@ static irqreturn_t sport_rx_irq(int irq, void *dev_id)
 {
 	struct sport_device *sport = dev_id;
 	unsigned long status;
+	unsigned long flags;
+	union sharc_msg_payload payload;
+	int ret;
+	int xrun = 0;
 
 	atomic_add(1, &sport->in_interrupt);
 
 	status = get_dma_curr_irqstat(sport->rx_dma_chan);
 	if (status & (DMA_DONE|DMA_ERR))
 		clear_dma_irqstat(sport->rx_dma_chan);
+
+	spin_lock_irqsave(&sport->icc_spinlock, flags);
+
+	if(sport->rx_frags_in_dma[0] < sport->rx_frags){ //TODO select core
+		xrun = 1; // set xrun flag on transition to empty DMA level so we don't spam uevents
+		sport->rx_frags_in_dma[0]++;
+	}
+
+	if(sport->rx_frags_in_dma[0] < sport->rx_frags){
+		// No XRUN
+		xrun = 0;
+	}else{
+		// XRUN must have happened and DMA is looping over old data
+		// Dont't let the counter go over available size
+		sport->rx_frags_in_dma[0] = sport->rx_frags;
+	}
+
+	// Read more data if DMA buf level is higher
+	payload.ui = sport->rx_frags_in_dma[0];
+	spin_unlock_irqrestore(&sport->icc_spinlock, flags);
+
+	send_sharc_msg(sport, 0, SHARC_MSG_RECORD_FRAG_READY, &payload); //TODO select core
+
+	if(xrun){
+		//TODO select core
+		queue_work(sport->sharc_workqueue, &sport->sharc0_overrun_work);
+		trigger_buffer_overrun_irq();
+	}
 
 	atomic_sub(1, &sport->in_interrupt);
 	return IRQ_HANDLED;
