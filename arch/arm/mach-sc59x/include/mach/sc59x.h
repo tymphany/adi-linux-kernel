@@ -53,24 +53,24 @@
 /* =========================
        CRC0 MMR
    ========================= */
-#define REG_CRC0_CTL			0x31001200	/* CRC0 Control Register */
-#define REG_CRC0_DCNT			0x31001204	/* CRC0 Data Word Count Register */
-#define REG_CRC0_FILLVAL		0x31001218	/* CRC0 Fill Value Register */
+#define REG_CRC0_CTL				0x310A5000	/* CRC0 Control Register */
+#define REG_CRC0_DCNT			0x310A5004	/* CRC0 Data Word Count Register */
+#define REG_CRC0_FILLVAL		0x310A5018	/* CRC0 Fill Value Register */
 
 /* ==================================================
         DMA Channel Registers
    ================================================== */
 
-#define REG_DMA8_DSCPTR_NXT             0x31028000         /* DMA8 Pointer to Next Initial Descriptor */
-#define REG_DMA8_CFG                    0x31028008         /* DMA8 Configuration Register */
-#define REG_DMA9_DSCPTR_NXT             0x31028080         /* DMA9 Pointer to Next Initial Descriptor */
-#define REG_DMA9_CFG                    0x31028088         /* DMA9 Configuration Register */
-#define REG_DMA9_STAT                   0x310280B0         /* DMA9 Status Register */
-#define REG_DMA18_DSCPTR_NXT            0x31028100         /* DMA18 Pointer to Next Initial Descriptor */
-#define REG_DMA18_CFG                   0x31028108         /* DMA18 Configuration Register */
-#define REG_DMA19_DSCPTR_NXT            0x31028180         /* DMA19 Pointer to Next Initial Descriptor */
-#define REG_DMA19_CFG                   0x31028188         /* DMA19 Configuration Register */
-#define REG_DMA19_STAT                  0x310281B0         /* DMA19 Status Register */
+#define REG_DMA8_DSCPTR_NXT             0x310A7000         /* DMA8 Pointer to Next Initial Descriptor */
+#define REG_DMA8_CFG                    0x310A7008         /* DMA8 Configuration Register */
+#define REG_DMA9_DSCPTR_NXT             0x310A7080         /* DMA9 Pointer to Next Initial Descriptor */
+#define REG_DMA9_CFG                    0x310A7088         /* DMA9 Configuration Register */
+#define REG_DMA9_STAT                   0x310A70B0         /* DMA9 Status Register */
+#define REG_DMA18_DSCPTR_NXT            0x310A7100         /* DMA18 Pointer to Next Initial Descriptor */
+#define REG_DMA18_CFG                   0x310A7108         /* DMA18 Configuration Register */
+#define REG_DMA19_DSCPTR_NXT            0x310A7180         /* DMA19 Pointer to Next Initial Descriptor */
+#define REG_DMA19_CFG                   0x310A7188         /* DMA19 Configuration Register */
+#define REG_DMA19_STAT                  0x310A71B0         /* DMA19 Status Register */
 
 /* =========================
         L2CTL0
@@ -159,11 +159,11 @@
 #define REG_RCU0_CRCTL                  0x3108C008         /* RCU0 Core Reset Control Register */
 #define REG_RCU0_CRSTAT                 0x3108C00C         /* RCU0 Core Reset Status Register */
 #define REG_RCU0_SIDIS                  0x3108C01C         /* RCU0 System Interface Disable Register */
-#define REG_RCU0_SISTAT                 0x3108B020         /* RCU0 System Interface Status Register */
-#define REG_RCU0_BCODE                  0x3108B028         /* RCU0 Boot Code Register */
-#define REG_RCU0_MSG_SET                0x3108B070         /* RCU0 Message Set Bits Register */
-#define REG_RCU0_SVECT1                 0x3108B02C         /* Software Vector Register 1 */
-#define REG_RCU0_SVECT2                 0x3108B030         /* Software Vector Register 2 */
+#define REG_RCU0_SISTAT                 0x3108C020         /* RCU0 System Interface Status Register */
+#define REG_RCU0_BCODE                  0x3108C028         /* RCU0 Boot Code Register */
+#define REG_RCU0_MSG_SET                0x3108C070         /* RCU0 Message Set Bits Register */
+#define REG_RCU0_SVECT1                 0x3108C030         /* Software Vector Register 1 */
+#define REG_RCU0_SVECT2                 0x3108C034         /* Software Vector Register 2 */
 
 /* =========================
         SPU0
@@ -178,7 +178,7 @@
 #define REG_PADS0_PCFG0                 0x31004604         /* PADS0 Peripheral Configuration0 Register */
 #define REG_PADS0_DAI0_IE               0x31004690         /* PADS DAI0 IE Register */
 #define REG_PADS0_DAI1_IE               0x31004694         /* PADS DAI1 IE Register */
-#define BITM_PADS_PCFG0_EMACPHYISEL     0x00000008         /* Bitmask of selecting PHY Interface RGMII/RMII */
+#define BITM_PADS_PCFG0_EMACPHYISEL     0x00000018         /* Bitmask of selecting PHY Interface RGMII/RMII */
 #define BITM_PADS_PCFG0_EMACRESET       0x00000004         /* Bitmask of reseting enable for RGMII */
 
 /* =========================
