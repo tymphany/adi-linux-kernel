@@ -1,0 +1,23 @@
+/*
+ * Copyright (c) 2021 Analog Devices Incorporated
+ * Author: Nathan Barrett-Morrison <nathan.morrison@timesys.com>
+ */
+
+/dts-v1/;
+
+#include "sc59x-64.dtsi"
+
+/ {
+	model = "ADI 64-bit SC598 SOM EZ Kit";
+	compatible = "adi,sc598-som-ezkit", "adi,sc59x-64";
+
+	chosen {
+		stdout-path = &uart1;
+	};
+
+	memory@C3000000 {
+		device_type = "memory";
+		reg = <0xC3000000 0xF000000>;
+	};
+
+};
