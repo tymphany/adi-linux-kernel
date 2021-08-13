@@ -513,6 +513,13 @@
 					adi,function = "ospi";
 				};
 			};
+
+			usbc0 {
+				usbc0_default: usbc0@0 {
+					adi,group = "usbc0grp";
+					adi,function = "usbc0";
+				};
+			};
 		};
 
 		mmc0: mmc@0x31010000 {
