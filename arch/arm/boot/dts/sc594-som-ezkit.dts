@@ -46,8 +46,8 @@
 			            <&ssw1 10 GPIO_ACTIVE_LOW>,	 /* SPDIF_OPTICAL_EN */
 			            <&ssw1 11 GPIO_ACTIVE_LOW>,	 /* AUDIO_JACK_SEL */
 			            <&ssw1 12 GPIO_ACTIVE_LOW>,	 /* MLB_EN */
-			            <&ssw1 13 GPIO_ACTIVE_HIGH>, /* ETH1_EN */
-			            <&ssw1 14 GPIO_ACTIVE_LOW>,  /* ETH1_RESET */
+			            <&ssw1 13 GPIO_ACTIVE_LOW>,  /* ETH1_EN */
+			            <&ssw1 14 GPIO_ACTIVE_HIGH>, /* ETH1_RESET */
 			            <&ssw1 15 GPIO_ACTIVE_LOW>;  /* GIGE_RESET */
 
 			reboot-pins = <&ssw0 3 GPIO_ACTIVE_LOW>,	/* SP2IFLASH_CS */
@@ -375,25 +375,19 @@
 	phy-mode = "rmii";
 	pinctrl-names = "default";
 	pinctrl-0 = <&eth1_default>;
-	status = "okay";
+	status = "disabled";
 };
 
 &usb0_phy {
+	reset-gpios = <&gpg 11 GPIO_ACTIVE_LOW>;
 	status = "okay";
 };
 
 &usb0 {
-	mode = <3>; /* OTG port */
-	status = "disabled";
-};
-
-&usb1_phy {
-	status = "disabled";
-};
-
-&usb1 {
-	mode = <2>; /* Device port */
-	status = "disabled";
+	dr_mode = "host";
+	pinctrl-names = "default";
+	pinctrl-0 = <&usbc0_default>;
+	status = "okay";
 };
 
 &mmc0 {
