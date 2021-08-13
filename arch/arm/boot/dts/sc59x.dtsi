@@ -740,53 +740,18 @@
 			pint_map = /bits/ 8 <1>;
 		};
 
-		usb0_phy: usb-phy@310c1390 {
+		usb0_phy: usbphy {
 			compatible = "usb-nop-xceiv";
-			reg = <0x310c1390 0x10>;
-			reg-names = "phy";
 			#phy-cells = <0>;
 			status = "disabled";
 		};
 
-		usb0: usb@310c1000 {
-			compatible = "ADI,musb";
-			reg = <0x310c1000 0x390>;
-			reg-names = "mc";
-			interrupts = <GIC_SPI 132 IRQ_TYPE_LEVEL_HIGH>,
-					<GIC_SPI 133 IRQ_TYPE_LEVEL_HIGH>;
-			interrupt-names = "mc", "dma";
-			spu_securep_id = <153>;
-
-			mentor,multipoint = <1>;
-			mentor,num-eps = <16>;
-			mentor,ram-bits = <12>;
-			mentor,power = <500>;
+		usb0: usb@310c5000 {
+			compatible = "adi,adsp2159x-usbc", "snps,dwc2";
+			reg = <0x310c5000 0x4000>;
+			interrupts = <GIC_SPI 241 IRQ_TYPE_LEVEL_HIGH>;
 			phys = <&usb0_phy>;
-			status = "disabled";
-		};
-
-		usb1_phy: usb-phy@310c2390 {
-			compatible = "usb-nop-xceiv";
-			reg = <0x310c2390 0x10>;
-			reg-names = "phy";
-			#phy-cells = <0>;
-			status = "disabled";
-		};
-
-		usb1: usb@310c2000 {
-			compatible = "ADI,musb";
-			reg = <0x310c2000 0x390>;
-			reg-names = "mc";
-			interrupts = <GIC_SPI 134 IRQ_TYPE_LEVEL_HIGH>,
-					<GIC_SPI 135 IRQ_TYPE_LEVEL_HIGH>;
-			interrupt-names = "mc", "dma";
-			spu_securep_id = <154>;
-
-			mentor,multipoint = <1>;
-			mentor,num-eps = <16>;
-			mentor,ram-bits = <12>;
-			mentor,power = <500>;
-			phys = <&usb1_phy>;
+			phy-names = "usb2-phy";
 			status = "disabled";
 		};
 
