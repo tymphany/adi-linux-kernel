@@ -289,6 +289,12 @@ static const unsigned mmc0_4b_pins[] = {
 	GPIO_PF10, GPIO_PF11, GPIO_PF12,
 };
 
+static const unsigned usbc0_pins[] = {
+	GPIO_PF3,
+	GPIO_PF4, GPIO_PF5, GPIO_PF6, GPIO_PF7, GPIO_PF8, GPIO_PF9,
+	GPIO_PF10, GPIO_PF11, GPIO_PF12, GPIO_PF13, GPIO_PF14,
+};
+
 static const unsigned short uart0_mux[] = {
 	P_UART0_TX, P_UART0_RX,
 	0
@@ -447,6 +453,14 @@ static const unsigned short cnt0_mux[] = {
 	0
 };
 
+static const unsigned short usbc0_mux[] = {
+	P_USBC0_STOP,
+	P_USBC0_DATA7, P_USBC0_DATA6, P_USBC0_DATA5,
+	P_USBC0_DATA4, P_USBC0_NXT, P_USBC0_DIR, P_USBC0_DATA3, P_USBC0_DATA2,
+	P_USBC0_DATA1, P_USBC0_DATA0, P_USBC0_CLK,
+	0
+};
+
 static const struct adi_pin_group adi_pin_groups[] = {
 	ADI_PIN_GROUP("uart0grp", uart0_pins, uart0_mux),
 	ADI_PIN_GROUP("uart0_hwflowgrp", uart0_hwflow_pins, uart0_hwflow_mux),
@@ -473,6 +487,7 @@ static const struct adi_pin_group adi_pin_groups[] = {
 	ADI_PIN_GROUP("mmc0_8bgrp", mmc0_8b_pins, mmc0_8b_mux),
 	ADI_PIN_GROUP("mmc0_4bgrp", mmc0_4b_pins, mmc0_4b_mux),
 	ADI_PIN_GROUP("cnt0grp", cnt0_pins, cnt0_mux),
+	ADI_PIN_GROUP("usbc0grp", usbc0_pins, usbc0_mux),
 };
 
 static const char * const uart0grp[] = { "uart0grp",
@@ -498,6 +513,7 @@ static const char * const lp1grp[] = { "lp1grp" };
 static const char * const mmc0grp[] = { "mmc0_8bgrp",
 					"mmc0_4bgrp" };
 static const char * const cnt0grp[] = { "cnt0grp" };
+static const char * const usbc0grp[] = { "usbc0grp" };
 
 static const struct adi_pmx_func adi_pmx_functions[] = {
 	ADI_PMX_FUNCTION("uart0", uart0grp),
@@ -517,6 +533,7 @@ static const struct adi_pmx_func adi_pmx_functions[] = {
 	ADI_PMX_FUNCTION("mmc0", mmc0grp),
 	ADI_PMX_FUNCTION("ppi0", ppi0grp),
 	ADI_PMX_FUNCTION("cnt0", cnt0grp),
+	ADI_PMX_FUNCTION("usbc0", usbc0grp),
 };
 
 static const struct adi_pinctrl_soc_data adi_sc59x_soc = {
