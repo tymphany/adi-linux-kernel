@@ -35,7 +35,8 @@
 #define TWI_I2C_MODE_REPEAT		4
 
 static void adi_twi_handle_interrupt(struct adi_twi_iface *iface,
-					unsigned short twi_int_status)
+					unsigned short twi_int_status,
+					bool polling)
 {
 	unsigned short mast_stat = read_MASTER_STAT(iface);
 
@@ -155,7 +156,8 @@ static void adi_twi_handle_interrupt(struct adi_twi_iface *iface,
 			(twi_int_status & MCOMP) && (mast_stat & DNAK))
 			iface->result = 1;
 
-		complete(&iface->complete);
+		if (!polling)
+			complete(&iface->complete);
 		return;
 	}
 	if (twi_int_status & MCOMP) {
@@ -229,35 +231,46 @@ static void adi_twi_handle_interrupt(struct adi_twi_iface *iface,
 			write_INT_MASK(iface, 0);
 			write_MASTER_CTL(iface, 0);
 		}
-		complete(&iface->complete);
+		if (!polling)
+			complete(&iface->complete);
 	}
 }
 
 /* Interrupt handler */
+static irqreturn_t adi_twi_handle_all_interrupts(struct adi_twi_iface *iface,
+						 bool polling)
+{
+	irqreturn_t handled = IRQ_NONE;
+	unsigned short twi_int_status;
+
+	while (1) {
+		twi_int_status = read_INT_STAT(iface);
+		if (!twi_int_status)
+			return handled;
+		/* Clear interrupt status */
+		write_INT_STAT(iface, twi_int_status);
+		adi_twi_handle_interrupt(iface, twi_int_status, polling);
+		handled = IRQ_HANDLED;
+	}
+}
+
 static irqreturn_t adi_twi_interrupt_entry(int irq, void *dev_id)
 {
 	struct adi_twi_iface *iface = dev_id;
 	unsigned long flags;
-	unsigned short twi_int_status;
+	irqreturn_t handled;
 
 	spin_lock_irqsave(&iface->lock, flags);
-	while (1) {
-		twi_int_status = read_INT_STAT(iface);
-		if (!twi_int_status)
-			break;
-		/* Clear interrupt status */
-		write_INT_STAT(iface, twi_int_status);
-		adi_twi_handle_interrupt(iface, twi_int_status);
-	}
+	handled = adi_twi_handle_all_interrupts(iface, false);
 	spin_unlock_irqrestore(&iface->lock, flags);
-	return IRQ_HANDLED;
+	return handled;
 }
 
 /*
  * One i2c master transfer
  */
 static int adi_twi_do_master_xfer(struct i2c_adapter *adap,
-				struct i2c_msg *msgs, int num)
+				struct i2c_msg *msgs, int num, bool polling)
 {
 	struct adi_twi_iface *iface = adap->algo_data;
 	struct i2c_msg *pmsg;
@@ -285,7 +298,8 @@ static int adi_twi_do_master_xfer(struct i2c_adapter *adap,
 	iface->transPtr = pmsg->buf;
 	iface->writeNum = iface->readNum = pmsg->len;
 	iface->result = 0;
-	init_completion(&(iface->complete));
+	if (!polling)
+		init_completion(&(iface->complete));
 	/* Set Transmit device address */
 	write_MASTER_ADDR(iface, pmsg->addr);
 
@@ -324,12 +338,27 @@ static int adi_twi_do_master_xfer(struct i2c_adapter *adap,
 		(iface->msg_num > 1 ? RSTART : 0) |
 		((iface->read_write == I2C_SMBUS_READ) ? MDIR : 0) |
 		((iface->twi_clk > 100) ? FAST : 0));
-
-	while (!iface->result) {
-		if (!wait_for_completion_timeout(&iface->complete,
-			adap->timeout)) {
-			iface->result = -1;
-			dev_err(&adap->dev, "master transfer timeout\n");
+ 
+	if (polling) {
+		int timeout = 50000;
+		for (;;) {
+			irqreturn_t handled = adi_twi_handle_all_interrupts(
+								iface, true);
+			if (handled == IRQ_HANDLED && iface->result)
+				break;
+			if (--timeout == 0) {
+				iface->result = -1;
+				dev_err(&adap->dev, "master polling timeout");
+				break;
+			}
+		}
+	} else { /* interrupt driven */
+		while (!iface->result) {
+			if (!wait_for_completion_timeout(&iface->complete,
+				adap->timeout)) {
+				iface->result = -1;
+				dev_err(&adap->dev, "master transfer timeout");
+			}
 		}
 	}
 
@@ -347,7 +376,13 @@ static int adi_twi_do_master_xfer(struct i2c_adapter *adap,
 static int adi_twi_master_xfer(struct i2c_adapter *adap,
 				struct i2c_msg *msgs, int num)
 {
-	return adi_twi_do_master_xfer(adap, msgs, num);
+	return adi_twi_do_master_xfer(adap, msgs, num, false);
+}
+
+static int adi_twi_master_xfer_atomic(struct i2c_adapter *adap,
+				struct i2c_msg *msgs, int num)
+{
+	return adi_twi_do_master_xfer(adap, msgs, num, true);
 }
 
 /*
@@ -355,7 +390,8 @@ static int adi_twi_master_xfer(struct i2c_adapter *adap,
  */
 int adi_twi_do_smbus_xfer(struct i2c_adapter *adap, u16 addr,
 			unsigned short flags, char read_write,
-			u8 command, int size, union i2c_smbus_data *data)
+			u8 command, int size, union i2c_smbus_data *data,
+			bool polling)
 {
 	struct adi_twi_iface *iface = adap->algo_data;
 	int rc = 0;
@@ -441,7 +477,8 @@ int adi_twi_do_smbus_xfer(struct i2c_adapter *adap, u16 addr,
 	iface->manual_stop = 0;
 	iface->read_write = read_write;
 	iface->command = command;
-	init_completion(&(iface->complete));
+	if (!polling)
+		init_completion(&(iface->complete));
 
 	/* FIFO Initiation. Data in FIFO should be discarded before
 	 * start a new operation.
@@ -529,11 +566,26 @@ int adi_twi_do_smbus_xfer(struct i2c_adapter *adap, u16 addr,
 		break;
 	}
 
-	while (!iface->result) {
-		if (!wait_for_completion_timeout(&iface->complete,
-			adap->timeout)) {
-			iface->result = -1;
-			dev_err(&adap->dev, "smbus transfer timeout\n");
+	if (polling) {
+		int timeout = 50000;
+		for (;;) {
+			irqreturn_t handled = adi_twi_handle_all_interrupts(
+								iface, true);
+			if (handled == IRQ_HANDLED && iface->result)
+				break;
+			if (--timeout == 0) {
+				iface->result = -1;
+				dev_err(&adap->dev, "smbus polling timeout");
+				break;
+			}
+		}
+	} else { /* interrupt driven */
+		while (!iface->result) {
+			if (!wait_for_completion_timeout(&iface->complete,
+				adap->timeout)) {
+				iface->result = -1;
+				dev_err(&adap->dev, "smbus transfer timeout");
+			}
 		}
 	}
 
@@ -550,7 +602,15 @@ int adi_twi_smbus_xfer(struct i2c_adapter *adap, u16 addr,
 			u8 command, int size, union i2c_smbus_data *data)
 {
 	return adi_twi_do_smbus_xfer(adap, addr, flags,
-			read_write, command, size, data);
+			read_write, command, size, data, false);
+}
+
+int adi_twi_smbus_xfer_atomic(struct i2c_adapter *adap, u16 addr,
+			unsigned short flags, char read_write,
+			u8 command, int size, union i2c_smbus_data *data)
+{
+	return adi_twi_do_smbus_xfer(adap, addr, flags,
+			read_write, command, size, data, true);
 }
 
 /*
@@ -565,9 +625,11 @@ static u32 adi_twi_functionality(struct i2c_adapter *adap)
 }
 
 static const struct i2c_algorithm adi_twi_algorithm = {
-	.master_xfer   = adi_twi_master_xfer,
-	.smbus_xfer    = adi_twi_smbus_xfer,
-	.functionality = adi_twi_functionality,
+	.master_xfer	    = adi_twi_master_xfer,
+	.master_xfer_atomic = adi_twi_master_xfer_atomic,
+	.smbus_xfer	    = adi_twi_smbus_xfer,
+	.smbus_xfer_atomic  = adi_twi_smbus_xfer_atomic,
+	.functionality	    = adi_twi_functionality,
 };
 
 #ifdef CONFIG_PM_SLEEP
