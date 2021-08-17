@@ -15,6 +15,7 @@
 
 #include <linux/clk.h>
 #include <linux/firmware.h>
+#include <linux/elf.h>
 #include <linux/interrupt.h>
 #include <linux/module.h>
 #include <linux/of_address.h>
@@ -60,6 +61,9 @@
 #define MEMORY_COUNT 1
 #endif
 
+#define ADI_FW_LDR 0
+#define ADI_FW_ELF 1
+
 struct adi_rproc_data {
 	struct device *dev;
 	struct rproc *rproc;
@@ -71,6 +75,9 @@ struct adi_rproc_data {
 	size_t fw_size;
 	unsigned long ldr_load_addr;
 	struct rcu_reg __iomem *rcu_base;
+	int firmware_format;
+	void __iomem *L1_shared_base;
+	void __iomem *L2_shared_base;
 };
 
 typedef struct block_code_flag {
@@ -320,15 +327,23 @@ static void ldr_load(struct adi_rproc_data *rproc_data)
 
 }
 
-static bool ldr_phdr_valid(const LDR_Ehdr_t *phdr)
+static int adi_valid_firmware(struct rproc *rproc, const struct firmware *fw)
 {
-	if (!phdr->byte_count
-				&& (phdr->bcode_flag.bHdrSIGN == 0xAD
-					|| phdr->bcode_flag.bHdrSIGN == 0xAC
-					|| phdr->bcode_flag.bHdrSIGN == 0xAB))
-		return true;
-	else
-		return false;
+	LDR_Ehdr_t *adi_ldr_hdr = (LDR_Ehdr_t *)fw->data;
+
+	if (!adi_ldr_hdr->byte_count
+				&& (adi_ldr_hdr->bcode_flag.bHdrSIGN == 0xAD
+					|| adi_ldr_hdr->bcode_flag.bHdrSIGN == 0xAC
+					|| adi_ldr_hdr->bcode_flag.bHdrSIGN == 0xAB))
+		return ADI_FW_LDR;
+
+	if(!rproc_elf_sanity_check(rproc, fw)){
+		dev_err(&rproc->dev, "ELF format not supported\n");
+		return -ENOTSUPP;
+	}
+
+	dev_err(&rproc->dev, "## No valid image at address 0x%08x\n", (unsigned int)fw->data);
+	return -EINVAL;
 }
 
 void set_spu_securep_msec(uint16_t n, bool msec);
@@ -347,8 +362,6 @@ static void disable_spu(void)
 static int adi_ldr_load(struct adi_rproc_data *rproc_data,
 						const struct firmware *fw)
 {
-	int ret = 0;
-
 	rproc_data->fw_size = fw->size;
 	if (!rproc_data->mem_virt) {
 		rproc_data->mem_virt = dma_alloc_coherent(rproc_data->dev,
@@ -363,20 +376,11 @@ static int adi_ldr_load(struct adi_rproc_data *rproc_data,
 
 	memcpy((char*)rproc_data->mem_virt, fw->data, fw->size);
 
-	/* Check if it is a LDR file */
-	if (ldr_phdr_valid((LDR_Ehdr_t*)rproc_data->mem_virt)) {
-		enable_spu();
-		ldr_load(rproc_data);
-		disable_spu();
-	} else {
-		printk("## No ldr image at address 0x%x\n", (unsigned long)rproc_data->mem_virt);
-		dma_free_coherent(rproc_data->dev, rproc_data->fw_size * MEMORY_COUNT,
-						rproc_data->mem_virt, rproc_data->mem_handle);
-		rproc_data->mem_virt = NULL;
-		ret = -1;
-	}
+	enable_spu();
+	ldr_load(rproc_data);
+	disable_spu();
 
-	return ret;
+	return 0;
 }
 
 /*
@@ -387,13 +391,23 @@ static int adi_ldr_load(struct adi_rproc_data *rproc_data,
  */
 static int adi_rproc_load(struct rproc *rproc, const struct firmware *fw)
 {
-	int ret = 0;
 	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)rproc->priv;
+	int ret;
 
-	ret = adi_ldr_load(rproc_data, fw);
+	switch (rproc_data->firmware_format){
+		case ADI_FW_LDR:
+			ret = adi_ldr_load(rproc_data, fw);
+			break;
+		case ADI_FW_ELF:
+			ret = rproc_elf_load_segments(rproc, fw);
+			break;
+		default:
+			BUG();
+			break;
+	}
+
 	if (ret) {
 		dev_err(rproc_data->dev, "Failed to load ldr, ret:%d\n", ret);
-		return ret;
 	}
 
 	return ret;
@@ -456,10 +470,103 @@ static int adi_rproc_stop(struct rproc *rproc)
 	return ret;
 }
 
+static int adi_rproc_load_rsc_table(struct rproc *rproc, const struct firmware *fw)
+{
+	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)rproc->priv;
+	int ret;
+
+	switch (rproc_data->firmware_format){
+		case ADI_FW_LDR:
+			ret = 0;
+			break;
+		case ADI_FW_ELF:
+			ret = rproc_elf_load_rsc_table(rproc, fw);
+			break;
+		default:
+			BUG();
+			break;
+	}
+	return ret;
+}
+
+static struct resource_table *adi_rproc_find_loaded_rsc_table(struct rproc *rproc, const struct firmware *fw)
+{
+	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)rproc->priv;
+	struct resource_table * ret = NULL;
+
+	switch (rproc_data->firmware_format){
+		case ADI_FW_LDR:
+			break;
+		case ADI_FW_ELF:
+			ret = rproc_elf_find_loaded_rsc_table(rproc, fw);
+			break;
+		default:
+			BUG();
+			break;
+	}
+	return ret;
+}
+
+static int adi_rproc_sanity_check(struct rproc *rproc, const struct firmware *fw)
+{
+	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)rproc->priv;
+
+	/* Check if it is a LDR or ELF file */
+	rproc_data->firmware_format = adi_valid_firmware(rproc, fw);
+
+	if (rproc_data->firmware_format < 0)
+		return rproc_data->firmware_format;
+	else
+		return 0;
+}
+
+static u32 adi_rproc_get_boot_addr(struct rproc *rproc, const struct firmware *fw)
+{
+	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)rproc->priv;
+	u32 ret;
+
+	switch (rproc_data->firmware_format){
+		case ADI_FW_LDR:
+			ret = 0;
+			break;
+		case ADI_FW_ELF:
+			ret = rproc_elf_get_boot_addr(rproc, fw);
+			break;
+		default:
+			BUG();
+			break;
+	}
+	return ret;
+}
+
+static void *adi_da_to_va(struct rproc *rproc, u64 da, int len)
+{
+	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)rproc->priv;
+	void __iomem *L1_shared_base = rproc_data->L1_shared_base;
+	void __iomem *L2_shared_base = rproc_data->L2_shared_base;
+	void *ret=NULL;
+	int offset = 0;
+
+	if(len == 0){
+		return NULL;
+	}
+
+	if((da >= 0x00240000) && (da < 0x003A0000)){
+		ret = L1_shared_base + da;
+	}else	if((da >= 0x20000000) && (da < 0x20200000)){ //FIXME fix address range for other platfoms
+		offset = da - 0x20000000;
+		ret = L2_shared_base + offset;
+	}
+
+	return ret;
+}
+
 static const struct rproc_ops adi_rproc_ops = {
 	.start = adi_rproc_start,
 	.stop = adi_rproc_stop,
 	.load = adi_rproc_load,
+	.da_to_va = adi_da_to_va,
+	.sanity_check = adi_rproc_sanity_check,
 };
 
 static int adi_remoteproc_probe(struct platform_device *pdev)
@@ -513,6 +620,24 @@ static int adi_remoteproc_probe(struct platform_device *pdev)
 	if (IS_ERR((void *)rproc_data->rcu_base)) {
 		dev_err(dev, "Cannot map rcu memory\n");
 		ret = PTR_ERR((void *)rproc_data->rcu_base);
+		goto free_rproc;
+	}
+
+	if(rproc_data->core_id == 1){
+		rproc_data->L1_shared_base = devm_ioremap_nocache(dev, 0x28240000, 0x160000);
+	}else{
+		rproc_data->L1_shared_base = devm_ioremap_nocache(dev, 0x28A40000, 0x160000);
+	}
+	if (IS_ERR((void *)rproc_data->L1_shared_base)) {
+		dev_err(dev, "Cannot map L1 shared memory\n");
+		ret = PTR_ERR((void *)rproc_data->L1_shared_base);
+		goto free_rproc;
+	}
+
+	rproc_data->L2_shared_base = devm_ioremap_nocache(dev, 0x20000000, 0x200000); //FIXME fix address range for other platfoms
+	if (IS_ERR((void *)rproc_data->L2_shared_base)) {
+		dev_err(dev, "Cannot map L2 shared memory\n");
+		ret = PTR_ERR((void *)rproc_data->L2_shared_base);
 		goto free_rproc;
 	}
 
