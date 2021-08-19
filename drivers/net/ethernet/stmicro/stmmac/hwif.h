@@ -186,7 +186,7 @@ struct stmmac_dma_ops {
 	/* To track extra statistic (if supported) */
 	void (*dma_diagnostic_fr) (void *data, struct stmmac_extra_stats *x,
 				   void __iomem *ioaddr);
-	void (*enable_dma_transmission) (void __iomem *ioaddr);
+	void (*enable_dma_transmission) (void __iomem *ioaddr, u32 chan);
 	void (*enable_dma_irq)(void __iomem *ioaddr, u32 chan);
 	void (*disable_dma_irq)(void __iomem *ioaddr, u32 chan);
 	void (*start_tx)(void __iomem *ioaddr, u32 chan);
