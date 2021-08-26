@@ -150,13 +150,9 @@ struct sport_device {
 	s32 rx_frags_in_dma[SHARC_CORES_NUM];
 
 	spinlock_t icc_spinlock;
-	int icc_irq;
-	int icc_irq_type;
 	atomic_t in_interrupt;
-	struct sharc_msg *messages;
-	int message_queue_pointer;
-	struct sharc_msg *received_messages;
-	int receive_message_queue_pointer;
+
+	struct rpmsg_device *sharc_rpmsg[SHARC_CORES_NUM];
 
 	unsigned char *sharc_tx_buf;
 	dma_addr_t sharc_tx_buf_phy;
@@ -215,5 +211,11 @@ int sport_config_rx_dma(struct sport_device *sport, void *buf,
 	int fragcount, size_t fragsize, struct snd_pcm_substream *substream);
 unsigned long sport_curr_offset_tx(struct sport_device *sport);
 unsigned long sport_curr_offset_rx(struct sport_device *sport);
+
+#if IS_ENABLED(CONFIG_SND_SC5XX_SPORT_SHARC)
+int rpmsg_sharc_alsa_probe(struct rpmsg_device *rpdev);
+int rpmsg_sharc_alsa_cb(struct rpmsg_device *rpdev, void *data, int len, void *priv, u32 src);
+void rpmsg_sharc_alsa_remove(struct rpmsg_device *rpdev);
+#endif
 
 #endif

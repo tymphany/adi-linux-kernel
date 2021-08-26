@@ -22,6 +22,7 @@
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 #include <sound/soc-dai.h>
+#include <linux/rpmsg.h>
 
 #include "sc5xx-sport.h"
 
@@ -203,7 +204,49 @@ static struct platform_driver sc5xx_pcm_driver = {
 	.probe = sc5xx_soc_platform_probe,
 };
 
-module_platform_driver(sc5xx_pcm_driver);
+static struct rpmsg_device_id rpmsg_sharc_alsa_id_table[] = {
+	{ .name = "sharc-alsa" },
+	{ },
+};
+static struct rpmsg_driver rpmsg_sharc_alsa = {
+	.drv.name  = KBUILD_MODNAME,
+	.drv.owner = THIS_MODULE,
+	.id_table  = rpmsg_sharc_alsa_id_table,
+	.probe     = rpmsg_sharc_alsa_probe,
+	.callback  = rpmsg_sharc_alsa_cb,
+	.remove    = rpmsg_sharc_alsa_remove,
+};
+
+static int sc5xx_pcm_driver_init(void)
+{
+	int ret;
+
+	ret = platform_driver_register(&sc5xx_pcm_driver);
+	if (ret < 0) {
+		pr_err("sc5xx_pcm_driver: failed to register pcm driver\n");
+		return ret;
+	}
+#if IS_ENABLED(CONFIG_SND_SC5XX_SPORT_SHARC)
+	ret = register_rpmsg_driver(&rpmsg_sharc_alsa);
+	if (ret < 0) {
+		pr_err("sc5xx_pcm_driver: failed to register rpmsg driver\n");
+		platform_driver_unregister(&sc5xx_pcm_driver);
+		return ret;
+	}
+#endif
+
+	return 0;
+}
+module_init(sc5xx_pcm_driver_init);
+
+static void sc5xx_pcm_driver_exit(void)
+{
+	platform_driver_unregister(&sc5xx_pcm_driver);
+#if IS_ENABLED(CONFIG_SND_SC5XX_SPORT_SHARC)
+	unregister_rpmsg_driver(&rpmsg_sharc_alsa);
+#endif
+}
+module_exit(sc5xx_pcm_driver_exit);
 
 MODULE_DESCRIPTION("Analog Devices SC5XX audio dma driver");
 MODULE_AUTHOR("Scott Jiang <Scott.Jiang.Linux@gmail.com>");
