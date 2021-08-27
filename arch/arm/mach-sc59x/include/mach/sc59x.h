@@ -1,6 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2018 Analog Devices Inc.
- * Licensed under the GPL-2 or later.
+ * Copyright (C) 2020 - 2021 Analog Devices Inc.
  */
 
 
@@ -178,8 +178,14 @@
 #define REG_PADS0_PCFG0                 0x31004604         /* PADS0 Peripheral Configuration0 Register */
 #define REG_PADS0_DAI0_IE               0x31004690         /* PADS DAI0 IE Register */
 #define REG_PADS0_DAI1_IE               0x31004694         /* PADS DAI1 IE Register */
-#define BITM_PADS_PCFG0_EMACPHYISEL     0x00000018         /* Bitmask of selecting PHY Interface RGMII/RMII */
-#define BITM_PADS_PCFG0_EMACRESET       0x00000004         /* Bitmask of reseting enable for RGMII */
+#define BITM_PADS_PCFG0_EMACRESET       0x00000004         /* Reset Enable for RGMII */
+#define ENUM_PADS_PCFG0_EMACPHY_MII     0x00000000         /* EMACPHYISEL: MII Interface */
+#define ENUM_PADS_PCFG0_EMACPHY_RGMII   0x00000008         /* EMACPHYISEL: RGMII Interface */
+#define ENUM_PADS_PCFG0_EMACPHY_RMII    0x00000010         /* EMACPHYISEL: RMII Interface */
+#define ENUM_PADS_PCFG0_EMAC0_RMII_CLK  0x00000000         /* EMAC0: EMAC0_RMII CLK */
+#define ENUM_PADS_PCFG0_EMAC0_SCLK1     0x00000001         /* EMAC0: SCLK */
+#define ENUM_PADS_PCFG0_EMAC0_EXT_CLK   0x00000002         /* EMAC0: External Clock */
+#define ENUM_PADS_PCFG0_EMAC0_SCLK3     0x00000003         /* EMAC0: SCLK */
 
 /* =========================
         LP0

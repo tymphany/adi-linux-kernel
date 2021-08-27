@@ -1,9 +1,8 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
  * core timer and machine init for ADI processor on-chip memory
  *
- * Copyright 2018 Analog Devices Inc.
- *
- * Licensed under the GPL-2 or later.
+ * Copyright 2020 - 2021 Analog Devices Inc.
  */
 
 #include <linux/init.h>
@@ -415,7 +414,8 @@ static void sc59x_init_ethernet(void)
 	if (IS_BUILTIN(CONFIG_PHYLIB)) {
 		/* select RGMII as the external PHY interface for EMAC0 */
 		writel((readl(__io_address(REG_PADS0_PCFG0)) |
-		        BITM_PADS_PCFG0_EMACPHYISEL | BITM_PADS_PCFG0_EMACRESET),
+		        ENUM_PADS_PCFG0_EMACPHY_RGMII |
+		        BITM_PADS_PCFG0_EMACRESET),
 		        __io_address(REG_PADS0_PCFG0));
 		/* register fixup to be run for PHYs */
 		phy_register_fixup_for_uid(DP83865_PHY_ID, 0xffffffff,
