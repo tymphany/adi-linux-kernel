@@ -150,7 +150,7 @@ struct sport_device {
 	s32 rx_frags_in_dma[SHARC_CORES_NUM];
 
 	spinlock_t icc_spinlock;
-	atomic_t in_interrupt;
+	struct mutex rpmsg_lock;
 
 	struct rpmsg_device *sharc_rpmsg[SHARC_CORES_NUM];
 
@@ -167,20 +167,17 @@ struct sport_device {
 	struct workqueue_struct *sharc_workqueue;
 
 	//can't be array due to container_of usage
-	struct work_struct sharc0_wait_playback_ack_work;
-	struct work_struct sharc0_wait_record_ack_work;
-	struct work_struct sharc1_wait_playback_ack_work;
-	struct work_struct sharc1_wait_record_ack_work;
-
+	// Works to be scheduled form rx_irq or tx_irq
 	struct work_struct sharc0_underrun_work;
 	struct work_struct sharc0_overrun_work;
+	struct work_struct sharc0_playback_frag_ready_work;
+	struct work_struct sharc0_record_frag_ready_work;
 	struct work_struct sharc1_underrun_work;
 	struct work_struct sharc1_overrun_work;
+	struct work_struct sharc1_playback_frag_ready_work;
+	struct work_struct sharc1_record_frag_ready_work;
 
-	struct completion sharc_playback_ack_complete[SHARC_CORES_NUM];
-	struct completion sharc_record_ack_complete[SHARC_CORES_NUM];
-	struct completion sharc_sync_ack_complete[SHARC_CORES_NUM];
-	int sharc_last_sync_msg[SHARC_CORES_NUM];
+	struct completion sharc_msg_ack_complete[SHARC_CORES_NUM];
 #endif
 };
 
