@@ -967,7 +967,7 @@ struct sport_device *sport_create(struct platform_device *pdev)
 
 	sport_devices[0] = sport; // TODO add multiple sport devices support
 
-	dev_info(dev, "SPORT create success\n");
+	dev_info(dev, "SPORT create success, SHARC-ALSA (PCM steram send to sharc for processing)\n");
 	return sport;
 
 err_free_data:
