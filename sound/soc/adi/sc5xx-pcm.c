@@ -204,6 +204,7 @@ static struct platform_driver sc5xx_pcm_driver = {
 	.probe = sc5xx_soc_platform_probe,
 };
 
+#if IS_ENABLED(CONFIG_SND_SC5XX_SPORT_SHARC)
 static struct rpmsg_device_id rpmsg_sharc_alsa_id_table[] = {
 	{ .name = "sharc-alsa" },
 	{ },
@@ -216,6 +217,7 @@ static struct rpmsg_driver rpmsg_sharc_alsa = {
 	.callback  = rpmsg_sharc_alsa_cb,
 	.remove    = rpmsg_sharc_alsa_remove,
 };
+#endif
 
 static int sc5xx_pcm_driver_init(void)
 {
