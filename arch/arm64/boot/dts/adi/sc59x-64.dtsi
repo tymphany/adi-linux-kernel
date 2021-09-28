@@ -69,14 +69,12 @@
 		interrupt-parent = <&gic>;
 	};
 
-
 	gic: interrupt-controller@31200000 {
-		/*compatible = "arm,cortex-a5-gic", "arm,cortex-a9-gic";*/
 		compatible = "arm,gic-v3";
 		#interrupt-cells = <3>;
-		#address-cells = <0>;
 		interrupt-controller;
-		reg = <0x31200000 0x80000>;
+		reg = <0x31200000 0x40000>, /* GIC Dist */
+		      <0x31240000 0x40000>; /* GICR */
 	};
 
 	sram0: sram-icc@20000000 { /* ICC SRAM 4KB */
