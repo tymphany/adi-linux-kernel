@@ -1362,178 +1362,58 @@ module_init(adi_uart4_serial_init);
 module_exit(adi_uart4_serial_exit);
 
 
+/* Early Console Support */
 
+#define STAT_OFFSET	0x08
+#define THR_OFFSET	0x24
+#define THRE		(1 << 5)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#ifdef NEVER
-
-/*
- * Copyright (C) 2013 Analog Devices Inc.
- * Licensed under the GPL-2 or later.
- */
-
-#include <common.h>
-#include <post.h>
-#include <watchdog.h>
-#include <serial.h>
-#include <asm/io.h>
-#include <linux/compiler.h>
-#include <adi_uart4.h>
-
-DECLARE_GLOBAL_DATA_PTR;
-
-#define CONSOLE_PORT CONFIG_UART_CONSOLE
-
-unsigned int baudrate = CONFIG_BAUDRATE;
-static void uart_setbrg(void);
-
-static inline int uart_init(void)
+static inline u32 adi_uart_read(struct uart_port *port, u32 off)
 {
-	struct uart4_reg *regs = adi_uart4_get_regs(CONSOLE_PORT);
-	unsigned short *pins = adi_uart4_get_pins(CONSOLE_PORT);
-
-	if (peripheral_request_list(pins, "adi-uart4"))
-		return -1;
-
-	/* always enable UART to 8-bit mode */
-	writel(UEN | UMOD_UART | WLS_8, &regs->control);
-
-	uart_setbrg();
-	writel(-1, &regs->status);
-
-	return 0;
+	return readl(port->membase + off);
 }
 
-static inline int uart_uninit(void)
+static inline void adi_uart_write(struct uart_port *port, u32 val,
+				  u32 off)
 {
-	struct uart4_reg *regs = adi_uart4_get_regs(CONSOLE_PORT);
-	unsigned short *pins = adi_uart4_get_pins(CONSOLE_PORT);
-
-	/* disable the UART by clearing UEN */
-	writel(0, &regs->control);
-
-	peripheral_free_list(pins);
-
-	return 0;
+	writel(val, port->membase + off);
 }
 
-static void serial_set_divisor(uint16_t divisor)
+
+static void adi_uart_wait_bit_set(struct uart_port *port, unsigned int offset,
+				  u32 bit)
 {
-	struct uart4_reg *regs = adi_uart4_get_regs(CONSOLE_PORT);
-	/* Program the divisor to get the baud rate we want */
-	writel(divisor, &regs->clock);
+	while (!(adi_uart_read(port, offset) & bit))
+		cpu_relax();
 }
 
-void uart_putc(const char c)
+
+static void adi_uart_console_putchar(struct uart_port *port, int ch)
 {
-	struct uart4_reg *regs = adi_uart4_get_regs(CONSOLE_PORT);
-	/* send a \r for compatibility */
-	if (c == '\n')
-		uart_putc('\r');
-
-	WATCHDOG_RESET();
-
 	/* wait for the hardware fifo to clear up */
-	while (!(readl(&regs->status) & THRE))
-		continue;
+	adi_uart_wait_bit_set(port, STAT_OFFSET, THRE);
 
 	/* queue the character for transmission */
-	writel(c, &regs->thr);
-
-	WATCHDOG_RESET();
+	adi_uart_write(port, ch, THR_OFFSET);
 }
 
-static int uart_tstc(void)
+
+static void adi_uart_early_write(struct console *con, const char *s, unsigned n)
 {
-	struct uart4_reg *regs = adi_uart4_get_regs(CONSOLE_PORT);
+	struct earlycon_device *dev = con->data;
 
-	WATCHDOG_RESET();
-
-	return (readl(&regs->status) & DR) ? 1 : 0;
+	uart_console_write(&dev->port, s, n, adi_uart_console_putchar);
 }
 
-static int uart_getc(void)
+
+static int __init adi_uart_early_console_setup(struct earlycon_device *device,
+					  const char *opt)
 {
-	struct uart4_reg *regs = adi_uart4_get_regs(CONSOLE_PORT);
-	u32 uart_rbr_val;
+	if (!device->port.membase)
+		return -ENODEV;
 
-	/* wait for data ! */
-	while (!uart_tstc())
-		continue;
-
-	/* grab the new byte */
-	uart_rbr_val = readl(&regs->rbr);
-	writel(-1, &regs->status);
-
-	return uart_rbr_val;
+	device->con->write = adi_uart_early_write;
+	return 0;
 }
 
-static void uart_setbrg(void)
-{
-	uint16_t divisor = (get_uart_clk() + (baudrate * 8)) / (baudrate * 16);
-	baudrate = gd->baudrate;
-
-	/* Program the divisor to get the baud rate we want */
-	serial_set_divisor(divisor);
-}
-
-struct serial_device adi_serial_device = {
-	.name   = "adi_uart4",
-	.start  = uart_init,
-	.stop   = uart_uninit,
-	.setbrg = uart_setbrg,
-	.getc   = uart_getc,
-	.tstc   = uart_tstc,
-	.putc   = uart_putc,
-	.puts   = default_serial_puts,
-};
-
-__weak struct serial_device *default_serial_console(void)
-{
-	return &adi_serial_device;
-}
-
-void adi_uart4_serial_initialize(void)
-{
-	serial_register(&adi_serial_device);
-}
-
-#endif
+EARLYCON_DECLARE(adi_uart, adi_uart_early_console_setup);
