@@ -16,9 +16,9 @@
 
 	chosen { };
 
-/*
 	aliases {
 		serial0 = &uart0;
+/*
 		timer0 = &gptimer0;
 		timer1 = &gptimer1;
 		timer2 = &gptimer2;
@@ -40,8 +40,9 @@
 		rtc0 = &rtc0;
 		i2s0 = &i2s0;
 		mmc0 = &mmc0;
-	};
 */
+	};
+
 
 	cpus {
 		#address-cells = <0x1>;

@@ -752,6 +752,12 @@ static void adi_uart4_serial_shutdown(struct uart_port *port)
 static void adi_uart4_serial_set_termios(struct uart_port *port,
 		struct ktermios *termios, struct ktermios *old)
 {
+
+	#ifdef CONFIG_ARCH_SC59X_64
+		//Clock configuration not yet available for UART
+		return;
+	#endif
+
 	struct adi_uart4_serial_port *uart =
 		container_of(port, struct adi_uart4_serial_port, port);
 	unsigned long flags;
@@ -1059,6 +1065,12 @@ adi_uart4_serial_console_write(struct console *co, const char *s, unsigned int c
 static int __init
 adi_uart4_serial_console_setup(struct console *co, char *options)
 {
+
+	#ifdef CONFIG_ARCH_SC59X_64
+		//Clock configuration not yet available for UART
+		return 0;
+	#endif
+
 	struct adi_uart4_serial_port *uart;
 	int baud = 57600;
 	int bits = 8;
@@ -1111,7 +1123,12 @@ static struct uart_driver adi_uart4_serial_reg = {
 	.driver_name		= DRIVER_NAME,
 	.dev_name		= "ttySC",
 	.major			= TTY_MAJOR,
+#ifdef CONFIG_ARCH_SC59X_64
+	//Other serial drivers are using 64 -- can probably disable in the future and set this back to 64
+	.minor			= 74,
+#else
 	.minor			= 64,
+#endif
 	.nr			= ADI_UART_NR_PORTS,
 	.cons			= ADI_SERIAL_UART4_CONSOLE,
 };
@@ -1160,10 +1177,14 @@ static int adi_uart4_serial_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	clk = clk_get(&pdev->dev, "adi-uart4");
-	if (IS_ERR(clk)) {
-		return -ENODEV;
-	}
+	#ifdef CONFIG_ARCH_SC59X_64
+		//Clock configuration not yet available for UART
+	#else
+		clk = clk_get(&pdev->dev, "adi-uart4");
+		if (IS_ERR(clk)) {
+			return -ENODEV;
+		}
+	#endif
 
 	if (adi_uart4_serial_ports[uartid] == NULL) {
 
