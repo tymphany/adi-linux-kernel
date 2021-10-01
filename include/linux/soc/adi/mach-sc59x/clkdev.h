@@ -24,17 +24,10 @@
 # define CONFIG_CCLK_DIV 8
 #endif
 
-struct clk_ops {
-	void                    (*enable)(struct clk *);
-	void                    (*disable)(struct clk *);
-	unsigned long           (*get_rate)(struct clk *);
-	unsigned long           (*set_rate)(struct clk *, unsigned long);
-};
-
-struct clk {
+struct clk_adi {
 	const char *name;
-	const struct clk_ops	*ops;
-	struct clk              *parent;
+	const struct clk_ops_adi	*ops;
+	struct clk_adi              *parent;
 	unsigned long		rate;
 	const struct icst_params *params;
 	void __iomem		*reg;
@@ -43,8 +36,17 @@ struct clk {
 	unsigned long		flags;
 };
 
-#define __clk_get(clk) ({ 1; })
-#define __clk_put(clk) do { } while (0)
+struct clk_ops_adi {
+	void                    (*enable)(struct clk_adi * a);
+	void                    (*disable)(struct clk_adi * a);
+	unsigned long           (*get_rate)(struct clk_adi * a);
+	unsigned long           (*set_rate)(struct clk_adi * a, unsigned long b);
+};
+
+struct clk_lookup_adi {
+	const char		*con_id;
+	struct clk_adi		*clk_adi;
+};
 
 extern u_long get_sclk(void);
 extern u_long get_cclk(void);

@@ -37,8 +37,8 @@ static DEFINE_SPINLOCK(gptimers_lock);
 #define GPTIMER_WID_OFF   0xC
 #define GPTIMER_DLY_OFF   0x10
 
-static struct gptimer3_group_regs* const group_base = __io_address(TIMER_GROUP);
-static struct gptimer3* const timer0_base = __io_address(TIMER0_CONFIG);
+static struct gptimer3_group_regs* group_base = NULL;
+static struct gptimer3* timer0_base = NULL;
 
 void set_gptimer_pwidth(struct sc59x_gptimer *timer, uint32_t value)
 {
@@ -97,6 +97,16 @@ static void _disable_gptimers(uint16_t mask)
 	writew(mask, &group_base->disable);
 }
 
+void map_gptimers(void)
+{
+	if(group_base == NULL)
+		group_base = ioremap(TIMER_GROUP, sizeof(struct gptimer3_group_regs));
+
+	if(timer0_base == NULL)
+		timer0_base = ioremap(TIMER0_CONFIG, sizeof(struct gptimer3));
+}
+EXPORT_SYMBOL(map_gptimers);
+
 void disable_gptimers(uint16_t mask)
 {
 	set_gptimer_stopcfg(mask);
@@ -152,6 +162,8 @@ static int sc59x_gptimer_probe(struct platform_device *pdev)
 	int irq;
 	struct resource *mem;
 	struct device *dev = &pdev->dev;
+
+	map_gptimers();
 
 	if (!dev->of_node) {
 		dev_err(dev, "%s: no platform device.\n", __func__);

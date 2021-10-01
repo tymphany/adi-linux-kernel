@@ -13,15 +13,18 @@
 #include <linux/errno.h>
 #include <linux/clk.h>
 #include <linux/clkdev.h>
+#include <linux/clk-provider.h>
 #include <linux/mutex.h>
 #ifdef CONFIG_ARCH_SC59X_64
 #include <linux/soc/adi/mach-sc59x/hardware.h>
 #include <linux/soc/adi/mach-sc59x/sc59x.h>
 #include <linux/soc/adi/mach-sc59x/clkdev.h>
+#include <linux/soc/adi/mach-sc59x/cpu.h>
 #else
 #include <mach/clkdev.h>
 #include <mach/hardware.h>
 #include <mach/sc59x.h>
+#include <mach/cpu.h>
 #endif
 
 #define NEEDS_INITIALIZATION     BIT(2)
@@ -67,54 +70,22 @@
 	(CONFIG_SCLK0_DIV  << CGU0_DIV_S0SEL_SHIFT) | \
 	(CONFIG_SCLK1_DIV  << CGU0_DIV_S1SEL_SHIFT))
 
-/*
-int clk_enable(struct clk *clk)
-{
-	return 0;
-}
-EXPORT_SYMBOL(clk_enable);
-*/
+static u32 __iomem * cgu0_stat, * cgu0_div, * cgu0_ctl;
 
-/*
-void clk_disable(struct clk *clk)
-{
-}
-EXPORT_SYMBOL(clk_disable);
-*/
-
-/*
-unsigned long clk_get_rate(struct clk *clk)
+unsigned long clk_get_rate_adi(struct clk_adi *clk_adi)
 {
 	unsigned long ret = 0;
 
-	if (clk->ops && clk->ops->get_rate)
-		ret = clk->ops->get_rate(clk);
-	clk->rate = ret;
+	if(clk_adi->rate)
+		return clk_adi->rate;
 
-	return clk->rate;
+	if (clk_adi->ops && clk_adi->ops->get_rate)
+		ret = clk_adi->ops->get_rate(clk_adi);
+	clk_adi->rate = ret;
+
+	return clk_adi->rate;
 }
-EXPORT_SYMBOL(clk_get_rate);
-
-long clk_round_rate(struct clk *clk, unsigned long rate)
-{
-	long ret = -EIO;
-	return ret;
-}
-EXPORT_SYMBOL(clk_round_rate);
-
-int clk_set_rate(struct clk *clk, unsigned long rate)
-{
-	int ret = -EIO;
-	if (clk->ops && clk->ops->set_rate)
-		ret = clk->ops->set_rate(clk, rate);
-
-	if (!ret)
-		clk->rate = rate;
-
-	return ret;
-}
-EXPORT_SYMBOL(clk_set_rate);
-*/
+EXPORT_SYMBOL(clk_get_rate_adi);
 
 static void clk_reg_write_mask(void __iomem *reg, uint32_t val, uint32_t mask)
 {
@@ -130,10 +101,10 @@ int wait_for_pll_align(void)
 {
 	int i = 10000;
 	while (i-- &&
-		(readl(__io_address(REG_CGU0_STAT)) & CGU0_STAT_CLKSALGN))
+		(readl(cgu0_stat) & CGU0_STAT_CLKSALGN))
 			continue;
 
-	if (readl(__io_address(REG_CGU0_STAT)) & CGU0_STAT_CLKSALGN) {
+	if (readl(cgu0_stat) & CGU0_STAT_CLKSALGN) {
 		pr_crit(KERN_CRIT "fail to align clk\n");
 		return -1;
 	}
@@ -144,11 +115,11 @@ int wait_for_pll_align(void)
 /*
  * These are fixed clocks.
  */
-void dummy_enable(struct clk *clk)
+void dummy_enable(struct clk_adi *clk)
 {
 }
 
-unsigned long dummy_get_rate(struct clk *clk)
+unsigned long dummy_get_rate(struct clk_adi *clk)
 {
 	if (!clk->parent)
 		return 0;
@@ -159,12 +130,12 @@ unsigned long dummy_get_rate(struct clk *clk)
 	return clk->rate;
 }
 
-unsigned long pll_get_rate(struct clk *clk)
+unsigned long pll_get_rate(struct clk_adi *clk)
 {
 	u32 df;
 	u32 msel;
-	u32 ctl = readl(__io_address(REG_CGU0_CTL));
-	u32 stat = readl(__io_address(REG_CGU0_STAT));
+	u32 ctl = readl(cgu0_ctl);
+	u32 stat = readl(cgu0_stat);
 
 	if (!clk->parent)
 		return 0;
@@ -177,17 +148,17 @@ unsigned long pll_get_rate(struct clk *clk)
 	return clk->parent->rate / (df + 1) * msel;
 }
 
-unsigned long pll_round_rate(struct clk *clk, unsigned long rate)
+unsigned long pll_round_rate(struct clk_adi *clk, unsigned long rate)
 {
 	u32 div;
 	div = rate / clk->parent->rate;
 	return clk->parent->rate * div;
 }
 
-unsigned long pll_set_rate(struct clk *clk, unsigned long rate)
+unsigned long pll_set_rate(struct clk_adi *clk, unsigned long rate)
 {
 	u32 msel;
-	u32 stat = readl(__io_address(REG_CGU0_STAT));
+	u32 stat = readl(cgu0_stat);
 
 	if (!(stat & CGU0_STAT_PLLEN))
 		return -EBUSY;
@@ -196,28 +167,27 @@ unsigned long pll_set_rate(struct clk *clk, unsigned long rate)
 	if (wait_for_pll_align())
 		return -EBUSY;
 	msel = rate / clk->parent->rate / 2;
-	clk_reg_write_mask(__io_address(REG_CGU0_CTL),
+	clk_reg_write_mask(cgu0_ctl,
 			msel << CGU0_CTL_MSEL_SHIFT,
 			CGU0_CTL_MSEL_MASK);
 	clk->rate = rate;
 	return 0;
 }
 
-unsigned long sys_clk_get_rate(struct clk *clk)
+unsigned long sys_clk_get_rate(struct clk_adi *clk)
 {
-	u32 div = readl(__io_address(REG_CGU0_DIV));
-
+	u32 div = readl(cgu0_div);
 	div = (div & clk->mask) >> clk->shift;
 	if (div == 0)
 		div = clk->mask - 1;
 
-	return clk_get_rate(clk->parent) / div;
+	return clk_get_rate_adi(clk->parent) / div;
 }
 
-unsigned long sys_clk_set_rate(struct clk *clk, unsigned long rate)
+unsigned long sys_clk_set_rate(struct clk_adi *clk, unsigned long rate)
 {
 	u32 csel;
-	u32 stat = readl(__io_address(REG_CGU0_STAT));
+	u32 stat = readl(cgu0_stat);
 
 	if (!(stat & CGU0_STAT_PLLEN))
 		return -EBUSY;
@@ -233,50 +203,50 @@ unsigned long sys_clk_set_rate(struct clk *clk, unsigned long rate)
 
 	pr_debug("%s rate %ld csel %x\n", clk->name, rate, csel);
 
-	clk_reg_write_mask(__io_address(REG_CGU0_DIV),
+	clk_reg_write_mask(cgu0_div,
 			csel << clk->shift,
 			clk->mask);
 
 	return 0;
 }
 
-static struct clk_ops dummy_clk_ops = {
+static struct clk_ops_adi dummy_clk_ops = {
 	.enable = dummy_enable,
 	.get_rate = dummy_get_rate,
 };
 
-static struct clk_ops pll_ops = {
+static struct clk_ops_adi pll_ops = {
 	.enable = dummy_enable,
 	.get_rate = pll_get_rate,
 	.set_rate = pll_set_rate,
 };
 
-static struct clk_ops sys_clk_ops = {
+static struct clk_ops_adi sys_clk_ops = {
 	.enable = dummy_enable,
 	.get_rate = sys_clk_get_rate,
 	.set_rate = sys_clk_set_rate,
 };
 
-static struct clk vco_clk = {
+static struct clk_adi vco_clk = {
 	.name = "VCO_CLK",
 	.rate	= 25000000,
 };
 
-static struct clk cgu0_pll_clk = {
+static struct clk_adi cgu0_pll_clk = {
 	.name = "CGU0_PLL",
 	.parent = &vco_clk,
 	.ops = &pll_ops,
 	.flags = NEEDS_INITIALIZATION,
 };
 
-static struct clk cgu1_pll_clk = {
+static struct clk_adi cgu1_pll_clk = {
 	.name = "CGU1_PLL",
 	.parent = &vco_clk,
 	.ops = &pll_ops,
 	.flags = NEEDS_INITIALIZATION,
 };
 
-static struct clk cgu0_cclk = {
+static struct clk_adi cgu0_cclk = {
 	.name = "CGU0_CCLK",
 	.parent = &cgu0_pll_clk,
 	.ops = &sys_clk_ops,
@@ -285,7 +255,7 @@ static struct clk cgu0_cclk = {
 	.shift      = CGU0_DIV_CSEL_SHIFT,
 };
 
-static struct clk cgu0_sysclk = {
+static struct clk_adi cgu0_sysclk = {
 	.name = "CGU0_SYSCLK",
 	.parent = &cgu0_pll_clk,
 	.ops = &sys_clk_ops,
@@ -294,7 +264,7 @@ static struct clk cgu0_sysclk = {
 	.shift      = CGU0_DIV_SYSSEL_SHIFT,
 };
 
-static struct clk cgu0_sys0_clk = {
+static struct clk_adi cgu0_sys0_clk = {
 	.name = "CGU0_SYS0",
 	.parent = &cgu0_sysclk,
 	.ops = &sys_clk_ops,
@@ -303,7 +273,7 @@ static struct clk cgu0_sys0_clk = {
 	.shift      = CGU0_DIV_S0SEL_SHIFT,
 };
 
-static struct clk cgu0_sys1_clk = {
+static struct clk_adi cgu0_sys1_clk = {
 	.name = "CGU0_SYS1",
 	.parent = &cgu0_sysclk,
 	.ops = &sys_clk_ops,
@@ -312,7 +282,7 @@ static struct clk cgu0_sys1_clk = {
 	.shift      = CGU0_DIV_S1SEL_SHIFT,
 };
 
-static struct clk cgu0_dclk = {
+static struct clk_adi cgu0_dclk = {
 	.name = "CGU0_DCLK",
 	.parent = &cgu0_pll_clk,
 	.ops = &sys_clk_ops,
@@ -321,7 +291,7 @@ static struct clk cgu0_dclk = {
 	.shift      = CGU0_DIV_DSEL_SHIFT,
 };
 
-static struct clk cgu0_oclk = {
+static struct clk_adi cgu0_oclk = {
 	.name = "CGU0_OCLK",
 	.parent = &cgu0_pll_clk,
 	.ops = &sys_clk_ops,
@@ -330,83 +300,89 @@ static struct clk cgu0_oclk = {
 	.shift      = CGU0_DIV_OSEL_SHIFT,
 };
 
-static struct clk uartclk = {
+static struct clk_adi uartclk = {
+	.name = "UARTCLK",
 	.parent = &cgu0_sys0_clk,
 	.ops = &dummy_clk_ops,
 };
 
-static struct clk canclk = {
+static struct clk_adi canclk = {
+	.name = "CANCLK",
 	.parent = &cgu0_sys0_clk,
 	.ops = &dummy_clk_ops,
 };
 
-static struct clk spiclk = {
+static struct clk_adi spiclk = {
+	.name = "SPICLK",
 	.parent = &cgu0_sys0_clk,
 	.ops = &dummy_clk_ops,
 };
 
-static struct clk wdtclk = {
+static struct clk_adi wdtclk = {
+	.name = "WDTCLK",
 	.parent = &cgu0_sys0_clk,
 	.ops = &dummy_clk_ops,
 };
 
-static struct clk stmmacclk = {
+static struct clk_adi stmmacclk = {
+	.name = "STMMACCLK",
 	.parent = &cgu0_sys0_clk,
 	.ops = &dummy_clk_ops,
 };
 
-static struct clk msiclk = {
+static struct clk_adi msiclk = {
+	.name = "MSICLK",
 	.rate	= 50000000,
 	.parent = &cgu0_sys0_clk,
 	.ops = &dummy_clk_ops,
 };
 
-static struct clk_lookup lookups[] = {
+static struct clk_lookup_adi lookups[] = {
 	{	/* fpga core clock */
 		.con_id		= "vco_clk",
-		.clk		= &vco_clk,
+		.clk_adi		= &vco_clk,
 	}, {	/* AMBA bus clock */
 		.con_id		= "cgu0_pll_clk",
-		.clk		= &cgu0_pll_clk,
+		.clk_adi		= &cgu0_pll_clk,
 	}, {
 		.con_id		= "cgu0_sysclk",
-		.clk		= &cgu0_sysclk,
+		.clk_adi		= &cgu0_sysclk,
 	}, {
 		.con_id		= "cgu0_cclk",
-		.clk		= &cgu0_cclk,
+		.clk_adi		= &cgu0_cclk,
 	}, {
 		.con_id		= "cgu0_sys0_clk",
-		.clk		= &cgu0_sys0_clk,
+		.clk_adi		= &cgu0_sys0_clk,
 	}, {
 		.con_id		= "cgu0_dclk",
-		.clk		= &cgu0_dclk,
+		.clk_adi		= &cgu0_dclk,
 	}, {
 		.con_id		= "cgu0_oclk",
-		.clk		= &cgu0_oclk,
+		.clk_adi		= &cgu0_oclk,
 	}, {	/* UART0 */
 		.con_id		= "adi-uart4",
-		.clk		= &uartclk,
+		.clk_adi		= &uartclk,
 	}, {	/*CAN*/
 		.con_id		= "can",
-		.clk		= &canclk,
+		.clk_adi		= &canclk,
 	}, {
 		.con_id         = "spi",
-		.clk            = &spiclk,
+		.clk_adi            = &spiclk,
 	},
 	{	/* Watchdog */
 		.con_id		= "adi-watchdog",
-		.clk		= &wdtclk,
+		.clk_adi		= &wdtclk,
 	}, {
 		/* MSI biu clock*/
 		.con_id		= "biu",
-		.clk		= &cgu0_sys0_clk,
+		.clk_adi		= &cgu0_sys0_clk,
 	}, {
 		/* MSI ciu clock*/
 		.con_id		= "ciu",
-		.clk		= &msiclk,
+		.clk_adi		= &msiclk,
 	}, {
 		.con_id		= "stmmaceth",
-		.clk		= &stmmacclk,
+		.clk_adi		= &stmmacclk,
 	}
 
 };
@@ -431,14 +407,13 @@ EXPORT_SYMBOL(get_sclk);
 static void dump_init_clock_rate(void)
 {
 	int i;
-	struct clk *clkp;
+	struct clk_adi *clkp;
 
-	pr_info("dump init clock rate\n");
+	pr_info("Analog Devices - Clocks\n");
 	for (i = 0; i < ARRAY_SIZE(lookups); i++) {
-		clkp = lookups[i].clk;
-		if (clkp->flags & NEEDS_INITIALIZATION)
-			pr_info("%s %ld MHz\n", clkp->name,
-				clk_get_rate(clkp) / 1000000);
+		clkp = lookups[i].clk_adi;
+		pr_info("   %s %ld MHz\n", clkp->name,
+			clk_get_rate_adi(clkp) / 1000000);
 	}
 }
 
@@ -448,7 +423,7 @@ static void init_cgu(u32 cgu_div)
 	u32 div;
 	u32 mask;
 
-	stat = readl(__io_address(REG_CGU0_STAT));
+	stat = readl(cgu0_stat);
 	if (!(stat & CGU0_STAT_PLLEN))
 		return;
 	if (!(stat & CGU0_STAT_PLLLK))
@@ -458,11 +433,11 @@ static void init_cgu(u32 cgu_div)
 
 	mask = CGU0_DIV_CSEL_MASK | CGU0_DIV_SYSSEL_MASK |
 		CGU0_DIV_S0SEL_MASK | CGU0_DIV_S1SEL_MASK;
-	div = readl(__io_address(REG_CGU0_DIV));
+	div = readl(cgu0_div);
 	if ((div & mask) == cgu_div)
 		return;
 	div &= ~mask;
-	writel(div | cgu_div | CGU0_DIV_UPDT, __io_address(REG_CGU0_DIV));
+	writel(div | cgu_div | CGU0_DIV_UPDT, cgu0_div);
 	if (wait_for_pll_align())
 		return;
 }
@@ -470,15 +445,21 @@ static void init_cgu(u32 cgu_div)
 void __init sc59x_clock_init(void)
 {
 	int i;
-	struct clk *clkp;
+	struct clk_adi *clkp;
+	struct clk_hw *hw;
+
+	cgu0_stat = ioremap(REG_CGU0_STAT, 4);
+	cgu0_div = ioremap(REG_CGU0_DIV, 4);
+	cgu0_ctl = ioremap(REG_CGU0_CTL, 4);
+	map_gptimers();
 
 	init_cgu(CGU_DIV_VAL);
 
 	for (i = 0; i < ARRAY_SIZE(lookups); i++) {
-		clkp = lookups[i].clk;
-		if (clkp->flags & NEEDS_INITIALIZATION)
-			clk_get_rate(clkp);
+		clkp = lookups[i].clk_adi;
+		hw = clk_hw_register_fixed_rate(NULL, lookups[i].con_id, NULL, 0, clk_get_rate_adi(clkp));
+		clk_hw_register_clkdev(hw, lookups[i].con_id, NULL);
 	}
+
 	dump_init_clock_rate();
-	clkdev_add_table(lookups, ARRAY_SIZE(lookups));
 }

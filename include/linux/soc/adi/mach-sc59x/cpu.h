@@ -96,6 +96,7 @@ uint32_t get_gptimer_count(struct sc59x_gptimer *timer);
 void     set_gptimer_config(struct sc59x_gptimer *timer, uint16_t config);
 void     enable_gptimers(uint16_t mask);
 void     disable_gptimers(uint16_t mask);
+void     map_gptimers(void);
 uint16_t get_gptimer_status(void);
 void     set_gptimer_status(uint16_t value);
 void     set_spu_securep_msec(uint16_t n, bool msec);

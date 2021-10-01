@@ -602,7 +602,7 @@ irqreturn_t gptmr_interrupt(int irq, void *dev_id)
 
 static struct irqaction gptmr_irq = {
 	.name           = "SC58x GPTimer0",
-	.flags          = IRQF_TIMER | IRQF_IRQPOLL,
+	.flags          = IRQF_TIMER | IRQF_IRQPOLL | IRQF_PROBE_SHARED,
 	.handler        = gptmr_interrupt,
 };
 
@@ -697,3 +697,34 @@ void __init sc59x_timer_init(void)
 	gptmr_clockevent_init(&clockevent_gptmr);
 
 }
+
+#ifdef CONFIG_ARCH_SC59X_64
+static bool timer_initialized = 0;
+static int __init sc59x_arch_timer_of_init(struct device_node *np){
+	//There's two adi,sc59x-timer-core entries in the device tree -- sc59x_timer_init() handles them both
+	//Don't let TIMER_OF_DECLARE call sc59x_timer_init() twice
+	if(!timer_initialized){
+		sc59x_clock_init();
+		sc59x_timer_init();
+		timer_initialized = 1;
+	}
+	return 0;
+}
+
+//#define CONFIG_ADI_USE_ARMV8_TIMER
+u32 adi_timer_get_rate(void)
+{
+	//Use ARMv8 Generic Timer
+	#ifdef ADI_USE_ARMV8_TIMER
+		return arch_timer_get_rate();
+	#else
+		return get_sclk();
+	#endif
+}
+EXPORT_SYMBOL(adi_timer_get_rate);
+
+#ifndef ADI_USE_ARMV8_TIMER
+TIMER_OF_DECLARE(sc59x_arch_timer, "adi,sc59x-timer-core", sc59x_arch_timer_of_init);
+#endif
+
+#endif
