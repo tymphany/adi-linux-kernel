@@ -218,6 +218,7 @@ config ARCH_SC59X_64
 	select TIMER_OF
 	select GPIOLIB
 	select PINCTRL
+	select PINCTRL_SC59x
 	select SERIAL_ADI_UART4
 	help
 		This enables support for Analog Devices Incorporated's

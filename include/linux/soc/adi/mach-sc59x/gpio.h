@@ -21,27 +21,27 @@
  * gpio port registers layout
  */
 struct gpio_port_t {
-	unsigned long port_fer;
-	unsigned long port_fer_set;
-	unsigned long port_fer_clear;
-	unsigned long data;
-	unsigned long data_set;
-	unsigned long data_clear;
-	unsigned long dir;
-	unsigned long dir_set;
-	unsigned long dir_clear;
-	unsigned long inen;
-	unsigned long inen_set;
-	unsigned long inen_clear;
-	unsigned long port_mux;
-	unsigned long toggle;
-	unsigned long polar;
-	unsigned long polar_set;
-	unsigned long polar_clear;
-	unsigned long lock;
-	unsigned long spare;
-	unsigned long padding[12];
-	unsigned long revid;
+	u32 port_fer;
+	u32 port_fer_set;
+	u32 port_fer_clear;
+	u32 data;
+	u32 data_set;
+	u32 data_clear;
+	u32 dir;
+	u32 dir_set;
+	u32 dir_clear;
+	u32 inen;
+	u32 inen_set;
+	u32 inen_clear;
+	u32 port_mux;
+	u32 toggle;
+	u32 polar;
+	u32 polar_set;
+	u32 polar_clear;
+	u32 lock;
+	u32 spare;
+	u32 padding[12];
+	u32 revid;
 };
 
 /*

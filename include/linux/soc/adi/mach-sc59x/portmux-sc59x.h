@@ -7,8 +7,14 @@
 
 #ifndef _PORTMUX_SC59X_H_
 #define _PORTMUX_SC59X_H_
+
+#ifdef CONFIG_ARCH_SC59X_64
+#include <linux/soc/adi/mach-sc59x/gpio.h>
+#include <linux/soc/adi/mach-sc59x/portmux.h>
+#else
 #include <mach/gpio.h>
 #include <mach/portmux.h>
+#endif
 
 #define PORTA_FER         0x31004000
 #define PORTB_FER         0x31004080
@@ -265,5 +271,19 @@
 #define P_CNT_CZM           (P_DEFINED | P_IDENT(GPIO_PB11) | P_FUNCT(4))
 #define P_CNT_CUD           (P_DEFINED | P_IDENT(GPIO_PB12) | P_FUNCT(4))
 #define P_CNT_CDG           (P_DEFINED | P_IDENT(GPIO_PB14) | P_FUNCT(4))
+
+/* USB Controller Port Mux */
+#define P_USBC0_STOP	(P_DEFINED | P_IDENT(GPIO_PF3) | P_FUNCT(2))
+#define P_USBC0_DATA7	(P_DEFINED | P_IDENT(GPIO_PF4) | P_FUNCT(2))
+#define P_USBC0_DATA6	(P_DEFINED | P_IDENT(GPIO_PF5) | P_FUNCT(2))
+#define P_USBC0_DATA5	(P_DEFINED | P_IDENT(GPIO_PF6) | P_FUNCT(2))
+#define P_USBC0_DATA4	(P_DEFINED | P_IDENT(GPIO_PF7) | P_FUNCT(2))
+#define P_USBC0_NXT	(P_DEFINED | P_IDENT(GPIO_PF8) | P_FUNCT(2))
+#define P_USBC0_DIR	(P_DEFINED | P_IDENT(GPIO_PF9) | P_FUNCT(2))
+#define P_USBC0_DATA3	(P_DEFINED | P_IDENT(GPIO_PF10) | P_FUNCT(2))
+#define P_USBC0_DATA2	(P_DEFINED | P_IDENT(GPIO_PF11) | P_FUNCT(2))
+#define P_USBC0_DATA1	(P_DEFINED | P_IDENT(GPIO_PF12) | P_FUNCT(2))
+#define P_USBC0_DATA0	(P_DEFINED | P_IDENT(GPIO_PF13) | P_FUNCT(2))
+#define P_USBC0_CLK	(P_DEFINED | P_IDENT(GPIO_PF14) | P_FUNCT(2))
 
 #endif				/* _PORTMUX_H_ */

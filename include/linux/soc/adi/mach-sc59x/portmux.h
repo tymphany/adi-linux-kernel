@@ -33,6 +33,11 @@ void pinmux_free_list(const unsigned short per[]);
 #include <linux/err.h>
 #include <linux/pinctrl/pinctrl.h>
 #include <linux/gpio.h>
+
+#ifdef CONFIG_ARCH_SC59X_64
+#include <linux/soc/adi/mach-sc59x/sc59x.h>
+#else
 #include <mach/sc59x.h>
+#endif
 
 #endif				/* _PORTMUX_H_ */
