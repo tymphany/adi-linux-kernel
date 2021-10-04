@@ -474,13 +474,23 @@ static void __iomem *spu_base;
 
 void set_spu_securep_msec(uint16_t n, bool msec)
 {
-	void __iomem *p = (void __iomem *)(spu_base + 0xA00 + 4 * n);
-	u32 securep = ioread32(p);
+#ifdef CONFIG_ARCH_SC59X_64
+	//This throws a data abort right now.
+	//I assume the SPU is inaccessible from EL1.
+	//If we need to adjust this from kernel-space,
+	//this will have to be a secure monitor call (optee?)
+#else
+	void __iomem *p;
+	u32 securep;
+
+	p = (void __iomem *)(spu_base + 0xA00 + 4 * n);
+	securep = ioread32(p);
 
 	if (msec)
 		iowrite32(securep | 0x3, p);
 	else
 		iowrite32(securep & ~0x3, p);
+#endif
 }
 EXPORT_SYMBOL(set_spu_securep_msec);
 
