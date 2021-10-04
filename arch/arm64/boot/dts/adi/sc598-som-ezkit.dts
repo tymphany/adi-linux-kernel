@@ -30,3 +30,46 @@
 	pinctrl-1 = <&uart0_hwflow>;
 	status = "okay";
 };
+
+&spi2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi2_quad>;
+	status = "okay";
+
+	flash: is25lp512@0 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "is25lp512", "jedec,spi-nor";
+		spi-max-frequency = <5000000>;
+		reg = <5>;
+		spi-cpol;
+		spi-cpha;
+		spi-rx-bus-width = <4>;
+
+		partition@0 {
+			label = "U-Boot";
+			reg = <0x0 0x80000>;
+		};
+
+		partition@1 {
+			label = "U-Boot Environment";
+			reg = <0x80000 0x20000>;
+		};
+
+		partition@2 {
+			label = "Device Tree Blob";
+			reg = <0xA0000 0x20000>;
+		};
+
+		partition@3 {
+			label = "Kernel zImage";
+			reg = <0xC0000 0xF00000>;
+		};
+
+		partition@4 {
+			label = "JFFS2 Formatted RFS";
+			reg = <0xFC0000 0x3040000>;
+		};
+
+	};
+};

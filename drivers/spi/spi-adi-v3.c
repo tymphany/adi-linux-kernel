@@ -31,8 +31,13 @@
 #include <linux/types.h>
 
 #ifdef CONFIG_ARCH_HEADER_IN_MACH
+#ifdef CONFIG_ARCH_SC59X_64
+#include <linux/soc/adi/mach-sc59x/dma.h>
+#include <linux/soc/adi/mach-sc59x/portmux.h>
+#else
 #include <mach/dma.h>
 #include <mach/portmux.h>
+#endif
 #else
 #include <asm/dma.h>
 #include <asm/portmux.h>
