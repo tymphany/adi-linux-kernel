@@ -26,8 +26,8 @@
 		timer5 = &gptimer5;
 		timer6 = &gptimer6;
 		timer7 = &gptimer7;
-/*
 		ethernet0 = &emac0;
+/*
 		ethernet1 = &emac1;
 		spi0   = &spi0;
 		spi1   = &spi1;
@@ -328,7 +328,7 @@
 		};
 
 		emac0: ethernet@0x31040000 {
-			compatible = "adi,dwmac", "snps,dwmac-3.710", "snps,dwmac";
+			compatible = "adi,dwmac", "snps,dwmac-4.20a", "snps,dwmac-5.20a";
 			reg = <0x31040000 0x2000>;
 			interrupt-parent = <&gic>;
 			interrupts = <GIC_SPI 221 IRQ_TYPE_LEVEL_HIGH>;
@@ -337,6 +337,7 @@
 			snps,pbl = <8>;
 			snps,force_sf_dma_mode;
 			snps,perfect-filter-entries = <32>;
+			snps,tso = <1>;
 			clock-names = "stmmaceth";
 			status = "disabled";
 		};
