@@ -11,7 +11,10 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
-#include <mach/gpio.h>
+#include <linux/gpio.h>
+#ifndef CONFIG_ARCH_SC59X_64
+	#include <mach/gpio.h>
+#endif
 
 #include "stmmac.h"
 #include "stmmac_platform.h"
@@ -43,6 +46,7 @@ static int dwmac_adi_probe(struct platform_device *pdev)
 			return PTR_ERR(plat_dat);
 		}
 
+#ifndef CONFIG_ARCH_SC59X_64
 		if (likely(of_count_phandle_with_args(pdev->dev.of_node,
 							"enable-pin", NULL) > 0)) {
 			if (softconfig_of_set_active_pin_output(&pdev->dev,
@@ -50,7 +54,7 @@ static int dwmac_adi_probe(struct platform_device *pdev)
 						&dwmac->enable_pin_active_low, true))
 				return -ENODEV;
 		}
-
+#endif
 	} else {
 		plat_dat = dev_get_platdata(&pdev->dev);
 		if (!plat_dat) {
