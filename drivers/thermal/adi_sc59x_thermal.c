@@ -219,17 +219,29 @@ static int sc59x_thermal_probe(struct platform_device *pdev) {
 		return PTR_ERR(data->ioaddr);
 	}
 
+	INIT_WORK(&data->work, sc59x_work_handler);
+
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0) {
-		dev_err(dev, "Failed to find IRQ: %d\n", irq);
+		dev_err(dev, "Failed to find fault IRQ: %d\n", irq);
 		return irq;
 	}
 
-	INIT_WORK(&data->work, sc59x_work_handler);
+	ret = devm_request_threaded_irq(dev, irq, sc59x_thermal_irq, NULL, 0, "sc59x_thermal", data);
+	if (ret < 0) {
+		dev_err(dev, "Failed to request IRQ: %d\n", ret);
+		return ret;
+	}
+
+	irq = platform_get_irq(pdev, 1);
+	if (irq < 0) {
+		dev_err(dev, "Failed to find alert IRQ: %d\n", irq);
+		return irq;
+	}
 
 	ret = devm_request_threaded_irq(dev, irq, sc59x_thermal_irq, NULL, 0, "sc59x_thermal", data);
 	if (ret < 0) {
-		dev_err(dev, "Failed to request IRQ thread: %d\n", ret);
+		dev_err(dev, "Failed to request IRQ: %d\n", ret);
 		return ret;
 	}
 
