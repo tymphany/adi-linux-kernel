@@ -24,6 +24,15 @@
 
 };
 
+&thermal {
+	status = "okay";
+	adi,gain = <1>;
+	adi,offset = <0>;
+	adi,trip-alert = <60>;
+	adi,trip-fault = <70>;
+	/* adi,average; */
+};
+
 &uart0 {
 	/* enable-pin = <&ssw0 5 GPIO_ACTIVE_LOW>;	 UART0_EN */
 	/* hwflow-en-pin = <&ssw0 6 GPIO_ACTIVE_LOW>;  UART0_FLOW_EN */
