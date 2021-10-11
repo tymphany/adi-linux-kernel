@@ -147,3 +147,11 @@
 	};
 };
 
+&mmc0{
+	pinctrl-names = "default";
+	pinctrl-0 = <&mmc0_8bgrp>;
+	bus-width = <8>;
+	max-frequency = <50000000>;
+	non-removable;
+	status = "okay";
+};

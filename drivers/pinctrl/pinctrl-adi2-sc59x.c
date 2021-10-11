@@ -283,10 +283,30 @@ static const unsigned ppi0_24b_pins[] = {
 	GPIO_PD13, GPIO_PD12, GPIO_PE13, GPIO_PE14, GPIO_PE15, GPIO_PD0,
 };
 
+#ifdef CONFIG_ARCH_SC59X_64
+static const unsigned mmc0_8b_pins[] = {
+/* EMSI0_D0 */   GPIO_PD15,
+/* EMSI0_D1 */   GPIO_PE1,
+/* EMSI0_D2 */   GPIO_PE6,
+/* EMSI0_D3 */   GPIO_PE8,
+/* EMSI0_D4 */   GPIO_PG2,
+/* EMSI0_D5 */   GPIO_PG8,
+/* EMSI0_D6 */   GPIO_PG9,
+/* EMSI0_D7 */   GPIO_PG10,
+/* EMSI0_CLK */  GPIO_PE9,
+/* EMSI0_LED */  GPIO_PI6,
+/* EMSI0_RST */  GPIO_PC4,
+/* EMSI0_WP */   GPIO_PC6,
+/* EMSI0_CD */   GPIO_PB15,
+/* EMSI0_CLK */  GPIO_PE9,
+/* EMSI0_CMD */  GPIO_PG1,
+};
+#else
 static const unsigned mmc0_8b_pins[] = {
 	GPIO_PF2, GPIO_PF3, GPIO_PF4, GPIO_PF5, GPIO_PF6, GPIO_PF7,
 	GPIO_PF8, GPIO_PF9, GPIO_PF10, GPIO_PF11, GPIO_PF12,
 };
+#endif
 
 static const unsigned cnt0_pins[] = {
 	GPIO_PB11, GPIO_PB12, GPIO_PB14,
@@ -444,11 +464,19 @@ static const unsigned short ppi0_24b_mux[] = {
 	0
 };
 
+#ifdef CONFIG_ARCH_SC59X_64
+static const unsigned short mmc0_8b_mux[] = {
+	P_EMSI0_D0, P_EMSI0_D1,  P_EMSI0_D2,  P_EMSI0_D3,  P_EMSI0_D4, P_EMSI0_D5, P_EMSI0_D6,
+	P_EMSI0_D7, P_EMSI0_CLK, P_EMSI0_LED, P_EMSI0_RST, P_EMSI0_WP, P_EMSI0_CD, P_EMSI0_CLK, P_EMSI0_CMD,
+	0,
+};
+#else
 static const unsigned short mmc0_8b_mux[] = {
 	P_MSI0_D0, P_MSI0_D1, P_MSI0_D2, P_MSI0_D3, P_MSI0_D4, P_MSI0_D5,
 	P_MSI0_D6, P_MSI0_D7, P_MSI0_CMD, P_MSI0_CLK, P_MSI0_CDb,
 	0
 };
+#endif
 
 static const unsigned short mmc0_4b_mux[] = {
 	P_MSI0_D0, P_MSI0_D1, P_MSI0_D2, P_MSI0_D3,

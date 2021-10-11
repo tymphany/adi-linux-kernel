@@ -254,6 +254,24 @@
 #define P_PPI0_FS2	(P_DEFINED | P_IDENT(GPIO_PE1) | P_FUNCT(0))
 #define P_PPI0_FS3	(P_DEFINED | P_IDENT(GPIO_PC15) | P_FUNCT(1))
 
+#ifdef CONFIG_ARCH_SC59X_64
+#define P_EMSI0_D0          (P_DEFINED | P_IDENT(GPIO_PD15) | P_FUNCT(1))
+#define P_EMSI0_D1          (P_DEFINED | P_IDENT(GPIO_PE1)  | P_FUNCT(1))
+#define P_EMSI0_D2          (P_DEFINED | P_IDENT(GPIO_PE6)  | P_FUNCT(2))
+#define P_EMSI0_D3          (P_DEFINED | P_IDENT(GPIO_PE8)  | P_FUNCT(1))
+#define P_EMSI0_D4          (P_DEFINED | P_IDENT(GPIO_PG2)  | P_FUNCT(2))
+#define P_EMSI0_D5          (P_DEFINED | P_IDENT(GPIO_PG8)  | P_FUNCT(1))
+#define P_EMSI0_D6          (P_DEFINED | P_IDENT(GPIO_PG9)  | P_FUNCT(3))
+#define P_EMSI0_D7          (P_DEFINED | P_IDENT(GPIO_PG10) | P_FUNCT(1))
+#define P_EMSI0_CLK         (P_DEFINED | P_IDENT(GPIO_PE9)  | P_FUNCT(1))
+#define P_EMSI0_LED         (P_DEFINED | P_IDENT(GPIO_PI6)  | P_FUNCT(1))
+#define P_EMSI0_RST         (P_DEFINED | P_IDENT(GPIO_PC4)  | P_FUNCT(2))
+#define P_EMSI0_WP          (P_DEFINED | P_IDENT(GPIO_PC6)  | P_FUNCT(2))
+#define P_EMSI0_CD          (P_DEFINED | P_IDENT(GPIO_PB15) | P_FUNCT(2))
+#define P_EMSI0_CLK         (P_DEFINED | P_IDENT(GPIO_PE9)  | P_FUNCT(1))
+#define P_EMSI0_CMD         (P_DEFINED | P_IDENT(GPIO_PG1)  | P_FUNCT(2))
+#endif
+
 /*MSI*/
 #define P_MSI0_D0           (P_DEFINED | P_IDENT(GPIO_PF2) | P_FUNCT(0))
 #define P_MSI0_D1           (P_DEFINED | P_IDENT(GPIO_PF3) | P_FUNCT(0))
