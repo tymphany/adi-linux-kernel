@@ -95,6 +95,34 @@
 
 &i2c2 {
 	status = "okay";
+
+	ssw0: gpio@0x20 {
+		compatible = "microchip,mcp23018";
+		gpio-controller;
+		#gpio-cells = <2>;
+		reg = <0x20>;
+		status = "okay";
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&ssw0pullups>;
+
+		ssw0pullups: pinmux {
+			bias-pull-up;
+			pins = "gpio0", "gpio1", "gpio2", "gpio3",
+				"gpio4", "gpio5", "gpio6", "gpio7",
+				"gpio8", "gpio9", "gpio10", "gpio11",
+				"gpio12", "gpio13", "gpio14", "gpio15";
+		};
+	};
+
+	ssw1: gpio@0x22 {
+		compatible = "microchip,mcp23017";
+		gpio-controller;
+		#gpio-cells = <2>;
+		reg = <0x22>;
+		status = "okay";
+	};
+
 };
 
 &emac0 {
