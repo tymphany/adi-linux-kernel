@@ -150,13 +150,9 @@ struct sport_device {
 	s32 rx_frags_in_dma[SHARC_CORES_NUM];
 
 	spinlock_t icc_spinlock;
-	int icc_irq;
-	int icc_irq_type;
-	atomic_t in_interrupt;
-	struct sharc_msg *messages;
-	int message_queue_pointer;
-	struct sharc_msg *received_messages;
-	int receive_message_queue_pointer;
+	struct mutex rpmsg_lock;
+
+	struct rpmsg_device *sharc_rpmsg[SHARC_CORES_NUM];
 
 	unsigned char *sharc_tx_buf;
 	dma_addr_t sharc_tx_buf_phy;
@@ -171,20 +167,17 @@ struct sport_device {
 	struct workqueue_struct *sharc_workqueue;
 
 	//can't be array due to container_of usage
-	struct work_struct sharc0_wait_playback_ack_work;
-	struct work_struct sharc0_wait_record_ack_work;
-	struct work_struct sharc1_wait_playback_ack_work;
-	struct work_struct sharc1_wait_record_ack_work;
-
+	// Works to be scheduled form rx_irq or tx_irq
 	struct work_struct sharc0_underrun_work;
 	struct work_struct sharc0_overrun_work;
+	struct work_struct sharc0_playback_frag_ready_work;
+	struct work_struct sharc0_record_frag_ready_work;
 	struct work_struct sharc1_underrun_work;
 	struct work_struct sharc1_overrun_work;
+	struct work_struct sharc1_playback_frag_ready_work;
+	struct work_struct sharc1_record_frag_ready_work;
 
-	struct completion sharc_playback_ack_complete[SHARC_CORES_NUM];
-	struct completion sharc_record_ack_complete[SHARC_CORES_NUM];
-	struct completion sharc_sync_ack_complete[SHARC_CORES_NUM];
-	int sharc_last_sync_msg[SHARC_CORES_NUM];
+	struct completion sharc_msg_ack_complete[SHARC_CORES_NUM];
 #endif
 };
 
@@ -215,5 +208,11 @@ int sport_config_rx_dma(struct sport_device *sport, void *buf,
 	int fragcount, size_t fragsize, struct snd_pcm_substream *substream);
 unsigned long sport_curr_offset_tx(struct sport_device *sport);
 unsigned long sport_curr_offset_rx(struct sport_device *sport);
+
+#if IS_ENABLED(CONFIG_SND_SC5XX_SPORT_SHARC)
+int rpmsg_sharc_alsa_probe(struct rpmsg_device *rpdev);
+int rpmsg_sharc_alsa_cb(struct rpmsg_device *rpdev, void *data, int len, void *priv, u32 src);
+void rpmsg_sharc_alsa_remove(struct rpmsg_device *rpdev);
+#endif
 
 #endif
