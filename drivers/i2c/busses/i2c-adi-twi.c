@@ -25,8 +25,15 @@
 #include <linux/of_address.h>
 
 #include <asm/irq.h>
+
+#ifndef CONFIG_ARCH_SC59X_64
 #include <mach/portmux.h>
 #include <mach/adi_twi.h>
+#else
+#include <linux/soc/adi/mach-sc59x/portmux.h>
+#include <linux/soc/adi/mach-sc59x/adi_twi.h>
+#include <linux/soc/adi/mach-sc59x/clkdev.h>
+#endif
 
 /* SMBus mode*/
 #define TWI_I2C_MODE_STANDARD		1

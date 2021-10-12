@@ -34,9 +34,6 @@
 		spi2   = &spi2;
 		can0 = &can0;
 		can1 = &can1;
-		i2c0 = &i2c0;
-		i2c1 = &i2c1;
-		i2c2 = &i2c2;
 		rtc0 = &rtc0;
 		i2s0 = &i2s0;
 		mmc0 = &mmc0;
@@ -275,6 +272,36 @@
 			compatible = "adi,twi";
 			reg = <0x31001600 0xFF>;
 			interrupts = <GIC_SPI 152 IRQ_TYPE_LEVEL_HIGH>;
+			clock-khz = <100>;
+			status = "disabled";
+		};
+
+		i2c3: twi@0x31001000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "adi,twi";
+			reg = <0x31001000 0xFF>;
+			interrupts = <GIC_SPI 153 IRQ_TYPE_LEVEL_HIGH>;
+			clock-khz = <100>;
+			status = "disabled";
+		};
+
+		i2c4: twi@0x31001100 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "adi,twi";
+			reg = <0x31001100 0xFF>;
+			interrupts = <GIC_SPI 154 IRQ_TYPE_LEVEL_HIGH>;
+			clock-khz = <100>;
+			status = "disabled";
+		};
+
+		i2c5: twi@0x31001200 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "adi,twi";
+			reg = <0x31001200 0xFF>;
+			interrupts = <GIC_SPI 155 IRQ_TYPE_LEVEL_HIGH>;
 			clock-khz = <100>;
 			status = "disabled";
 		};

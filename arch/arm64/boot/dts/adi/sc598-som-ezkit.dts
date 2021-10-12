@@ -85,6 +85,18 @@
 	};
 };
 
+&i2c0 {
+	status = "okay";
+};
+
+&i2c1 {
+	status = "okay";
+};
+
+&i2c2 {
+	status = "okay";
+};
+
 &emac0 {
 	snps,reset-active-low;
 	snps,reset-delays-us = <0 200 500>;
