@@ -26,10 +26,10 @@
 
 &thermal {
 	status = "okay";
-	adi,gain = <1>;
-	adi,offset = <0>;
+	adi,gain = <0x6>;
+	adi,offset = <0x7D86>;
 	adi,trip-alert = <60>;
-	adi,trip-fault = <70>;
+	adi,trip-fault = <85>;
 	/* adi,average; */
 };
 
