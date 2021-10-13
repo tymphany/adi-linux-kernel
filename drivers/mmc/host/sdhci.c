@@ -3635,6 +3635,12 @@ void __sdhci_read_caps(struct sdhci_host *host, const u16 *ver,
 	if (debug_quirks2)
 		host->quirks2 = debug_quirks2;
 
+#ifdef CONFIG_ARCH_SC59X_64
+	host->quirks  |= SDHCI_QUIRK_BROKEN_ADMA;
+//	host->quirks  |= SDHCI_QUIRK_NO_MULTIBLOCK;
+	host->quirks2 |= SDHCI_QUIRK2_BROKEN_HS200;
+#endif
+
 	sdhci_do_reset(host, SDHCI_RESET_ALL);
 
 	if (host->v4_mode)
