@@ -15,15 +15,9 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
-#ifdef CONFIG_ARCH_SC59X_64
-#include <linux/soc/adi/mach-sc59x/hardware.h>
-#include <linux/soc/adi/mach-sc59x/sc59x.h>
-#include <linux/soc/adi/mach-sc59x/cpu.h>
-#else
-#include <mach/hardware.h>
-#include <mach/sc59x.h>
-#include <mach/cpu.h>
-#endif
+#include <linux/soc/adi/hardware.h>
+#include <linux/soc/adi/sc59x.h>
+#include <linux/soc/adi/cpu.h>
 
 static LIST_HEAD(gptimers_list);
 static DEFINE_SPINLOCK(gptimers_lock);

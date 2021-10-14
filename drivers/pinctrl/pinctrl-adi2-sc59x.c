@@ -8,14 +8,9 @@
  */
 
 
-#ifdef CONFIG_ARCH_SC59X_64
-#include <linux/soc/adi/mach-sc59x/gpio.h>
-#include <linux/soc/adi/mach-sc59x/portmux-sc59x.h>
-#include <linux/soc/adi/mach-sc59x/gpio-sc59x.h>
-#else
-#include <mach/gpio.h>
-#include <mach/portmux-sc59x.h>
-#endif
+#include <linux/soc/adi/gpio.h>
+#include <linux/soc/adi/portmux.h>
+#include <linux/soc/adi/gpio.h>
 
 #include "pinctrl-adi2.h"
 

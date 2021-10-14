@@ -22,17 +22,10 @@
 #include <linux/of_device.h>
 #include <linux/vmalloc.h>
 
-#ifdef CONFIG_ARCH_SC59X_64
-#include <linux/soc/adi/mach-sc59x/hardware.h>
-#include <linux/soc/adi/mach-sc59x/sc59x.h>
-#include <linux/soc/adi/mach-sc59x/cpu.h>
-#include <linux/soc/adi/mach-sc59x/dma.h>
-#else
-#include <mach/hardware.h>
-#include <mach/sc59x.h>
-#include <mach/cpu.h>
-#include <mach/dma.h>
-#endif
+#include <linux/soc/adi/hardware.h>
+#include <linux/soc/adi/sc59x.h>
+#include <linux/soc/adi/cpu.h>
+#include <linux/soc/adi/dma.h>
 
 #include <asm/uaccess.h>
 #include <asm/io.h>

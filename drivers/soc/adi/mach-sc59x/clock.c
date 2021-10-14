@@ -15,17 +15,10 @@
 #include <linux/clkdev.h>
 #include <linux/clk-provider.h>
 #include <linux/mutex.h>
-#ifdef CONFIG_ARCH_SC59X_64
-#include <linux/soc/adi/mach-sc59x/hardware.h>
-#include <linux/soc/adi/mach-sc59x/sc59x.h>
-#include <linux/soc/adi/mach-sc59x/clkdev.h>
-#include <linux/soc/adi/mach-sc59x/cpu.h>
-#else
-#include <mach/clkdev.h>
-#include <mach/hardware.h>
-#include <mach/sc59x.h>
-#include <mach/cpu.h>
-#endif
+#include <linux/soc/adi/clkdev.h>
+#include <linux/soc/adi/cpu.h>
+#include <linux/soc/adi/hardware.h>
+#include <linux/soc/adi/sc59x.h>
 
 #define NEEDS_INITIALIZATION     BIT(2)
 #define CGU0_CTL_DF (1 << 0)

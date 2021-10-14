@@ -19,21 +19,15 @@
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
 #include <linux/delay.h>
-#include <linux/adi_twi.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_address.h>
 
 #include <asm/irq.h>
 
-#ifndef CONFIG_ARCH_SC59X_64
-#include <mach/portmux.h>
-#include <mach/adi_twi.h>
-#else
-#include <linux/soc/adi/mach-sc59x/portmux.h>
-#include <linux/soc/adi/mach-sc59x/adi_twi.h>
-#include <linux/soc/adi/mach-sc59x/clkdev.h>
-#endif
+#include <linux/soc/adi/adi_twi.h>
+#include <linux/soc/adi/clkdev.h>
+#include <linux/soc/adi/portmux.h>
 
 /* SMBus mode*/
 #define TWI_I2C_MODE_STANDARD		1

@@ -26,17 +26,9 @@
 #include <linux/slab.h>
 #include <linux/syscore_ops.h>
 #include <linux/gpio/driver.h>
-#ifdef CONFIG_ARCH_SC59X_64
-#include <linux/soc/adi/mach-sc59x/gpio.h>
-#else
-#include <mach/gpio.h>
-#endif
+#include <linux/soc/adi/gpio.h>
 #ifdef CONFIG_ARCH_HEADER_IN_MACH
-#ifdef CONFIG_ARCH_SC59X_64
-#include <linux/soc/adi/mach-sc59x/portmux.h>
-#else
-#include <mach/portmux.h>
-#endif
+#include <linux/soc/adi/portmux.h>
 #else
 #include <asm/portmux.h>
 #endif

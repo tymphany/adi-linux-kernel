@@ -27,29 +27,12 @@
 
 #include <asm/irq.h>
 
-#ifdef CONFIG_ARCH_SC59X_64
-#include <linux/soc/adi/mach-sc59x/hardware.h>
-#include <linux/soc/adi/mach-sc59x/sc59x.h>
-#include <linux/soc/adi/mach-sc59x/cpu.h>
-#include <linux/soc/adi/mach-sc59x/dma.h>
-#include <linux/soc/adi/mach-sc59x/irqs.h>
-#include <linux/soc/adi/mach-sc59x/clkdev.h>
-#include <linux/soc/adi/mach-sc59x/sec.h>
-#else
-#include <asm/mach-types.h>
-#include <asm/mach/arch.h>
-#include <asm/mach/time.h>
-#include <asm/mach/map.h>
-#include <asm/mach/irq.h>
-#include <asm/hardware/cache-l2x0.h>
-#include <mach/hardware.h>
-#include <mach/cpu.h>
-#include <mach/dma.h>
-#include <mach/sc59x.h>
-#include <mach/irqs.h>
-#include <mach/clkdev.h>
-#include <mach/sec.h>
-#endif
+#include <linux/soc/adi/hardware.h>
+#include <linux/soc/adi/sc59x.h>
+#include <linux/soc/adi/cpu.h>
+#include <linux/soc/adi/dma.h>
+#include <linux/soc/adi/clkdev.h>
+#include <linux/soc/adi/sec.h>
 
 #include "core.h"
 
@@ -429,7 +412,7 @@ static void sc59x_init_ethernet(void)
 	if (IS_BUILTIN(CONFIG_PHYLIB)) {
 		/* select RGMII as the external PHY interface for EMAC0 */
 		writel((readl(__io_address(REG_PADS0_PCFG0)) |
-		        BITM_PADS_PCFG0_EMACPHYISEL | BITM_PADS_PCFG0_EMACRESET),
+		        ENUM_PADS_PCFG0_EMACPHY_RGMII | BITM_PADS_PCFG0_EMACRESET),
 		        __io_address(REG_PADS0_PCFG0));
 		/* register fixup to be run for PHYs */
 		phy_register_fixup_for_uid(DP83865_PHY_ID, 0xffffffff,

@@ -10,17 +10,9 @@
 #include <linux/device.h>
 #include <linux/io.h>
 
-#ifdef CONFIG_ARCH_SC59X_64
-#include <linux/soc/adi/mach-sc59x/hardware.h>
-#include <linux/soc/adi/mach-sc59x/sc59x.h>
-#include <linux/soc/adi/mach-sc59x/gpio.h>
-#else
-#include <mach/hardware.h>
-#include <mach/sc59x.h>
-#include <mach/gpio.h>
-#include <asm/mach-types.h>
-#include <asm/mach/arch.h>
-#endif
+#include <linux/soc/adi/hardware.h>
+#include <linux/soc/adi/sc59x.h>
+#include <linux/soc/adi/gpio.h>
 
 #include <asm/irq.h>
 

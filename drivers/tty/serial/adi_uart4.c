@@ -27,15 +27,10 @@
 #include <linux/of_irq.h>
 #include <asm/io.h>
 #include <linux/compiler.h>
-#ifdef CONFIG_ARCH_SC59X_64
-#include <linux/soc/adi/mach-sc59x/dma.h>
-#else
-#include <mach/anomaly.h>
-#include <mach/hardware.h>
-#include <mach/portmux.h>
-#include <mach/dma.h>
-#include <mach/gpio.h>
-#endif
+#include <linux/soc/adi/dma.h>
+#include <linux/soc/adi/hardware.h>
+#include <linux/soc/adi/portmux.h>
+#include <linux/soc/adi/gpio.h>
 
 #include "adi_uart4.h"
 #ifdef CONFIG_ARCH_SC59X

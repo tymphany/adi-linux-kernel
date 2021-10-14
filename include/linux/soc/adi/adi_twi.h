@@ -1,18 +1,17 @@
-/*
- * twi.h - TWI register access header
+// SPDX-License-Identifier: GPL-2.0-or-later
+/**
+ * I2C/TWI register access header
  *
- * Copyright 2014 - 2018 Analog Devices Inc.
- *
- * Licensed under the GPL-2 or later.
+ * Copyright 2014-2018, Analog Devices Inc.
  */
+#ifndef SOC_ADI_ADI_TWI_H
+#define SOC_ADI_ADI_TWI_H
 
-#ifndef __ASM_TWI_H__
-#define __ASM_TWI_H__
-
+#include <linux/adi_twi.h>
+#include <linux/io.h>
+#include <linux/soc/adi/clkdev.h>
+#include <linux/soc/adi/anomaly.h>
 #include <linux/types.h>
-#include <mach/sc59x.h>
-#include <mach/anomaly.h>
-#include <mach/clkdev.h>
 
 #define DEFINE_TWI_REG(reg_name, reg) \
 static inline u16 read_##reg_name(struct adi_twi_iface *iface) \

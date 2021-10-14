@@ -13,15 +13,9 @@
 #include <asm/io.h>
 #include <asm/delay.h>
 
-#ifdef CONFIG_ARCH_SC59X_64
-#include <linux/soc/adi/mach-sc59x/hardware.h>
-#include <linux/soc/adi/mach-sc59x/sc59x.h>
-#include <linux/soc/adi/mach-sc59x/sec.h>
-#else
-#include <mach/sc59x.h>
-#include <mach/hardware.h>
-#include <mach/sec.h>
-#endif
+#include <linux/soc/adi/hardware.h>
+#include <linux/soc/adi/sc59x.h>
+#include <linux/soc/adi/sec.h>
 
 static DEFINE_SPINLOCK(lock);
 
