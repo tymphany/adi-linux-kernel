@@ -1171,6 +1171,7 @@ static inline void sdhci_auto_cmd_select(struct sdhci_host *host,
 	bool use_cmd23 = cmd->mrq->sbc && (host->flags & SDHCI_AUTO_CMD23);
 	u16 ctrl2;
 
+#ifndef CONFIG_ARCH_SC59X_64
 	/*
 	 * In case of Version 4.10 or later, use of 'Auto CMD Auto
 	 * Select' is recommended rather than use of 'Auto CMD12
@@ -1190,6 +1191,7 @@ static inline void sdhci_auto_cmd_select(struct sdhci_host *host,
 
 		return;
 	}
+#endif
 
 	/*
 	 * If we are sending CMD23, CMD12 never gets sent
@@ -3636,8 +3638,6 @@ void __sdhci_read_caps(struct sdhci_host *host, const u16 *ver,
 		host->quirks2 = debug_quirks2;
 
 #ifdef CONFIG_ARCH_SC59X_64
-	host->quirks  |= SDHCI_QUIRK_BROKEN_ADMA;
-//	host->quirks  |= SDHCI_QUIRK_NO_MULTIBLOCK;
 	host->quirks2 |= SDHCI_QUIRK2_BROKEN_HS200;
 #endif
 
