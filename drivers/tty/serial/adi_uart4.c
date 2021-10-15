@@ -69,6 +69,7 @@ struct uart4_reg {
 
 struct adi_uart4_serial_port {
 	struct uart_port port;
+	struct device *dev;
 	unsigned int old_status;
 	int tx_irq;
 	int rx_irq;
@@ -166,7 +167,7 @@ static struct adi_uart4_serial_port *adi_uart4_serial_ports[ADI_UART_NR_PORTS];
 #define DMA_RX_XCOUNT		512
 #define DMA_RX_YCOUNT		(PAGE_SIZE / DMA_RX_XCOUNT)
 
-#define DMA_RX_FLUSH_JIFFIES	(HZ / 50)
+#define DMA_RX_FLUSH_JIFFIES	(msecs_to_jiffies(50))
 
 static void adi_uart4_serial_dma_tx_chars(struct adi_uart4_serial_port *uart);
 static void adi_uart4_serial_tx_chars(struct adi_uart4_serial_port *uart);
@@ -524,8 +525,7 @@ void adi_uart4_serial_rx_dma_timeout(struct timer_list *list)
 
 	spin_unlock_irqrestore(&uart->rx_lock, flags);
 	dma_enable_irq(uart->rx_dma_channel);
-	timer_setup(list, adi_uart4_serial_rx_dma_timeout, 0);
-	mod_timer(list, jiffies + DMA_RX_FLUSH_JIFFIES);
+	mod_timer(&uart->rx_dma_timer, jiffies + DMA_RX_FLUSH_JIFFIES);
 }
 
 static irqreturn_t adi_uart4_serial_dma_tx_int(int irq, void *dev_id)
@@ -642,7 +642,7 @@ static int adi_uart4_serial_startup(struct uart_port *port)
 				adi_uart4_serial_dma_tx_int, uart);
 
 		uart->rx_dma_buf.buf = (unsigned char *)
-					dma_alloc_coherent(NULL, PAGE_SIZE,
+					dma_alloc_coherent(uart->dev, PAGE_SIZE,
 						&dma_handle, GFP_KERNEL);
 		if (!uart->rx_dma_buf.buf)
 			return -ENOMEM;
@@ -664,11 +664,8 @@ static int adi_uart4_serial_startup(struct uart_port *port)
 		set_dma_y_modify(uart->rx_dma_channel, 1);
 		set_dma_start_addr(uart->rx_dma_channel, uart->rx_dma_phy);
 		enable_dma(uart->rx_dma_channel);
-//		uart->rx_dma_timer.function =
-//				(void *)adi_uart4_serial_rx_dma_timeout;
-		timer_setup(&(uart->rx_dma_timer), adi_uart4_serial_rx_dma_timeout, 0);
-		uart->rx_dma_timer.expires = jiffies + DMA_RX_FLUSH_JIFFIES;
-		add_timer(&(uart->rx_dma_timer));
+		timer_setup(&uart->rx_dma_timer, adi_uart4_serial_rx_dma_timeout, 0);
+		mod_timer(&uart->rx_dma_timer, jiffies + DMA_RX_FLUSH_JIFFIES);
 	} else {
 		if (request_irq(uart->rx_irq, adi_uart4_serial_rx_int, 0,
 			"ADI_UART_RX", uart)) {
@@ -729,7 +726,7 @@ static void adi_uart4_serial_shutdown(struct uart_port *port)
 		free_dma(uart->tx_dma_channel);
 		disable_dma(uart->rx_dma_channel);
 		free_dma(uart->rx_dma_channel);
-		del_timer(&(uart->rx_dma_timer));
+		del_timer(&uart->rx_dma_timer);
 		dma_free_coherent(NULL, PAGE_SIZE, uart->rx_dma_buf.buf,
 					uart->rx_dma_phy);
 	} else {
@@ -1188,6 +1185,7 @@ static int adi_uart4_serial_probe(struct platform_device *pdev)
 		}
 
 		adi_uart4_serial_ports[uartid] = uart;
+		uart->dev = &pdev->dev;
 
 		spin_lock_init(&uart->port.lock);
 		uart->port.uartclk   = clk_get_rate(clk);
@@ -1218,13 +1216,11 @@ static int adi_uart4_serial_probe(struct platform_device *pdev)
 			return -ENXIO;
 		}
 
-		uart->tx_dma_channel = 0;//tx_dma_channel;
-		uart->rx_dma_channel = 0;//rx_dma_channel;
+		uart->tx_dma_channel = tx_dma_channel;
+		uart->rx_dma_channel = rx_dma_channel;
 		spin_lock_init(&uart->rx_lock);
 		uart->tx_done	    = 1;
 		uart->tx_count	    = 0;
-		//init_timer(&(uart->rx_dma_timer));
-
 
 		if (of_get_property(pdev->dev.of_node,
 				"adi,uart-has-rtscts", NULL))
