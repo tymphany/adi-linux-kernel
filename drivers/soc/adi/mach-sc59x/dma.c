@@ -83,7 +83,7 @@ int request_dma(unsigned int channel, const char *device_id)
 {
 	pr_debug("request_dma() : BEGIN\n");
 
-	if (!dma_ch[channel].regs) {
+	if (!dma_ch[channel].ioaddr) {
 		pr_warn("DMA channel %d is not registed\n", channel);
 		return -ENXIO;
 	}
@@ -98,7 +98,7 @@ int request_dma(unsigned int channel, const char *device_id)
 
 	dma_ch[channel].device_id = device_id;
 	dma_ch[channel].callback = 0;
-	set_spu_securep_msec(dma_ch[channel].spu_securep_id, true);
+//	set_spu_securep_msec(dma_ch[channel].spu_securep_id, true);
 
 	/* This is to be enabled by putting a restriction -
 	 * you have to request DMA, before doing any operations on
@@ -137,7 +137,7 @@ EXPORT_SYMBOL(set_dma_callback);
  */
 static void clear_dma_buffer(unsigned int chan)
 {
-	void *cfg = &dma_ch[chan].regs->cfg;
+	void __iomem *cfg = dma_ch[chan].ioaddr + ADI_DMA_CFG;
 
 	iowrite32(ioread32(cfg) | RESTART, cfg);
 	iowrite32(ioread32(cfg) & ~RESTART, cfg);
@@ -161,7 +161,7 @@ void free_dma(unsigned int channel)
 	/* Clear the DMA Variable in the Channel */
 	atomic_set(&dma_ch[channel].chan_status, 0);
 
-	set_spu_securep_msec(dma_ch[channel].spu_securep_id, false);
+//	set_spu_securep_msec(dma_ch[channel].spu_securep_id, false);
 
 	pr_debug("freedma() : END\n");
 }
@@ -432,10 +432,10 @@ static int adi_dma_probe(struct platform_device *pdev)
 		goto out_error;
 	}
 
-	dma->regs = devm_ioremap_resource(&pdev->dev, res);
-	if (IS_ERR(dma->regs)) {
+	dma->ioaddr = devm_ioremap_resource(&pdev->dev, res);
+	if (IS_ERR(dma->ioaddr)) {
 		dev_err(&pdev->dev, "Fail to remap io resources\n");
-		ret = PTR_ERR(dma->regs);
+		ret = PTR_ERR(dma->ioaddr);
 		goto out_error;
 	}
 

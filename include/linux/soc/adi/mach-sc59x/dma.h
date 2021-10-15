@@ -148,49 +148,29 @@ struct dmasg {
 	long y_modify;
 } __packed;
 
-struct dma_register {
-	void *next_desc_ptr;	/* DMA Next Descriptor Pointer register */
-	unsigned long start_addr;	/* DMA Start address  register */
+#define ADI_DMA_NEXT_DESC		0x00
+#define ADI_DMA_ADDRSTART		0x04
+#define ADI_DMA_CFG				0x08
+#define ADI_DMA_XCNT			0x0c
+#define ADI_DMA_XMOD			0x10
+#define ADI_DMA_YCNT			0x14
+#define ADI_DMA_YMOD			0x18
+#define ADI_DMA_DSCPTR_CUR		0x24
+#define ADI_DMA_DSCPTR_PRV		0x28
+#define ADI_DMA_ADDR_CUR		0x2c
+#define ADI_DMA_STAT			0x30
+#define ADI_DMA_XCNT_CUR		0x34
+#define ADI_DMA_YCNT_CUR		0x38
+#define ADI_DMA_BWLCNT			0x40
+#define ADI_DMA_BWLCNT_CUR		0x44
+#define ADI_DMA_BWMCNT			0x48
+#define ADI_DMA_BWMCNT_CUR		0x4c
 
-	unsigned long cfg;	/* DMA Configuration register */
-
-	unsigned long x_count;	/* DMA x_count register */
-
-	long x_modify;	/* DMA x_modify register */
-
-	unsigned long y_count;	/* DMA y_count register */
-
-	long y_modify;	/* DMA y_modify register */
-
-	unsigned long reserved;
-	unsigned long reserved2;
-
-	void *curr_desc_ptr;	/* DMA Current Descriptor Pointer
-					   register */
-	void *prev_desc_ptr;	/* DMA previous initial Descriptor Pointer
-					   register */
-	unsigned long curr_addr_ptr;	/* DMA Current Address Pointer
-						   register */
-	unsigned long irq_status;	/* DMA irq status register */
-
-	unsigned long curr_x_count;	/* DMA Current x-count register */
-
-	unsigned long curr_y_count;	/* DMA Current y-count register */
-
-	unsigned long reserved3;
-
-	unsigned long bw_limit_count;	/* DMA band width limit count register */
-	unsigned long curr_bw_limit_count;	/* DMA Current band width limit
-							count register */
-	unsigned long bw_monitor_count;	/* DMA band width limit count register */
-	unsigned long curr_bw_monitor_count;	/* DMA Current band width limit
-							count register */
-};
-
+/* @todo scatter-gather mode doesn't work yet */
 struct dma_channel {
 	const char *device_id;
 	atomic_t chan_status;
-	struct dma_register *regs;
+	void __iomem *ioaddr;
 	struct dmasg *sg;		/* large mode descriptor */
 	unsigned int irq;
 	irq_handler_t callback;
@@ -204,41 +184,41 @@ struct dma_channel {
 extern struct dma_channel dma_ch[MAX_DMA_CHANNELS];
 extern int channel2irq(unsigned int channel);
 
-static inline void set_dma_start_addr(unsigned int channel, unsigned long addr)
+static inline void set_dma_start_addr(unsigned int channel, dma_addr_t addr)
 {
-	writel(addr, &dma_ch[channel].regs->start_addr);
+	writel(lower_32_bits(addr), dma_ch[channel].ioaddr + ADI_DMA_ADDRSTART);
 }
-static inline void set_dma_next_desc_addr(unsigned int channel, void *addr)
+static inline void set_dma_next_desc_addr(unsigned int channel, dma_addr_t addr)
 {
-	writel(addr, &dma_ch[channel].regs->next_desc_ptr);
+	writel(lower_32_bits(addr), dma_ch[channel].ioaddr + ADI_DMA_NEXT_DESC);
 }
-static inline void set_dma_curr_desc_addr(unsigned int channel, void *addr)
+static inline void set_dma_curr_desc_addr(unsigned int channel, dma_addr_t addr)
 {
-	writel(addr, &dma_ch[channel].regs->curr_desc_ptr);
+	writel(lower_32_bits(addr), dma_ch[channel].ioaddr + ADI_DMA_DSCPTR_CUR);
 }
 static inline void set_dma_x_count(unsigned int channel, unsigned long x_count)
 {
-	writel(x_count, &dma_ch[channel].regs->x_count);
+	writel(x_count, dma_ch[channel].ioaddr + ADI_DMA_XCNT);
 }
 static inline void set_dma_y_count(unsigned int channel, unsigned long y_count)
 {
-	writel(y_count, &dma_ch[channel].regs->y_count);
+	writel(y_count, dma_ch[channel].ioaddr + ADI_DMA_YCNT);
 }
 static inline void set_dma_x_modify(unsigned int channel, long x_modify)
 {
-	writel(x_modify, &dma_ch[channel].regs->x_modify);
+	writel(x_modify, dma_ch[channel].ioaddr + ADI_DMA_XMOD);
 }
 static inline void set_dma_y_modify(unsigned int channel, long y_modify)
 {
-	writel(y_modify, &dma_ch[channel].regs->y_modify);
+	writel(y_modify, dma_ch[channel].ioaddr + ADI_DMA_YMOD);
 }
 static inline void set_dma_config(unsigned int channel, unsigned long config)
 {
-	writel(config, &dma_ch[channel].regs->cfg);
+	writel(config, dma_ch[channel].ioaddr + ADI_DMA_CFG);
 }
-static inline void set_dma_curr_addr(unsigned int channel, unsigned long addr)
+static inline void set_dma_curr_addr(unsigned int channel, dma_addr_t addr)
 {
-	writel(addr, &dma_ch[channel].regs->curr_addr_ptr);
+	writel(lower_32_bits(addr), dma_ch[channel].ioaddr + ADI_DMA_ADDR_CUR);
 }
 
 /* set_dma_config parameter valid values */
@@ -317,39 +297,40 @@ gen_dma_config(char direction, char flow_mode,
 
 static inline unsigned long get_dma_curr_irqstat(unsigned int channel)
 {
-	return readl(&dma_ch[channel].regs->irq_status);
+	return readl(dma_ch[channel].ioaddr + ADI_DMA_STAT);
 }
 static inline unsigned long get_dma_curr_xcount(unsigned int channel)
 {
-	return readl(&dma_ch[channel].regs->curr_x_count);
+	return readl(dma_ch[channel].ioaddr + ADI_DMA_XCNT_CUR);
 }
 static inline unsigned long get_dma_curr_ycount(unsigned int channel)
 {
-	return readl(&dma_ch[channel].regs->curr_y_count);
+	return readl(dma_ch[channel].ioaddr + ADI_DMA_YCNT_CUR);
 }
-static inline void *get_dma_next_desc_ptr(unsigned int channel)
+static inline dma_addr_t get_dma_next_desc_ptr(unsigned int channel)
 {
-	return (void *)readl(&dma_ch[channel].regs->next_desc_ptr);
+	return readl(dma_ch[channel].ioaddr + ADI_DMA_NEXT_DESC);
 }
-static inline void *get_dma_curr_desc_ptr(unsigned int channel)
+static inline dma_addr_t get_dma_curr_desc_ptr(unsigned int channel)
 {
-	return (void *)readl(&dma_ch[channel].regs->curr_desc_ptr);
+	return readl(dma_ch[channel].ioaddr + ADI_DMA_DSCPTR_CUR);
 }
 static inline unsigned long get_dma_config(unsigned int channel)
 {
-	return readl(&dma_ch[channel].regs->cfg);
+	return readl(dma_ch[channel].ioaddr + ADI_DMA_CFG);
 }
 static inline unsigned long get_dma_curr_addr(unsigned int channel)
 {
-	return readl(&dma_ch[channel].regs->curr_addr_ptr);
+	return readl(dma_ch[channel].ioaddr + ADI_DMA_ADDR_CUR);
 }
 
 static inline void set_dma_sg(unsigned int channel, struct dmasg *sg, int ndsize)
 {
-	writel((void *)__pa(sg), &dma_ch[channel].regs->next_desc_ptr);
-	writel((dma_ch[channel].regs->cfg & ~NDSIZE) |
-		((ndsize << NDSIZE_OFFSET) & NDSIZE),
-		&dma_ch[channel].regs->cfg);
+	u32 cfg;
+	writel(lower_32_bits(__pa(sg)), dma_ch[channel].ioaddr + ADI_DMA_NEXT_DESC);
+	cfg = readl(dma_ch[channel].ioaddr + ADI_DMA_CFG);
+	writel((cfg & ~NDSIZE) | ((ndsize << NDSIZE_OFFSET) & NDSIZE),
+		dma_ch[channel].ioaddr + ADI_DMA_CFG);
 }
 
 static inline int dma_channel_active(unsigned int channel)
@@ -359,13 +340,13 @@ static inline int dma_channel_active(unsigned int channel)
 
 static inline void disable_dma(unsigned int channel)
 {
-	writel(readl(&dma_ch[channel].regs->cfg) & ~DMAEN,
-		&dma_ch[channel].regs->cfg);
+	writel(readl(dma_ch[channel].ioaddr + ADI_DMA_CFG) & ~DMAEN,
+		dma_ch[channel].ioaddr + ADI_DMA_CFG);
 }
 static inline void enable_dma(unsigned int channel)
 {
-	writel(readl(&dma_ch[channel].regs->cfg) | DMAEN,
-		&dma_ch[channel].regs->cfg);
+	writel(readl(dma_ch[channel].ioaddr + ADI_DMA_CFG) | DMAEN,
+		dma_ch[channel].ioaddr + ADI_DMA_CFG);
 }
 int set_dma_callback(unsigned int channel, irq_handler_t callback, void *data);
 
@@ -383,8 +364,7 @@ static inline void dma_enable_irq(unsigned int channel)
 }
 static inline void clear_dma_irqstat(unsigned int channel)
 {
-	writel(DMA_DONE | DMA_ERR | DMA_PIRQ,
-		&dma_ch[channel].regs->irq_status);
+	writel(DMA_DONE | DMA_ERR | DMA_PIRQ, dma_ch[channel].ioaddr + ADI_DMA_STAT);
 }
 
 dma_addr_t dma_memcpy(dma_addr_t dest, const dma_addr_t src, size_t count);
