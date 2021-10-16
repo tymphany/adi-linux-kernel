@@ -41,85 +41,6 @@
 
 static struct sc59x_gptimer *timer_clock, *timer_event;
 
-void __init sc59x_init_irq(void)
-{
-	gic_init(__io_address(SC59X_GIC_PORT0), __io_address(SC59X_GIC_PORT1));
-}
-
-/*
-static struct map_desc sc59x_io_desc[] __initdata __maybe_unused = {
-	{
-		.virtual	=  IO_ADDRESS(SYS_MMR_BASE),
-		.pfn		= __phys_to_pfn(SYS_MMR_BASE),
-		.length		= SYS_MMR_SIZE,
-		.type		= MT_DEVICE,
-	}, {
-		.virtual	=  IO_ADDRESS(SYS_L2_START),
-		.pfn		= __phys_to_pfn(SYS_L2_START),
-		.length		= SZ_16K,
-		.type		= MT_MEMORY_RWX_NONCACHED,
-	}, {
-		.virtual	=  IO_ADDRESS(SYS_SRAM_BASE),
-		.pfn		= __phys_to_pfn(SYS_SRAM_BASE),
-		.length		= SYS_SRAM_SIZE,
-#ifdef CONFIG_ICC
-		.type		= MT_MEMORY_RWX_NONCACHED,
-#else
-		.type		= MT_MEMORY_RWX,
-#endif
-	},
-};
-*/
-
-void __init sc59x_map_io(void)
-{
-/*
-	iotable_init(sc59x_io_desc, ARRAY_SIZE(sc59x_io_desc));
-*/
-}
-
-void sc59x_restart(enum reboot_mode mode, const char *cmd)
-{
-	writel(1, __io_address(REG_RCU0_CTL));
-}
-
-
-#include <asm/siginfo.h>
-#include <asm/signal.h>
-
-
-static bool first_fault = true;
-
-static int sc59x_abort_handler(unsigned long addr, unsigned int fsr,
-		struct pt_regs *regs)
-{
-	if (fsr == 0x1c06 && first_fault) {
-		first_fault = false;
-
-		/*
-		 * These faults with code 0x1c06 happens for no good reason,
-		 * possibly left over from the CFE boot loader.
-		 */
-		pr_warn("External imprecise Data abort at addr=%#lx, fsr=%#x ignored.\n",
-				addr, fsr);
-
-		/* Returning non-zero causes fault display and panic */
-		return 0;
-	}
-
-	/* Others should cause a fault */
-	return 1;
-}
-
-/* Early initializations */
-void __init sc59x_init_early(void)
-{
-	/* Install our hook */
-//	hook_fault_code(16 + 6, sc59x_abort_handler, SIGBUS, BUS_OBJERR,
-//			"imprecise external abort");
-	sc59x_clock_init();
-}
-
 #if IS_ENABLED(CONFIG_VIDEO_ADI_CAPTURE)
 #include <linux/videodev2.h>
 #include <media/adi/adi_capture.h>
@@ -371,88 +292,55 @@ static const struct of_dev_auxdata sc59x_auxdata_lookup[] __initconst = {
 #endif
 	{},
 };
-
-static struct of_device_id sc59x_of_bus_ids[] __initdata = {
-	{ .compatible = "simple-bus", },
-	{},
-};
 #endif
 
-#define DP83865_PHY_ID          0x20005c7a
-#define REG_DP83865_AUX_CTRL    0x12
-#define BITP_AUX_CTRL_RGMII_EN  12
-#define RGMII_3COM_MODE         3
-static int sc59x_dp83865_fixup(struct phy_device *phydev)
-{
-	int  phy_data = 0;
+// Ethernet init stuff is handled in uboot, but the phy quirk fixup may be
+// needed at some point in the future
+//#define DP83865_PHY_ID          0x20005c7a
+//#define REG_DP83865_AUX_CTRL    0x12
+//#define BITP_AUX_CTRL_RGMII_EN  12
+//#define RGMII_3COM_MODE         3
+//static int sc59x_dp83865_fixup(struct phy_device *phydev)
+//{
+//	int  phy_data = 0;
+//
+//	phy_data = phy_read(phydev, REG_DP83865_AUX_CTRL);
+//
+//	/* enable 3com mode for RGMII */
+//	phy_write(phydev, REG_DP83865_AUX_CTRL,
+//			     (RGMII_3COM_MODE << BITP_AUX_CTRL_RGMII_EN) | phy_data);
+//
+//	return 0;
+//}
+//
+//#define DP83848_PHY_ID          0x20005c90
+//#define REG_DP83848_PHY_MICR    0x11
+//#define BITM_PHY_MICR_INTEN     0x2
+//#define BITM_PHY_MICR_INT_OE    0x1
+//static int sc59x_dp83848_fixup(struct phy_device *phydev)
+//{
+//	phy_write(phydev, REG_DP83848_PHY_MICR,
+//				BITM_PHY_MICR_INTEN | BITM_PHY_MICR_INT_OE);
+//
+//	return 0;
+//}
+//
+//static void sc59x_init_ethernet(void)
+//{
+//	if (IS_BUILTIN(CONFIG_PHYLIB)) {
+//		/* select RGMII as the external PHY interface for EMAC0 */
+//		writel((readl(__io_address(REG_PADS0_PCFG0)) |
+//		        ENUM_PADS_PCFG0_EMACPHY_RGMII | BITM_PADS_PCFG0_EMACRESET),
+//		        __io_address(REG_PADS0_PCFG0));
+//		/* register fixup to be run for PHYs */
+//		phy_register_fixup_for_uid(DP83865_PHY_ID, 0xffffffff,
+//				sc59x_dp83865_fixup);
+//		phy_register_fixup_for_uid(DP83848_PHY_ID, 0xffffffff,
+//				sc59x_dp83848_fixup);
+//	}
+//}
 
-	phy_data = phy_read(phydev, REG_DP83865_AUX_CTRL);
-
-	/* enable 3com mode for RGMII */
-	phy_write(phydev, REG_DP83865_AUX_CTRL,
-			     (RGMII_3COM_MODE << BITP_AUX_CTRL_RGMII_EN) | phy_data);
-
-	return 0;
-}
-
-#define DP83848_PHY_ID          0x20005c90
-#define REG_DP83848_PHY_MICR    0x11
-#define BITM_PHY_MICR_INTEN     0x2
-#define BITM_PHY_MICR_INT_OE    0x1
-static int sc59x_dp83848_fixup(struct phy_device *phydev)
-{
-	phy_write(phydev, REG_DP83848_PHY_MICR,
-				BITM_PHY_MICR_INTEN | BITM_PHY_MICR_INT_OE);
-
-	return 0;
-}
-
-static void sc59x_init_ethernet(void)
-{
-	if (IS_BUILTIN(CONFIG_PHYLIB)) {
-		/* select RGMII as the external PHY interface for EMAC0 */
-		writel((readl(__io_address(REG_PADS0_PCFG0)) |
-		        ENUM_PADS_PCFG0_EMACPHY_RGMII | BITM_PADS_PCFG0_EMACRESET),
-		        __io_address(REG_PADS0_PCFG0));
-		/* register fixup to be run for PHYs */
-		phy_register_fixup_for_uid(DP83865_PHY_ID, 0xffffffff,
-				sc59x_dp83865_fixup);
-		phy_register_fixup_for_uid(DP83848_PHY_ID, 0xffffffff,
-				sc59x_dp83848_fixup);
-	}
-}
-
-#if IS_ENABLED(CONFIG_SND_SC5XX_PCM)
-static struct platform_device sc59x_pcm = {
-	.name = "sc5xx-pcm-audio",
-	.id = -1,
-};
-#endif
-
-static struct platform_device *ezkit_devices[] __initdata = {
-#if IS_ENABLED(CONFIG_SND_SC5XX_PCM)
-	&sc59x_pcm,
-#endif
-};
-void __init sc59x_init(void)
-{
-#ifdef CONFIG_CACHE_L2X0
-	l2x0_of_init(0, ~0UL);
-#endif
-
-	pr_info("%s: registering device resources\n", __func__);
-
-	sec_init(__io_address(SEC_COMMON_BASE), __io_address(SEC_SCI_BASE),
-			__io_address(SEC_SSI_BASE));
-
-#ifdef CONFIG_OF
-	of_platform_populate(NULL, sc59x_of_bus_ids,
-				sc59x_auxdata_lookup, NULL);
-#endif
-	sc59x_init_ethernet();
-	platform_add_devices(ezkit_devices, ARRAY_SIZE(ezkit_devices));
-}
-
+/** @todo spu stuff move to sec.c and make it a real driver */
 static void __iomem *spu_base;
 
 void set_spu_securep_msec(uint16_t n, bool msec)
@@ -476,14 +364,7 @@ void set_spu_securep_msec(uint16_t n, bool msec)
 #endif
 }
 EXPORT_SYMBOL(set_spu_securep_msec);
-
-static int __init spu_init(void)
-{
-	spu_base = ioremap(REG_SPU0_CTL, 0x1000);
-
-	return 0;
-}
-arch_initcall(spu_init);
+/** end @todo spu stuff */
 
 void __init setup_gptimer(struct sc59x_gptimer *timer)
 {
@@ -693,7 +574,6 @@ void __init sc59x_timer_init(void)
 
 #define CONFIG_ADI_USE_ARMV8_TIMER
 
-#ifdef CONFIG_ARCH_SC59X_64
 static bool timer_initialized = 0;
 static int __init sc59x_arch_timer_of_init(struct device_node *np){
 	//There's two adi,sc59x-timer-core entries in the device tree -- sc59x_timer_init() handles them both
@@ -720,4 +600,3 @@ u32 adi_timer_get_rate(void)
 EXPORT_SYMBOL(adi_timer_get_rate);
 
 TIMER_OF_DECLARE(sc59x_arch_timer, "adi,sc59x-timer-core", sc59x_arch_timer_of_init);
-#endif
