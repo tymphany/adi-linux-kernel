@@ -3,5 +3,4 @@
 #
 
 obj-y := core.o gptimers.o dma.o clock.o sec.o
-#sc59x-ezkit.o
 obj-$(CONFIG_ICC:m=y) += icc.o
