@@ -98,7 +98,7 @@ int request_dma(unsigned int channel, const char *device_id)
 
 	dma_ch[channel].device_id = device_id;
 	dma_ch[channel].callback = 0;
-//	set_spu_securep_msec(dma_ch[channel].spu_securep_id, true);
+	set_spu_securep_msec(dma_ch[channel].spu_securep_id, true);
 
 	/* This is to be enabled by putting a restriction -
 	 * you have to request DMA, before doing any operations on
@@ -161,7 +161,7 @@ void free_dma(unsigned int channel)
 	/* Clear the DMA Variable in the Channel */
 	atomic_set(&dma_ch[channel].chan_status, 0);
 
-//	set_spu_securep_msec(dma_ch[channel].spu_securep_id, false);
+	set_spu_securep_msec(dma_ch[channel].spu_securep_id, false);
 
 	pr_debug("freedma() : END\n");
 }
