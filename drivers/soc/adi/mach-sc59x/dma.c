@@ -377,21 +377,6 @@ dma_addr_t dma_memcpy(dma_addr_t pdst, const dma_addr_t psrc, size_t size)
 }
 EXPORT_SYMBOL(dma_memcpy);
 
-/**
- *	safe_dma_memcpy - DMA memcpy w/argument checking
- *
- * Verify arguments are safe before heading to dma_memcpy().
- */
-dma_addr_t safe_dma_memcpy(dma_addr_t dst, const dma_addr_t src, size_t size)
-{
-	if (!access_ok(dst, size))
-		return (dma_addr_t)NULL;
-	if (!access_ok(src, size))
-		return (dma_addr_t)NULL;
-	return dma_memcpy(dst, src, size);
-}
-EXPORT_SYMBOL(safe_dma_memcpy);
-
 #ifdef CONFIG_OF
 static const struct of_device_id adi_dma_of_match[] = {
 	{
