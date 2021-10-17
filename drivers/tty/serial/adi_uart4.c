@@ -36,7 +36,7 @@
 #ifdef CONFIG_ARCH_SC59X
 #include <mach/sc59x.h>
 #elif defined(CONFIG_ARCH_SC59X_64)
-#include <linux/soc/adi/mach-sc59x/sc59x.h>
+#include <linux/soc/adi/sc59x.h>
 #elif defined(CONFIG_ARCH_SC58X)
 #include <mach/sc58x.h>
 #elif defined(CONFIG_ARCH_SC57X)

@@ -34,7 +34,7 @@ void pinmux_free_list(const unsigned short per[]);
 #include <linux/pinctrl/pinctrl.h>
 #include <linux/gpio.h>
 
-#include <linux/soc/adi/mach-sc59x/sc59x.h>
+#include <linux/soc/adi/sc59x.h>
 
 #define PORTA_FER         0x31004000
 #define PORTB_FER         0x31004080

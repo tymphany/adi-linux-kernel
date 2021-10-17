@@ -7,7 +7,7 @@
 #ifndef __ARCH_GPIO_H__
 #define __ARCH_GPIO_H__
 
-#include <linux/soc/adi/mach-sc59x/sc59x.h>
+#include <linux/soc/adi/sc59x.h>
 
 #include <asm/irq.h>
 #include <asm/errno.h>
