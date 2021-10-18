@@ -122,6 +122,12 @@
 			status = "disabled";
 		};
 
+		rcu: rcu@0x3108c000 {
+			compatible = "adi,reset-controller";
+			reg = <0x3108c000 0x1000>;
+			status = "okay";
+		};
+
 		thermal: thermal@0x31016800 {
 			compatible = "adi,sc59x-thermal";
 			reg = <0x31016800 0x100>;
