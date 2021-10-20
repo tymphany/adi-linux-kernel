@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * sc59x SEC
  *
@@ -6,12 +7,14 @@
  * Licensed under the GPL-2 or later.
  */
 
-#include <linux/printk.h>
+#include <linux/delay.h>
+#include <linux/io.h>
 #include <linux/irq.h>
+#include <linux/module.h>
+#include <linux/of.h>
+#include <linux/platform_device.h>
+#include <linux/printk.h>
 #include <linux/spinlock.h>
-#include <linux/init.h>
-#include <asm/io.h>
-#include <asm/delay.h>
 
 #include <linux/soc/adi/hardware.h>
 #include <linux/soc/adi/sc59x.h>
@@ -148,12 +151,29 @@ void sec_set_ssi_coreid(unsigned int sid, unsigned int coreid)
 	spin_unlock_irqrestore(&lock, flags);
 }
 
-static int __init early_sec_init(char *buf)
-{
-	if (strncmp(buf, "no", 2) == 0)
-		enable_sec = false;
-
+static int adi_sec_probe(struct platform_device *pdev) {
 	return 0;
 }
 
-early_param("enable_sec", early_sec_init);
+static int adi_sec_remove(struct platform_device *pdev) {
+	return 0;
+}
+
+static const struct of_device_id adi_sec_match[] = {
+	{ .compatible = "adi,system-event-controller" },
+	{ }
+};
+MODULE_DEVICE_TABLE(of, adi_sec_match);
+
+static struct platform_driver adi_sec_driver = {
+	.probe = adi_sec_probe,
+	.remove = adi_sec_remove,
+	.driver = {
+		.name = "adi-system-event-controller",
+		.of_match_table = of_match_ptr(adi_sec_match)
+	},
+};
+module_platform_driver(adi_sec_driver);
+
+MODULE_DESCRIPTION("System Event Controller for ADI SC5xx SoCs");
+MODULE_LICENSE("GPL v2");

@@ -1,16 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Analog Device SHARC Image Loader for SC5XX processors
  *
- * Copyright (C) 2020 Analog Devices
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Copyright (C) 2020, 2021 Analog Devices
  */
 
 #include <linux/clk.h>
@@ -25,10 +17,12 @@
 #include <linux/remoteproc.h>
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
-#include <mach/hardware.h>
-#include <mach/sec.h>
-#include <mach/dma.h>
-#include <mach/icc.h>
+
+#include <linux/soc/adi/hardware.h>
+#include <linux/soc/adi/sec.h>
+#include <linux/soc/adi/dma.h>
+#include <linux/soc/adi/icc.h>
+#include <linux/soc/adi/rcu.h>
 #include "remoteproc_internal.h"
 
 /* The VERIFY_LDR_DATA macro is used to verify LDR data loaded to
@@ -41,20 +35,9 @@
 
 /* location of bootrom that loops idle */
 #define SHARC_IDLE_ADDR			(0x00090004)
-/* Bit values for the RCU0_MSG register */
-#define RCU0_MSG_C0IDLE			0x00000100		/* Core 0 Idle */
-#define RCU0_MSG_C1IDLE			0x00000200		/* Core 1 Idle */
-#define RCU0_MSG_C2IDLE			0x00000400		/* Core 2 Idle */
-#define RCU0_MSG_CRR0			0x00001000		/* Core 0 reset request */
-#define RCU0_MSG_CRR1			0x00002000		/* Core 1 reset request */
-#define RCU0_MSG_CRR2			0x00004000		/* Core 2 reset request */
-#define RCU0_MSG_C1ACTIVATE		0x00080000		/* Core 1 Activated */
-#define RCU0_MSG_C2ACTIVATE		0x00100000		/* Core 2 Activated */
 
 #define SPU_MDMA0_SRC_ID		88
 #define SPU_MDMA0_DST_ID		89
-#define VALID_CORE_MIN			1
-#define VALID_CORE_MAX			2
 
 #define CORE_INIT_TIMEOUT msecs_to_jiffies(2000)
 
@@ -131,16 +114,14 @@ static struct adi_sharc_resource_table resources_sharc1 = {
 struct adi_rproc_data {
 	struct device *dev;
 	struct rproc *rproc;
+	struct adi_rcu *rcu;
 	const char *firmware_name;
 	int core_id;
 	int core_irq;
-	int icc_irq;
-	int icc_irq_type;
 	void *mem_virt;
 	dma_addr_t mem_handle;
 	size_t fw_size;
 	unsigned long ldr_load_addr;
-	struct rcu_reg __iomem *rcu_base;
 	int firmware_format;
 	void __iomem *L1_shared_base;
 	void __iomem *L2_shared_base;
@@ -148,6 +129,9 @@ struct adi_rproc_data {
 	struct workqueue_struct *core_workqueue;
 	int wait_platform_init;
 	struct delayed_work core_kick_work;
+	u64 l1_da_range[2];
+	u64 l2_da_range[2];
+	u32 rsc_offset;
 };
 
 typedef struct block_code_flag {
@@ -179,12 +163,11 @@ static int adi_core_set_svect(struct adi_rproc_data *rproc_data,
 					unsigned long svect)
 {
 	int coreid = rproc_data->core_id;
-	struct rcu_reg __iomem *rcu_base = rproc_data->rcu_base;
 
 	if (svect && (coreid == 1))
-		writel(svect, &rcu_base->reg_rcu_svect1);
+		adi_rcu_writel(svect, rproc_data->rcu, ADI_RCU_REG_SVECT1);
 	else if (svect && (coreid == 2))
-		writel(svect, &rcu_base->reg_rcu_svect2);
+		adi_rcu_writel(svect, rproc_data->rcu, ADI_RCU_REG_SVECT2);
 	else {
 		dev_err(rproc_data->dev, "%s, invalid svect:0x%lx, cord_id:%d\n",
 						__func__, svect, coreid);
@@ -194,152 +177,32 @@ static int adi_core_set_svect(struct adi_rproc_data *rproc_data,
 	return 0;
 }
 
-static irqreturn_t sharc_virtio_irq_threded_handler(int irq, void *p);
-/* Active SHARC core */
+static irqreturn_t sharc_virtio_irq_threaded_handler(int irq, void *p);
+
 static int adi_core_start(struct adi_rproc_data *rproc_data)
 {
-	int ret;
-	int coreid = rproc_data->core_id;
-
-	struct rcu_reg __iomem *rcu_base = rproc_data->rcu_base;
-
 	rproc_data->wait_platform_init = 1;
-
-	ret = devm_request_threaded_irq(rproc_data->dev,
-			rproc_data->icc_irq, NULL, sharc_virtio_irq_threded_handler,
-			rproc_data->icc_irq_type | IRQF_ONESHOT,
-			"ICC virtio IRQ", rproc_data);
-	if (ret) {
-		dev_err(rproc_data->dev, "Fail to request ICC receive IRQ\n");
-		return -ENOENT;
-	}
-
-	if ((coreid < VALID_CORE_MIN) || (coreid > VALID_CORE_MAX)) {
-		printk(" %s: invalid Core ID:%d\n", __func__, coreid);
-		return -EINVAL;
-	}
-
-	/* Clear the IDLE bit when start the SHARC core */
-	writel(RCU0_MSG_C0IDLE << coreid, &rcu_base->reg_rcu_msg_clr);
-
-	/* Notify CCES */
-	writel(RCU0_MSG_C1ACTIVATE << (coreid-1), &rcu_base->reg_rcu_msg_set);
-
-	return 0;
+	return adi_rcu_start_core(rproc_data->rcu, rproc_data->core_id);
 }
 
-/* Reset ADI SHARC core */
 static int adi_core_reset(struct adi_rproc_data *rproc_data)
 {
-	int coreid = rproc_data->core_id;
-	struct rcu_reg __iomem *rcu_base = rproc_data->rcu_base;
-
-	if ((coreid < VALID_CORE_MIN) || (coreid > VALID_CORE_MAX)) {
-		printk(" %s: invalid Core ID:%d\n", __func__, coreid);
-		return -1;
-	}
-
-	/* First put core in reset.
-     * Clear CRSTAT bit for given coreid. */
-	writel(1 << coreid, &rcu_base->reg_rcu_crstat);
-
-	/* Set SIDIS to disable the system interface */
-	writel(readl(&rcu_base->reg_rcu_sidis) | (1 << (coreid-1)),
-				&rcu_base->reg_rcu_sidis);
-
-	/*
-	 * Wait for access to coreX have been disabled and all the pending
-	 * transactions have completed
-	 */
-	udelay(50);
-
-	/* Set CRCTL bit to put core in reset */
-	writel(readl(&rcu_base->reg_rcu_crctl) | (1 << coreid),
-				&rcu_base->reg_rcu_crctl);
-
-	/* Poll until Core is in reset */
-	while(!(readl(&rcu_base->reg_rcu_crstat) & (1 << coreid)));
-
-	/* Clear SIDIS to reenable the system interface */
-	writel(readl(&rcu_base->reg_rcu_sidis) & ~(1 << (coreid-1)),
-				&rcu_base->reg_rcu_sidis);
-
-	udelay(50);
-
-	/* Take Core out of reset */
-	writel(readl(&rcu_base->reg_rcu_crctl) & ~(1 << coreid),
-				&rcu_base->reg_rcu_crctl);
-
-	/* Wait for done */
-	udelay(50);
-
-	return 0;
+	return adi_rcu_reset_core(rproc_data->rcu, rproc_data->core_id);
 }
 
 static int adi_core_stop(struct adi_rproc_data *rproc_data)
 {
-	int coreid = rproc_data->core_id;
-	int coreirq = rproc_data->core_irq;
-	struct rcu_reg __iomem *rcu_base = rproc_data->rcu_base;
-	unsigned long timeout = jiffies + CORE_INIT_TIMEOUT;
-	bool is_timeout = true;
-
 	cancel_delayed_work_sync(&rproc_data->core_kick_work);
-
-	devm_free_irq(rproc_data->dev, rproc_data->icc_irq, rproc_data);
-
-	if ((coreid < VALID_CORE_MIN) || (coreid > VALID_CORE_MAX)) {
-		printk(" %s: invalid Core ID:%d\n", __func__, coreid);
-		return -EINVAL;
-	}
-
-	if (readl(&rcu_base->reg_rcu_crctl) & (1 << coreid))
-		return 0;
-
-	/* Check the IDLE bit in RCU_MSG register */
-	if (!(readl(&rcu_base->reg_rcu_msg) & (RCU0_MSG_C0IDLE << coreid))) {
-		/* Set core reset request bit in RCU_MSG bit(12:14) */
-		writel(readl(&rcu_base->reg_rcu_msg) | (RCU0_MSG_CRR0 << coreid),
-					&rcu_base->reg_rcu_msg_set);
-
-		/* Raise SOFT IRQ through SEC
-		 * DSP enter into ISR to release interrupts used by DSP program
-		 */
-		sec_set_ssi_coreid(coreirq, coreid);
-		sec_enable_ssi(coreirq, false, true);
-		sec_enable_sci(coreid);
-		sec_raise_irq(coreirq);
-	}
-
-	/* Wait until the specific core enter into IDLE bit(8:10)
-	 * DSP should set the IDLE bit to 1 manully in ISR
-	 */
-	do {
-		if (readl(&rcu_base->reg_rcu_msg) & (RCU0_MSG_C0IDLE << coreid)) {
-			is_timeout = false;
-			break;
-		}
-	} while(time_before(jiffies, timeout));
-
-	if (is_timeout)
-		dev_warn(rproc_data->dev, "Timeout to release remote core%d!\n", coreid);
-
-	/* Clear core reset request bit in RCU_MSG bit(12:14) */
-	writel(readl(&rcu_base->reg_rcu_msg) & (RCU0_MSG_CRR0 << coreid),
-				&rcu_base->reg_rcu_msg_clr);
-
-	/* Clear Activate bit when stop SHARC core */
-	writel(RCU0_MSG_C1ACTIVATE << (coreid-1), &rcu_base->reg_rcu_msg_clr);
-
-	return 0;
+	return adi_rcu_stop_core(rproc_data->rcu,
+		rproc_data->core_id, rproc_data->core_irq);
 }
 
+/* @todo this needs to return status */
 static void ldr_load(struct adi_rproc_data *rproc_data)
 {
 	LDR_Ehdr_t* block_hdr = NULL;
 	uint8_t* virbuf = (uint8_t*) rproc_data->mem_virt;
-	uint8_t* phybuf = (uint8_t*) rproc_data->mem_handle;
-	void __iomem *remap_addr;
+	dma_addr_t phybuf = rproc_data->mem_handle;
 	int offset;
 #if defined(VERIFY_LDR_DATA)
 	int i;
@@ -354,26 +217,24 @@ static void ldr_load(struct adi_rproc_data *rproc_data)
 
 		/* Overwrite the ldr_load_addr */
 		if (block_hdr->bcode_flag.bFlag_first)
-				rproc_data->ldr_load_addr =
-							(unsigned long)block_hdr->target_addr;
+			rproc_data->ldr_load_addr = (unsigned long)block_hdr->target_addr;
 
-		if (block_hdr->bcode_flag.bFlag_ignore == 0
-						&& block_hdr->byte_count != 0) {
-			if (block_hdr->bcode_flag.bFlag_fill == 0x1) { /* fill */
-				remap_addr = ioremap_nocache(block_hdr->target_addr,
-									block_hdr->byte_count);
-				memset(remap_addr, block_hdr->argument, block_hdr->byte_count);
-				iounmap(remap_addr);
-			} else { /* normal */
+		if (!block_hdr->bcode_flag.bFlag_ignore && block_hdr->byte_count) {
+			if (block_hdr->bcode_flag.bFlag_fill) {
+				dma_addr_t fillphy;
+				void *fill = dma_alloc_coherent(rproc_data->dev,
+					block_hdr->byte_count, &fillphy, GFP_KERNEL);
 
-				/* DMA Memcpy not yet supported on SC59X */
-				#ifdef CONFIG_ARCH_SC59X
-					remap_addr = ioremap_nocache(block_hdr->target_addr, block_hdr->byte_count);
-					memcpy(remap_addr, virbuf + sizeof(LDR_Ehdr_t), block_hdr->byte_count);
-					iounmap(remap_addr);
-				#else
-					dma_memcpy(block_hdr->target_addr, phybuf + sizeof(LDR_Ehdr_t), block_hdr->byte_count);
-				#endif
+				if (!fill)
+					return;
+
+				memset(fill, block_hdr->argument, block_hdr->byte_count);
+				dma_memcpy(block_hdr->target_addr, fillphy, block_hdr->byte_count);
+				dma_free_coherent(rproc_data->dev, block_hdr->byte_count,
+					fill, fillphy);
+			}
+			else {
+				dma_memcpy(block_hdr->target_addr, phybuf + sizeof(LDR_Ehdr_t), block_hdr->byte_count);
 
 #if defined(VERIFY_LDR_DATA)
 				pCompareBuffer = virbuf + sizeof(LDR_Ehdr_t);
@@ -385,7 +246,7 @@ static void ldr_load(struct adi_rproc_data *rproc_data)
 				/* check the data */
 				for (i = 0; i < block_hdr->byte_count; i++) {
 					if (pCompareBuffer[i] != pVerifyBuffer[i]) {
-						printk("dirty data, pCompareBuffer[%d]:0x%x,\
+						dev_dbg(&rproc_data->dev, "dirty data, pCompareBuffer[%d]:0x%x,\
 							pVerifyBuffer[%d]:0x%x\n",
 							i, pCompareBuffer[i], i, pVerifyBuffer[i]);
 						verfied++;
@@ -396,7 +257,7 @@ static void ldr_load(struct adi_rproc_data *rproc_data)
 			}
 		}
 
-		if (block_hdr->bcode_flag.bFlag_final == 0x1)
+		if (block_hdr->bcode_flag.bFlag_final)
 			break;
 
 		offset = sizeof(LDR_Ehdr_t) + (block_hdr->bcode_flag.bFlag_fill ?
@@ -407,9 +268,9 @@ static void ldr_load(struct adi_rproc_data *rproc_data)
 
 #if defined(VERIFY_LDR_DATA)
 	if (verfied == 0)
-		printk("success to verify all the data\n");
+		dev_dbg(&rproc_data->dev, "success to verify all the data\n");
 	else
-		printk("fail to verify all the data %d\n",verfied);
+		dev_dbg(&rproc_data->dev, "fail to verify all the data %d\n", verfied);
 #endif
 
 }
@@ -602,12 +463,16 @@ static int adi_rproc_load_rsc_table(struct rproc *rproc, const struct firmware *
 
 static struct resource_table *adi_ldr_find_loaded_rsc_table(struct rproc *rproc, const struct firmware *fw){
 	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)rproc->priv;
+	u64 da;
 
-	if(rproc_data->core_id == 1){
-		return rproc_da_to_va(rproc, 0x20001000, sizeof(resources_sharc0)); //FIXME fix address range for other platfoms
-	}else{
-		return rproc_da_to_va(rproc, 0x20001000 + sizeof(resources_sharc0), sizeof(resources_sharc0)); //FIXME fix address range for other platfoms
-	}
+	/* resource table stored in L2 memory */
+	da = rproc_data->l2_da_range[0] + rproc_data->rsc_offset;
+
+	/* core 2 resource table is located right after core 1 resource table */
+	if (rproc_data->core_id == 2)
+		da += sizeof(resources_sharc0);
+
+	return rproc_da_to_va(rproc, da, sizeof(resources_sharc0));
 }
 
 static struct resource_table *adi_rproc_find_loaded_rsc_table(struct rproc *rproc, const struct firmware *fw)
@@ -629,7 +494,7 @@ static struct resource_table *adi_rproc_find_loaded_rsc_table(struct rproc *rpro
 	return ret;
 }
 
-static irqreturn_t sharc_virtio_irq_threded_handler(int irq, void *p){
+static irqreturn_t sharc_virtio_irq_threaded_handler(int irq, void *p){
 	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)p;
 	struct adi_sharc_resource_table *table = (struct adi_sharc_resource_table *)adi_ldr_find_loaded_rsc_table(rproc_data->rproc, NULL);
 
@@ -713,19 +578,15 @@ static void *adi_da_to_va(struct rproc *rproc, u64 da, int len)
 	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)rproc->priv;
 	void __iomem *L1_shared_base = rproc_data->L1_shared_base;
 	void __iomem *L2_shared_base = rproc_data->L2_shared_base;
-	void *ret=NULL;
-	int offset = 0;
+	void *ret = NULL;
 
-	if(len == 0){
+	if (len == 0)
 		return NULL;
-	}
 
-	if((da >= 0x00240000) && (da < 0x003A0000)){
+	if (da >= rproc_data->l1_da_range[0] && da < rproc_data->l1_da_range[1])
 		ret = L1_shared_base + da;
-	}else	if((da >= 0x20000000) && (da < 0x20200000)){ //FIXME fix address range for other platfoms
-		offset = da - 0x20000000;
-		ret = L2_shared_base + offset;
-	}
+	else if (da >= rproc_data->l2_da_range[0] && da < rproc_data->l2_da_range[1])
+		ret = L2_shared_base + (da - rproc_data->l2_da_range[0]);
 
 	return ret;
 }
@@ -747,30 +608,64 @@ static int adi_remoteproc_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct adi_rproc_data *rproc_data;
 	struct device_node *np = dev->of_node;
+	struct adi_rcu *adi_rcu;
 	struct rproc *rproc;
 	struct resource *res;
+	u32 addr[2];
+	int irq, irq_flags;
 	int ret;
 	const char *name;
 
-	ret = of_property_read_string(np, "firmware-name",
-					&name);
+	ret = of_property_read_string(np, "firmware-name", &name);
 	if (ret) {
 		dev_err(dev, "Unable to get firmware-name property\n");
 		return ret;
 	}
 
+	adi_rcu = get_adi_rcu_from_node(dev);
+	if (IS_ERR(adi_rcu))
+		return PTR_ERR(adi_rcu);
+
 	rproc = rproc_alloc(dev, np->name, &adi_rproc_ops,
 					name, sizeof(*rproc_data));
 	if (!rproc) {
 		dev_err(dev, "Unable to allocate remoteproc\n");
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto free_adi_rcu;
 	}
 
 	rproc_data = (struct adi_rproc_data *)rproc->priv;
 	platform_set_drvdata(pdev, rproc);
 
-	rproc_data->core_workqueue = alloc_workqueue("Core workqueue", WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
-	if (rproc_data->core_workqueue == NULL){
+	/* for now device addresses are represented as 32 bits and expanded to 64
+	 * here in driver code */
+	if (of_property_read_u32_array(np, "adi,l1-da", addr, 2)) {
+		dev_err(dev, "Missing adi,l1-da with L1 device address range information\n");
+		ret = -ENODEV;
+		goto free_rproc;
+	}
+	rproc_data->l1_da_range[0] = addr[0];
+	rproc_data->l1_da_range[1] = addr[1];
+
+	if (of_property_read_u32_array(np, "adi,l2-da", addr, 2)) {
+		dev_err(dev, "Missing adi,l2-da with L2 device address range information\n");
+		ret = -ENODEV;
+		goto free_rproc;
+	}
+	rproc_data->l2_da_range[0] = addr[0];
+	rproc_data->l2_da_range[1] = addr[1];
+
+	if (of_property_read_u32(np, "adi,resource-table-offset",
+		&rproc_data->rsc_offset))
+	{
+		dev_err(dev, "Missing adi,resource-table-offset in device tree\n");
+		ret = -ENODEV;
+		goto free_rproc;
+	}
+
+	rproc_data->core_workqueue = alloc_workqueue("Core workqueue",
+		WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
+	if (!rproc_data->core_workqueue) {
 		dev_err(dev, "Unable to allocate core workqueue\n");
 		goto free_rproc;
 	}
@@ -778,60 +673,65 @@ static int adi_remoteproc_probe(struct platform_device *pdev)
 	init_completion(&rproc_data->sharc_platform_init_complete);
 	INIT_DELAYED_WORK(&rproc_data->core_kick_work, adi_rproc_kick_work);
 
-	ret = of_property_read_u32(np, "core-id",
-					&rproc_data->core_id);
+	ret = of_property_read_u32(np, "core-id", &rproc_data->core_id);
 	if (ret) {
 		dev_err(dev, "Unable to get core-id property\n");
-		goto free_rproc;
+		goto free_workqueue;
 	}
 
-	ret = of_property_read_u32(np, "core-irq",
-					&rproc_data->core_irq);
+	ret = of_property_read_u32(np, "core-irq", &rproc_data->core_irq);
 	if (ret) {
 		dev_err(dev, "Unable to get core-irq property\n");
-		goto free_rproc;
+		goto free_workqueue;
 	}
 
-	rproc_data->icc_irq = platform_get_irq(pdev, 0);
-	if (rproc_data->icc_irq <= 0) {
+	irq = platform_get_irq(pdev, 0);
+	if (irq <= 0) {
 		dev_err(dev, "No ICC IRQ specified\n");
-		return -ENOENT;
+		ret = -ENOENT;
+		goto free_workqueue;
 	}
 	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
-	rproc_data->icc_irq_type = (res->flags & IORESOURCE_BITS) | IRQF_PERCPU;
+	irq_flags = (res->flags & IORESOURCE_BITS) | IRQF_PERCPU | IRQF_SHARED;
+
+	ret = devm_request_threaded_irq(dev, irq, NULL,
+		sharc_virtio_irq_threaded_handler, irq_flags | IRQF_ONESHOT,
+		"ICC virtio IRQ", rproc_data);
+	if (ret) {
+		dev_err(rproc_data->dev, "Fail to request ICC receive IRQ\n");
+		return -ENOENT;
+	}
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (res == NULL) {
-		dev_err(dev, "Cannot get IORESOURCE_MEM\n");
-		goto free_rproc;
+	if (!res) {
+		dev_err(dev, "Cannot get L1 base address (reg 0)\n");
+		ret = -ENODEV;
+		goto free_workqueue;
 	}
-	rproc_data->rcu_base = devm_ioremap_nocache(dev,
-							    res->start, resource_size(res));
-	if (IS_ERR((void *)rproc_data->rcu_base)) {
-		dev_err(dev, "Cannot map rcu memory\n");
-		ret = PTR_ERR((void *)rproc_data->rcu_base);
-		goto free_rproc;
-	}
-
-	if(rproc_data->core_id == 1){
-		rproc_data->L1_shared_base = devm_ioremap_nocache(dev, 0x28240000, 0x160000);
-	}else{
-		rproc_data->L1_shared_base = devm_ioremap_nocache(dev, 0x28A40000, 0x160000);
-	}
-	if (IS_ERR((void *)rproc_data->L1_shared_base)) {
+	rproc_data->L1_shared_base = devm_ioremap_nocache(dev,
+		res->start, resource_size(res));
+	if (IS_ERR(rproc_data->L1_shared_base)) {
 		dev_err(dev, "Cannot map L1 shared memory\n");
-		ret = PTR_ERR((void *)rproc_data->L1_shared_base);
-		goto free_rproc;
+		ret = PTR_ERR(rproc_data->L1_shared_base);
+		goto free_workqueue;
 	}
 
-	rproc_data->L2_shared_base = devm_ioremap_nocache(dev, 0x20000000, 0x200000); //FIXME fix address range for other platfoms
-	if (IS_ERR((void *)rproc_data->L2_shared_base)) {
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+	if (!res) {
+		dev_err(dev, "Cannot get L2 base address (reg 1)\n");
+		ret = -ENODEV;
+		goto free_workqueue;
+	}
+	rproc_data->L2_shared_base = devm_ioremap_nocache(dev,
+		res->start, resource_size(res));
+	if (IS_ERR(rproc_data->L2_shared_base)) {
 		dev_err(dev, "Cannot map L2 shared memory\n");
-		ret = PTR_ERR((void *)rproc_data->L2_shared_base);
-		goto free_rproc;
+		ret = PTR_ERR(rproc_data->L2_shared_base);
+		goto free_workqueue;
 	}
 
 	rproc_data->dev = &pdev->dev;
+	rproc_data->rcu = adi_rcu;
 	rproc_data->rproc = rproc;
 	rproc_data->firmware_name = name;
 	rproc_data->mem_virt = NULL;
@@ -841,13 +741,19 @@ static int adi_remoteproc_probe(struct platform_device *pdev)
 	ret = rproc_add(rproc);
 	if (ret) {
 		dev_err(dev, "Failed to add rproc\n");
-		goto free_rproc;
+		goto free_workqueue;
 	}
 
 	return 0;
 
+free_workqueue:
+	destroy_workqueue(rproc_data->core_workqueue);
+
 free_rproc:
 	rproc_free(rproc);
+
+free_adi_rcu:
+	put_adi_rcu(adi_rcu);
 
 	return ret;
 }
@@ -856,6 +762,7 @@ static int adi_remoteproc_remove(struct platform_device *pdev)
 {
 	struct adi_rproc_data *rproc_data = platform_get_drvdata(pdev);
 
+	put_adi_rcu(rproc_data->rcu);
 	rproc_del(rproc_data->rproc);
 	rproc_free(rproc_data->rproc);
 
@@ -873,16 +780,11 @@ static struct platform_driver adi_rproc_driver = {
 	.remove = adi_remoteproc_remove,
 	.driver = {
 		.name = "adi_remoteproc",
-		.of_match_table = adi_rproc_of_match,
+		.of_match_table = of_match_ptr(adi_rproc_of_match),
 	},
 };
+module_platform_driver(adi_rproc_driver);
 
-static int __init adi_remoteproc_init(void)
-{
-	return platform_driver_register(&adi_rproc_driver);
-}
-
-late_initcall_sync(adi_remoteproc_init);
 MODULE_DESCRIPTION("Analog Device sc5xx SHARC Image Loader");
 MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("Greg Chen <jian.chen@analog.com>");

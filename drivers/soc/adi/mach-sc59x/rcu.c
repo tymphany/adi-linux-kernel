@@ -7,31 +7,212 @@
  */
 
 #include <linux/bits.h>
+#include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/io.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/reboot.h>
 #include <linux/types.h>
 
+#include <linux/soc/adi/rcu.h>
+#include <linux/soc/adi/sec.h>
+
 #define ADI_RCU_REBOOT_PRIORITY		255
-
-#define ADI_RCU_REG_CONTROL					0x00
-#define ADI_RCU_REG_STATUS					0x04
-#define ADI_RCU_REG_CORE_RESET_CONTROL		0x08
-#define ADI_RCU_REG_CORE_RESET_STATUS		0x0c
-
-#define ADI_RCU_CONTROL_SYSRST		BIT(0)
+#define ADI_RCU_CORE_INIT_TIMEOUT	msecs_to_jiffies(2000)
 
 struct adi_rcu {
 	struct notifier_block reboot_notifier;
 	void __iomem *ioaddr;
 	struct device *dev;
+	int sharc_min_coreid;
+	int sharc_max_coreid;
 };
 
 static struct adi_rcu *to_adi_rcu(struct notifier_block *nb) {
 	return container_of(nb, struct adi_rcu, reboot_notifier);
+}
+
+/**
+ * RCU memory accessors for other drivers that need it
+ */
+u32 adi_rcu_readl(struct adi_rcu *rcu, int offset) {
+	return readl(rcu->ioaddr + offset);
+}
+
+void adi_rcu_writel(u32 val, struct adi_rcu *rcu, int offset) {
+	writel(val, rcu->ioaddr + offset);
+}
+
+void adi_rcu_msg_set(struct adi_rcu *rcu, u32 bits) {
+	writel(bits, rcu->ioaddr + ADI_RCU_REG_MSG_SET);
+}
+
+void adi_rcu_msg_clear(struct adi_rcu *rcu, u32 bits) {
+	writel(bits, rcu->ioaddr + ADI_RCU_REG_MSG_CLR);
+}
+
+/**
+ * Device tree interface for other modules that need RCU access
+ */
+struct adi_rcu *get_adi_rcu_from_node(struct device *dev) {
+	struct platform_device *rcu_pdev;
+	struct device_node *rcu_node;
+	struct adi_rcu *ret = NULL;
+
+	rcu_node = of_parse_phandle(dev->of_node, "adi,rcu", 0);
+	if (!rcu_node) {
+		dev_err(dev, "Missing adi,rcu phandle in device tree\n");
+		return ERR_PTR(-ENODEV);
+	}
+
+	rcu_pdev = of_find_device_by_node(rcu_node);
+	if (!rcu_pdev) {
+		ret = ERR_PTR(-EPROBE_DEFER);
+		goto cleanup;
+	}
+
+	ret = dev_get_drvdata(&rcu_pdev->dev);
+
+cleanup:
+	of_node_put(rcu_node);
+	return ret;
+}
+EXPORT_SYMBOL(get_adi_rcu_from_node);
+
+void put_adi_rcu(struct adi_rcu *rcu) {
+	put_device(rcu->dev);
+}
+EXPORT_SYMBOL(put_adi_rcu);
+
+/**
+ * API for other drivers to interact with RCU
+ */
+int adi_rcu_check_coreid_valid(struct adi_rcu *rcu, int coreid) {
+	if (coreid < rcu->sharc_min_coreid || coreid > rcu->sharc_max_coreid)
+		return -EINVAL;
+	return 0;
+}
+EXPORT_SYMBOL(adi_rcu_check_coreid_valid);
+
+int adi_rcu_core_is_idle(struct adi_rcu *rcu, int coreid) {
+	return !!(adi_rcu_readl(rcu, ADI_RCU_REG_MSG) & (RCU0_MSG_C0IDLE << coreid));
+}
+
+int adi_rcu_reset_core(struct adi_rcu *rcu, int coreid) {
+	u32 val;
+	int ret;
+
+	ret = adi_rcu_check_coreid_valid(rcu, coreid);
+	if (ret)
+		return ret;
+
+	/* First put core in reset.
+     * Clear CRSTAT bit for given coreid. */
+	adi_rcu_writel(1 << coreid, rcu, ADI_RCU_REG_CRSTAT);
+
+	/* Set SIDIS to disable the system interface */
+	val = adi_rcu_readl(rcu, ADI_RCU_REG_SIDIS);
+	adi_rcu_writel(val | (1 << (coreid-1)), rcu, ADI_RCU_REG_SIDIS);
+
+	/*
+	 * Wait for access to coreX have been disabled and all the pending
+	 * transactions have completed
+	 */
+	udelay(50);
+
+	/* Set CRCTL bit to put core in reset */
+	val = adi_rcu_readl(rcu, ADI_RCU_REG_CRCTL);
+	adi_rcu_writel(val | (1 << coreid), rcu, ADI_RCU_REG_CRCTL);
+
+	/* Poll until Core is in reset */
+	while (!(adi_rcu_readl(rcu, ADI_RCU_REG_CRSTAT) & (1 << coreid)))
+		;
+
+	/* Clear SIDIS to reenable the system interface */
+	val = adi_rcu_readl(rcu, ADI_RCU_REG_SIDIS);
+	adi_rcu_writel(val & ~(1 << (coreid-1)), rcu, ADI_RCU_REG_SIDIS);
+
+	udelay(50);
+
+	/* Take Core out of reset */
+	val = adi_rcu_readl(rcu, ADI_RCU_REG_CRCTL);
+	adi_rcu_writel(val & ~(1 << coreid), rcu, ADI_RCU_REG_CRCTL);
+
+	/* Wait for done */
+	udelay(50);
+	return 0;
+}
+EXPORT_SYMBOL(adi_rcu_reset_core);
+
+int adi_rcu_start_core(struct adi_rcu *rcu, int coreid) {
+	int ret;
+
+	ret = adi_rcu_check_coreid_valid(rcu, coreid);
+	if (ret)
+		return ret;
+
+	/* Clear the IDLE bit when start the SHARC core */
+	adi_rcu_msg_clear(rcu, RCU0_MSG_C0IDLE << coreid);
+
+	/* Notify CCES */
+	adi_rcu_msg_set(rcu, RCU0_MSG_C1ACTIVATE << (coreid-1));
+	return 0;
+}
+EXPORT_SYMBOL(adi_rcu_start_core);
+
+static int adi_rcu_is_core_idle(struct adi_rcu *rcu, int coreid) {
+	return !!(adi_rcu_readl(rcu, ADI_RCU_REG_MSG) & (RCU0_MSG_C0IDLE << coreid));
+}
+
+int adi_rcu_stop_core(struct adi_rcu *rcu, int coreid, int coreirq) {
+	unsigned long timeout = jiffies + ADI_RCU_CORE_INIT_TIMEOUT;
+	bool is_timeout = true;
+	int ret;
+
+	ret = adi_rcu_check_coreid_valid(rcu, coreid);
+	if (ret)
+		return ret;
+
+	if (adi_rcu_readl(rcu, ADI_RCU_REG_CRCTL) & (1 << coreid))
+		return 0;
+
+	/* Check the IDLE bit in RCU_MSG register */
+	if (!adi_rcu_is_core_idle(rcu, coreid)) {
+		/* Set core reset request bit in RCU_MSG bit(12:14) */
+		adi_rcu_msg_set(rcu, RCU0_MSG_CRR0 << coreid);
+
+		/* Raise SOFT IRQ through SEC
+		 * DSP enter into ISR to release interrupts used by DSP program
+		 * @todo SEC still needs implementation
+		 */
+		sec_set_ssi_coreid(coreirq, coreid);
+		sec_enable_ssi(coreirq, false, true);
+		sec_enable_sci(coreid);
+		sec_raise_irq(coreirq);
+	}
+
+	/* Wait until the specific core enter into IDLE bit(8:10)
+	 * DSP should set the IDLE bit to 1 manully in ISR
+	 */
+	do {
+		if (adi_rcu_is_core_idle(rcu, coreid)) {
+			is_timeout = false;
+			break;
+		}
+	} while(time_before(jiffies, timeout));
+
+	if (is_timeout)
+		dev_warn(rcu->dev, "Timeout waiting for remote core %d to IDLE!\n", coreid);
+
+	/* Clear core reset request bit in RCU_MSG bit(12:14) */
+	adi_rcu_msg_clear(rcu, RCU0_MSG_CRR0 << coreid);
+
+	/* Clear Activate bit when stop SHARC core */
+	adi_rcu_msg_clear(rcu, RCU0_MSG_C1ACTIVATE << (coreid-1));
+	return 0;
 }
 
 static int adi_rcu_reboot(struct notifier_block *nb, unsigned long mode, void *cmd)
@@ -39,10 +220,10 @@ static int adi_rcu_reboot(struct notifier_block *nb, unsigned long mode, void *c
 	struct adi_rcu *adi_rcu = to_adi_rcu(nb);
 	u32 val;
 
-	dev_info(dev, "Reboot requested\n");
+	dev_info(adi_rcu->dev, "Reboot requested\n");
 
-	val = readl(adi_rcu->ioaddr + ADI_RCU_REG_CONTROL);
-	writel(val | ADI_RCU_CONTROL_SYSRST, adi_rcu->ioaddr);
+	val = adi_rcu_readl(adi_rcu, ADI_RCU_REG_CTL);
+	adi_rcu_writel(val | ADI_RCU_CTL_SYSRST, adi_rcu, ADI_RCU_REG_CTL);
 
 	dev_err(adi_rcu->dev, "Unable to reboot via RCU\n");
 	return NOTIFY_DONE;
@@ -50,6 +231,7 @@ static int adi_rcu_reboot(struct notifier_block *nb, unsigned long mode, void *c
 
 static int adi_rcu_probe(struct platform_device *pdev) {
 	struct device *dev = &pdev->dev;
+	struct device_node *np = dev->of_node;
 	struct adi_rcu *adi_rcu = NULL;
 	struct resource *res;
 	void __iomem *base;
@@ -69,11 +251,17 @@ static int adi_rcu_probe(struct platform_device *pdev) {
 		return -ENODEV;
 	}
 
-	base = devm_ioremap(dev, res->start, resource_size(res));
+	base = devm_ioremap_nocache(dev, res->start, resource_size(res));
 	if (IS_ERR(base)) {
 		dev_err(dev, "Cannot map RCU base address\n");
 		return PTR_ERR(base);
 	}
+
+	if (of_property_read_u32(np, "adi,sharc-min", &adi_rcu->sharc_min_coreid))
+		adi_rcu->sharc_min_coreid = 1;
+
+	if (of_property_read_u32(np, "adi,sharc-max", &adi_rcu->sharc_max_coreid))
+		adi_rcu->sharc_max_coreid = 2;
 
 	adi_rcu->ioaddr = base;
 	adi_rcu->dev = dev;

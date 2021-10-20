@@ -255,10 +255,12 @@ static void __dma_memcpy(u32 daddr, s16 dmod, u32 saddr, s16 smod, size_t cnt, u
 
 	spin_lock_irqsave(&mdma_lock, flags);
 
-	if (get_dma_config(CH_MEMCPY_DEST))
+	if (get_dma_config(CH_MEMCPY_DEST)) {
 		while (get_dma_curr_irqstat(CH_MEMCPY_DEST) & DMA_RUN_MASK ||
-			get_dma_curr_irqstat(CH_MEMCPY_SRC) & DMA_RUN_MASK)
+			get_dma_curr_irqstat(CH_MEMCPY_SRC) & DMA_RUN_MASK) {
 			continue;
+		}
+	}
 
 	if (conf & DMA2D) {
 		/* For larger bit sizes, we've already divided down cnt so it
@@ -296,19 +298,18 @@ static void __dma_memcpy(u32 daddr, s16 dmod, u32 saddr, s16 smod, size_t cnt, u
 
 	spin_unlock_irqrestore(&mdma_lock, flags);
 
-	while (!(get_dma_curr_irqstat(CH_MEMCPY_DEST) & DMA_DONE))
+	while (!(get_dma_curr_irqstat(CH_MEMCPY_DEST) & DMA_DONE)) {
 		if (get_dma_config(CH_MEMCPY_SRC))
 			continue;
 		else
 			return;
+	}
 
 	clear_dma_irqstat(CH_MEMCPY_DEST);
 
 	set_dma_config(CH_MEMCPY_SRC, 0);
 	set_dma_config(CH_MEMCPY_DEST, 0);
 }
-
-extern struct static_vm *find_static_vm_vaddr(void *vaddr);
 
 /**
  *	_dma_memcpy - translate C memcpy settings into MDMA settings
