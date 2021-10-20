@@ -374,7 +374,14 @@ static dma_addr_t _dma_memcpy(dma_addr_t pdst, dma_addr_t psrc, size_t size)
  */
 dma_addr_t dma_memcpy(dma_addr_t pdst, const dma_addr_t psrc, size_t size)
 {
-	return _dma_memcpy(pdst, psrc, size);
+	dma_addr_t ret;
+	request_dma(CH_MEMCPY_DEST, "SC58x dma_memcpy");
+	request_dma(CH_MEMCPY_SRC, "SC58x dma_memcpy");
+	ret = _dma_memcpy(pdst, psrc, size);
+	free_dma(CH_MEMCPY_SRC);
+	free_dma(CH_MEMCPY_DEST);
+	return ret;
+
 }
 EXPORT_SYMBOL(dma_memcpy);
 
@@ -463,10 +470,6 @@ static int __init adi_dma_init(void)
 		pr_err("fail to register adi-dma2\n");
 		return ret;
 	}
-
-	/* Mark MEMDMA Channel as requested since we're using it internally */
-	request_dma(CH_MEMCPY_DEST, "SC58x dma_memcpy");
-	request_dma(CH_MEMCPY_SRC, "SC58x dma_memcpy");
 
 	return 0;
 }
