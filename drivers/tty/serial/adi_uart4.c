@@ -727,7 +727,7 @@ static void adi_uart4_serial_shutdown(struct uart_port *port)
 		disable_dma(uart->rx_dma_channel);
 		free_dma(uart->rx_dma_channel);
 		del_timer(&uart->rx_dma_timer);
-		dma_free_coherent(NULL, PAGE_SIZE, uart->rx_dma_buf.buf,
+		dma_free_coherent(uart->dev, PAGE_SIZE, uart->rx_dma_buf.buf,
 					uart->rx_dma_phy);
 	} else {
 		free_irq(uart->rx_irq, uart);
