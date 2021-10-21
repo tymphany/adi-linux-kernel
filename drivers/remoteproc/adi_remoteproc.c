@@ -708,7 +708,7 @@ static int adi_remoteproc_probe(struct platform_device *pdev)
 		ret = -ENODEV;
 		goto free_workqueue;
 	}
-	rproc_data->L1_shared_base = devm_ioremap_nocache(dev,
+	rproc_data->L1_shared_base = devm_ioremap_wc(dev,
 		res->start, resource_size(res));
 	if (IS_ERR(rproc_data->L1_shared_base)) {
 		dev_err(dev, "Cannot map L1 shared memory\n");
@@ -722,7 +722,7 @@ static int adi_remoteproc_probe(struct platform_device *pdev)
 		ret = -ENODEV;
 		goto free_workqueue;
 	}
-	rproc_data->L2_shared_base = devm_ioremap_nocache(dev,
+	rproc_data->L2_shared_base = devm_ioremap_wc(dev,
 		res->start, resource_size(res));
 	if (IS_ERR(rproc_data->L2_shared_base)) {
 		dev_err(dev, "Cannot map L2 shared memory\n");
