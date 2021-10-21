@@ -33,6 +33,8 @@
  * #define VERIFY_LDR_DATA
  */
 
+#define VERIFY_LDR_DATA
+
 /* location of bootrom that loops idle */
 #define SHARC_IDLE_ADDR			(0x00090004)
 
@@ -246,7 +248,7 @@ static void ldr_load(struct adi_rproc_data *rproc_data)
 				/* check the data */
 				for (i = 0; i < block_hdr->byte_count; i++) {
 					if (pCompareBuffer[i] != pVerifyBuffer[i]) {
-						dev_dbg(&rproc_data->dev, "dirty data, pCompareBuffer[%d]:0x%x,\
+						dev_err(rproc_data->dev, "dirty data, pCompareBuffer[%d]:0x%x,\
 							pVerifyBuffer[%d]:0x%x\n",
 							i, pCompareBuffer[i], i, pVerifyBuffer[i]);
 						verfied++;
@@ -268,9 +270,9 @@ static void ldr_load(struct adi_rproc_data *rproc_data)
 
 #if defined(VERIFY_LDR_DATA)
 	if (verfied == 0)
-		dev_dbg(&rproc_data->dev, "success to verify all the data\n");
+		dev_err(rproc_data->dev, "success to verify all the data\n");
 	else
-		dev_dbg(&rproc_data->dev, "fail to verify all the data %d\n", verfied);
+		dev_err(rproc_data->dev, "fail to verify all the data %d\n", verfied);
 #endif
 
 }
