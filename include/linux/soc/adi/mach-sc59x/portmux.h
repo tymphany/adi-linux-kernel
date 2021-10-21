@@ -96,6 +96,19 @@ void pinmux_free_list(const unsigned short per[]);
 #define P_SPI1_SSEL6    (P_DEFINED | P_IDENT(GPIO_PC2) | P_FUNCT(3))
 #define P_SPI1_SSEL7    (P_DEFINED | P_IDENT(GPIO_PB8) | P_FUNCT(1))
 
+#ifdef CONFIG_ARCH_SC59X_64
+#define P_OSPI0_CLK     (P_DEFINED | P_IDENT(GPIO_PA4)  | P_FUNCT(1))
+#define P_OSPI0_D2      (P_DEFINED | P_IDENT(GPIO_PA2) | P_FUNCT(1))
+#define P_OSPI0_D3      (P_DEFINED | P_IDENT(GPIO_PA3)  | P_FUNCT(1))
+#define P_OSPI0_D4      (P_DEFINED | P_IDENT(GPIO_PA6)  | P_FUNCT(2))
+#define P_OSPI0_D5      (P_DEFINED | P_IDENT(GPIO_PA7) | P_FUNCT(2))
+#define P_OSPI0_D6      (P_DEFINED | P_IDENT(GPIO_PA8) | P_FUNCT(2))
+#define P_OSPI0_D7      (P_DEFINED | P_IDENT(GPIO_PA9) | P_FUNCT(2))
+#define P_OSPI0_DQS     (P_DEFINED | P_IDENT(GPIO_PD4)  | P_FUNCT(2))
+#define P_OSPI0_MISO    (P_DEFINED | P_IDENT(GPIO_PA0) | P_FUNCT(1))
+#define P_OSPI0_MOSI    (P_DEFINED | P_IDENT(GPIO_PA1) | P_FUNCT(1))
+#define P_OSPI0_SEL1    (P_DEFINED | P_IDENT(GPIO_PA5)  | P_FUNCT(1))
+#else
 #define P_OSPI0_CLK     (P_DEFINED | P_IDENT(GPIO_PC8)  | P_FUNCT(0))
 #define P_OSPI0_D2      (P_DEFINED | P_IDENT(GPIO_PC10) | P_FUNCT(0))
 #define P_OSPI0_D3      (P_DEFINED | P_IDENT(GPIO_PC9)  | P_FUNCT(0))
@@ -107,6 +120,7 @@ void pinmux_free_list(const unsigned short per[]);
 #define P_OSPI0_MISO    (P_DEFINED | P_IDENT(GPIO_PC12) | P_FUNCT(0))
 #define P_OSPI0_MOSI    (P_DEFINED | P_IDENT(GPIO_PC11) | P_FUNCT(0))
 #define P_OSPI0_SEL1    (P_DEFINED | P_IDENT(GPIO_PD1)  | P_FUNCT(0))
+#endif
 
 #define P_SPI2_SCK      (P_DEFINED | P_IDENT(GPIO_PA4) | P_FUNCT(0))
 #define P_SPI2_MISO     (P_DEFINED | P_IDENT(GPIO_PA0) | P_FUNCT(0))

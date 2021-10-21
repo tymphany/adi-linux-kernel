@@ -29,11 +29,11 @@
 #include <linux/spi/spi.h>
 #include <linux/timer.h>
 
-#ifdef CONFIG_ARCH_SC59X
+#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC59X_64)
 	#include "adi-sc594-quadspi.h"
 	#include <linux/dma-mapping.h>
 	#include <linux/dma-direct.h>
-	#include <mach/dma.h>
+	#include <linux/soc/adi/dma.h>
 #endif
 
 #define CQSPI_NAME			"cadence-qspi"
@@ -950,7 +950,7 @@ static ssize_t cqspi_write(struct spi_nor *nor, loff_t to,
 
 	if (f_pdata->use_direct_mode) {
 
-		#ifdef CONFIG_ARCH_SC59X
+		#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC59X_64)
 			return cqspi_adi_direct_write_execute(nor, to, len, buf);
 		#endif
 
@@ -984,7 +984,7 @@ static int cqspi_direct_read_execute(struct spi_nor *nor, u_char *buf,
 	dma_cookie_t cookie;
 	dma_addr_t dma_dst;
 
-	#ifdef CONFIG_ARCH_SC59X
+	#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC59X_64)
 		cqspi_adi_direct_read_execute(nor, buf, from, len);
 		return 0;
 	#endif
@@ -1298,7 +1298,7 @@ static int cqspi_setup_flash(struct cqspi_st *cqspi, struct device_node *np)
 			goto err;
 		}
 
-#ifdef CONFIG_ARCH_SC59X
+#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC59X_64)
 		f_pdata->use_direct_mode = true;
 #endif
 
@@ -1358,7 +1358,7 @@ static int cqspi_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-#ifndef CONFIG_ARCH_SC59X
+#if !(defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC59X_64))
 	/* Obtain QSPI clock. */
 	cqspi->clk = devm_clk_get(dev, NULL);
 	if (IS_ERR(cqspi->clk)) {
@@ -1401,7 +1401,7 @@ static int cqspi_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-#ifdef CONFIG_ARCH_SC59X
+#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC59X_64)
 	#define CONFIG_CQSPI_REF_CLK		500000000
 	cqspi->master_ref_clk_hz = CONFIG_CQSPI_REF_CLK;
 #else
@@ -1565,7 +1565,7 @@ MODULE_ALIAS("platform:" CQSPI_NAME);
 MODULE_AUTHOR("Ley Foon Tan <lftan@altera.com>");
 MODULE_AUTHOR("Graham Moore <grmoore@opensource.altera.com>");
 
-#ifdef CONFIG_ARCH_SC59X
+#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC59X_64)
 
 #define SCB5_SPI2_OSPI_REMAP 0x30400000
 #define OSPI0_MMAP_ADDRESS 0x60000000

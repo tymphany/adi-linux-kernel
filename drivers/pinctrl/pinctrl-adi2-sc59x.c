@@ -213,11 +213,19 @@ static const unsigned spi1_pins[] = {
 	GPIO_PA10, GPIO_PA11, GPIO_PA12,
 };
 
+#ifdef CONFIG_ARCH_SC59X_64
+static const unsigned ospi_pins[] = {
+	GPIO_PA4, GPIO_PA2, GPIO_PA3, GPIO_PA6, GPIO_PA7,
+	GPIO_PA8, GPIO_PA9, GPIO_PD4, GPIO_PA0, GPIO_PA1,
+	GPIO_PA5
+};
+#else
 static const unsigned ospi_pins[] = {
 	GPIO_PC8, GPIO_PC10, GPIO_PC9, GPIO_PD0, GPIO_PC15,
 	GPIO_PC14, GPIO_PC13, GPIO_PD4, GPIO_PC12, GPIO_PC11,
 	GPIO_PD1
 };
+#endif
 
 static const unsigned spi2_pins[] = {
 	GPIO_PA4, GPIO_PA0, GPIO_PA1,
