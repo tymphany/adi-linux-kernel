@@ -235,6 +235,10 @@ static const unsigned spi2_quad_pins[] = {
 	GPIO_PA4, GPIO_PA0, GPIO_PA1, GPIO_PA2, GPIO_PA3,
 };
 
+static const unsigned spi3_pins[] = {
+	GPIO_PG7, GPIO_PG6, GPIO_PG5,
+};
+
 static const unsigned can0_pins[] = {
 	GPIO_PC7, GPIO_PC8,
 };
@@ -360,7 +364,7 @@ static const unsigned short uart2_hwflow_mux[] = {
 };
 
 static const unsigned short spi0_mux[] = {
-	P_SPI0_SCK, P_SPI0_MISO, P_SPI0_MOSI,
+	P_SPI0_SCK, P_SPI0_MISO, P_SPI0_MOSI, P_SPI0_SSEL1,
 	0
 };
 
@@ -383,6 +387,11 @@ static const unsigned short spi2_mux[] = {
 
 static const unsigned short spi2_quad_mux[] = {
 	P_SPI2_SCK, P_SPI2_MISO, P_SPI2_MOSI, P_SPI2_D2, P_SPI2_D3,
+	0
+};
+
+static const unsigned short spi3_mux[] = {
+	P_SPI3_MOSI, P_SPI3_MISO, P_SPI3_SCK, P_SPI3_SSEL5,
 	0
 };
 
@@ -515,6 +524,7 @@ static const struct adi_pin_group adi_pin_groups[] = {
 	ADI_PIN_GROUP("ospigrp", ospi_pins, ospi_mux),
 	ADI_PIN_GROUP("spi2grp", spi2_pins, spi2_mux),
 	ADI_PIN_GROUP("spi2quadgrp", spi2_quad_pins, spi2_quad_mux),
+	ADI_PIN_GROUP("spi3grp", spi3_pins, spi3_mux),
 	ADI_PIN_GROUP("can0grp", can0_pins, can0_mux),
 	ADI_PIN_GROUP("can1grp", can1_pins, can1_mux),
 	ADI_PIN_GROUP("smc0grp", smc0_pins, smc0_mux),
@@ -541,6 +551,7 @@ static const char * const spi0grp[] = { "spi0grp" };
 static const char * const spi1grp[] = { "spi1grp" };
 static const char * const ospigrp[] = { "ospigrp" };
 static const char * const spi2grp[] = { "spi2grp", "spi2quadgrp" };
+static const char * const spi3grp[] = { "spi3grp" };
 static const char * const can0grp[] = { "can0grp" };
 static const char * const can1grp[] = { "can1grp" };
 static const char * const smc0grp[] = { "smc0grp" };
@@ -562,6 +573,7 @@ static const struct adi_pmx_func adi_pmx_functions[] = {
 	ADI_PMX_FUNCTION("spi1", spi1grp),
 	ADI_PMX_FUNCTION("ospi", ospigrp),
 	ADI_PMX_FUNCTION("spi2", spi2grp),
+	ADI_PMX_FUNCTION("spi3", spi3grp),
 	ADI_PMX_FUNCTION("can0", can0grp),
 	ADI_PMX_FUNCTION("can1", can1grp),
 	ADI_PMX_FUNCTION("smc0", smc0grp),

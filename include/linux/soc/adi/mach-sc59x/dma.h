@@ -62,7 +62,7 @@
 #define CH_MEM_STREAM3_SRC            43
 #define CH_MEM_STREAM3_DEST           44
 
-#define MAX_DMA_CHANNELS	45
+#define MAX_DMA_CHANNELS	57
 
 #define MDMA_S0_NEXT_DESC_PTR	(REG_DMA8_DSCPTR_NXT)
 #define MDMA_S0_CONFIG		(REG_DMA8_CFG)

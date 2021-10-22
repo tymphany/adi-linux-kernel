@@ -136,6 +136,18 @@ void pinmux_free_list(const unsigned short per[]);
 #define P_SPI2_SSEL6    (P_DEFINED | P_IDENT(GPIO_PC3) | P_FUNCT(3))
 #define P_SPI2_SSEL7    (P_DEFINED | P_IDENT(GPIO_PB9) | P_FUNCT(1))
 
+#define P_SPI3_SCK      (P_DEFINED | P_IDENT(GPIO_PG5) | P_FUNCT(0))
+#define P_SPI3_MISO     (P_DEFINED | P_IDENT(GPIO_PG6) | P_FUNCT(0))
+#define P_SPI3_MOSI     (P_DEFINED | P_IDENT(GPIO_PG7) | P_FUNCT(0))
+
+#define P_SPI3_SSEL1    (P_DEFINED | P_IDENT(GPIO_PG8) | P_FUNCT(0))
+#define P_SPI3_SSEL2    (P_DEFINED | P_IDENT(GPIO_PF7) | P_FUNCT(1))
+#define P_SPI3_SSEL3    (P_DEFINED | P_IDENT(GPIO_PE0) | P_FUNCT(2))
+#define P_SPI3_SSEL4    (P_DEFINED | P_IDENT(GPIO_PE1) | P_FUNCT(2))
+#define P_SPI3_SSEL5    (P_DEFINED | P_IDENT(GPIO_PG15) | P_FUNCT(2))
+#define P_SPI3_SSEL6    (P_DEFINED | P_IDENT(GPIO_PF8) | P_FUNCT(0))
+#define P_SPI3_SSEL7    (P_DEFINED | P_IDENT(GPIO_PH0) | P_FUNCT(2))
+
 /* SMC Port Mux */
 #define P_SMC_A1            (P_DEFINED | P_IDENT(GPIO_PB5) | P_FUNCT(3))
 #define P_SMC_A2            (P_DEFINED | P_IDENT(GPIO_PB6) | P_FUNCT(3))

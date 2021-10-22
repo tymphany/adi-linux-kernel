@@ -42,6 +42,56 @@
 	status = "okay";
 };
 
+&spi0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi0_default>;
+	status = "disabled";
+
+	spidev@9{
+		compatible = "adi,generic-spidev";
+		reg = <9>;  // SPI0_SSEL1 / GPIO_PA9
+		spi-max-frequency = <4000000>;
+	};
+};
+
+&spi1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi1_default>;
+	status = "disabled";
+
+	spidev@13{
+		compatible = "adi,generic-spidev";
+		reg = <13>; // SPI1_SSEL1 / GPIO_PA13
+		spi-max-frequency = <4000000>;
+	};
+};
+
+/*
+&spi2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi2_default>;
+	status = "disabled";
+
+	spidev@5{
+		compatible = "adi,generic-spidev";
+		reg = <5>; // SPI2_SSEL1 / GPIO_PA5
+		spi-max-frequency = <4000000>;
+	};
+};
+*/
+
+&spi3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi3_default>;
+	status = "disabled";
+
+	spidev@111{
+		compatible = "adi,generic-spidev";
+		reg = <111>; // SPI3_SSEL5 / GPIO_PG15
+		spi-max-frequency = <4000000>;
+	};
+};
+
 &spi2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&spi2_quad>;
