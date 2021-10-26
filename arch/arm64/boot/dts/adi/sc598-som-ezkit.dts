@@ -476,5 +476,8 @@
 	dr_mode = "host";
 	pinctrl-names = "default";
 	pinctrl-0 = <&usbc0_default>;
+};
+
+&sram_mmap {
 	status = "okay";
 };

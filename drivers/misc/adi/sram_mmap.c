@@ -1,9 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * SRAM mmap misc driver for ADI processor on-chip memory
  *
  * Copyright 2014-2018 Analog Devices Inc.
- *
- * Licensed under the GPL-2 or later.
  */
 
 #include <linux/fs.h>
@@ -16,13 +15,6 @@
 #include <linux/genalloc.h>
 #include <linux/miscdevice.h>
 #include <linux/platform_device.h>
-#include <mach/cpu.h>
-#include <mach/hardware.h>
-#ifdef CONFIG_ARCH_SC58X
-#include <mach/sc58x.h>
-#elif defined(CONFIG_ARCH_SC57X)
-#include <mach/sc57x.h>
-#endif
 
 #define SRAM_MMAP_DRV_NAME		"sram_mmap"
 

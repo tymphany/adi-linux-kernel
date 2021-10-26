@@ -1,9 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * SRAM Controller driver for ADI processor on-chip memory
  *
  * Copyright 2014-2018 Analog Devices Inc.
- *
- * Licensed under the GPL-2 or later.
  */
 
 #include <linux/module.h>
@@ -18,18 +17,8 @@
 #include <linux/seq_file.h>
 #include <linux/proc_fs.h>
 #include <linux/platform_device.h>
-#include <mach/cpu.h>
-#include <mach/irqs.h>
-#include <mach/hardware.h>
-#include <asm/io.h>
-#ifdef CONFIG_ARCH_SC59X
-#include <mach/sc59x.h>
-#elif defined(CONFIG_ARCH_SC58X)
-#include <mach/sc58x.h>
-#elif defined(CONFIG_ARCH_SC57X)
-#include <mach/sc57x.h>
-#endif
-#include <mach/sram.h>
+
+#include <linux/soc/adi/sram.h>
 
 #define SRAM_DRV_NAME		"sram_controller"
 
@@ -104,7 +93,7 @@ static int adi_sram_show(struct seq_file *s, void *data)
 		pool_size = gen_pool_size(sram_pool);
 		avail = gen_pool_avail(sram_pool);
 		used = pool_size - avail;
-		seq_printf(s,"\tTotal size: %d B\n\tUsed sram: %d B\n\tAvail sram: %d B\n",
+		seq_printf(s,"\tTotal size: %lu B\n\tUsed sram: %lu B\n\tAvail sram: %lu B\n",
 			pool_size, used, avail);
 
 		of_node_put(sram_node);
@@ -136,10 +125,7 @@ static int adi_sram_probe(struct platform_device *pdev)
 	int irq;
 	struct proc_dir_entry *d;
 	struct device *dev = &pdev->dev;
-	struct device_node *child;
-	const struct of_device_id *match;
-	const __be32 *l2_ctl_phys;
-	resource_size_t res_size = 0x100;
+	struct resource *res;
 
 	sram_dev = &pdev->dev;
 
@@ -148,36 +134,43 @@ static int adi_sram_probe(struct platform_device *pdev)
 	if (!d)
 		return -ENOMEM;
 
-	/* sram-ecc-err */
-	match = of_match_device(of_match_ptr(adi_sram_of_match), dev);
-	if (!match) {
-		dev_err(dev, "No sram-controller dts node specified\n");
-		return -ENOENT;
-	}
-	child = of_get_child_by_name(pdev->dev.of_node, "sram-ecc-err");
-	if (!child) {
-		dev_err(dev, "No sram-ecc-err dts node specified\n");
-		return -ENOENT;
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res) {
+		dev_err(dev, "Cannot find L2 CTL address (reg property in device tree)\n");
+		ret = -ENOENT;
+		goto free_proc;
 	}
 
-	irq = irq_of_parse_and_map(child, 0);
+	l2_ctl_vaddr = devm_ioremap_nocache(dev, res->start, resource_size(res));
+	if(IS_ERR(l2_ctl_vaddr)) {
+		dev_err(dev, "Cannot map L2 control address\n");
+		ret = -ENOENT;
+		goto free_proc;
+	}
+
+	irq = platform_get_irq(pdev, 0);
 	if (!irq) {
 		dev_err(dev, "invalid irq from dts node\n");
-		return -ENOENT;
+		ret = -ENOENT;
+		goto free_proc;
 	}
-	l2_ctl_phys = of_get_address(child, 0, NULL, NULL);
-	l2_ctl_vaddr = devm_ioremap(dev, be32_to_cpu(*l2_ctl_phys), res_size);
 
+	ret = devm_request_threaded_irq(dev, irq, sram_ecc_err, NULL,
+		0, "sram-ecc-err", dev);
+	if (unlikely(ret < 0)) {
+		dev_err(dev, "Fail to request SRAM ECC error interrupt.ret:%d\n", ret);
+		ret = -ENOENT;
+		goto free_proc;
+	}
 
+	/* clear all status bits */
 	writel(readl(l2_ctl_vaddr + L2CTL0_STAT_OFFSET),
 				(l2_ctl_vaddr + L2CTL0_STAT_OFFSET));
 
-	ret = devm_request_irq(dev, irq, sram_ecc_err, 0,
-			"sram-ecc-err", dev);
-	if (unlikely(ret < 0)) {
-		pr_err("Fail to request SRAM ECC error interrupt.ret:%d\n", ret);
-	}
+	return 0;
 
+free_proc:
+	remove_proc_entry("sraminfo", NULL);
 	return ret;
 }
 
