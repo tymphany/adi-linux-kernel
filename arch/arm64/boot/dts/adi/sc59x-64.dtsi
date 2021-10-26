@@ -582,6 +582,14 @@
 					adi,function = "ospi";
 				};
 			};
+
+			usbc0 {
+				usbc0_default: usbc0@0 {
+					adi,group = "usbc0grp";
+					adi,function = "usbc0";
+				};
+			};
+
 		};
 
 		clocks {
@@ -813,6 +821,21 @@
 			gpio-ranges = <&pinctrl0 0 128 16>;
 			pint_id = /bits/ 8 <7>;
 			pint_map = /bits/ 8 <1>;
+		};
+
+		usb0_phy: usbphy {
+			compatible = "usb-nop-xceiv";
+			#phy-cells = <0>;
+			status = "disabled";
+		};
+
+		usb0: usb@310c5000 {
+			compatible = "adi,adsp2159x-usbc", "snps,dwc2";
+			reg = <0x310c5000 0x2000>;
+			interrupts = <GIC_SPI 241 IRQ_TYPE_LEVEL_HIGH>;
+			phys = <&usb0_phy>;
+			phy-names = "usb2-phy";
+			status = "disabled";
 		};
 
 		dma0: dma@0 {

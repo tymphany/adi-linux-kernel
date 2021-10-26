@@ -248,9 +248,70 @@
 		ssw0pullups: pinmux {
 			bias-pull-up;
 			pins = "gpio0", "gpio1", "gpio2", "gpio3",
-				"gpio4", "gpio5", "gpio6", "gpio7",
-				"gpio8", "gpio9", "gpio10", "gpio11",
-				"gpio12", "gpio13", "gpio14", "gpio15";
+				"gpio4", "gpio5", "gpio6", "gpio8", "gpio9";
+		};
+
+		led1 {
+			gpio-hog;
+			gpios = <0 0x0>;
+			output-high;
+			line-name = "led1-en";
+		};
+
+		led2 {
+			gpio-hog;
+			gpios = <1 0x0>;
+			output-high;
+			line-name = "led2-en";
+		};
+
+		led3 {
+			gpio-hog;
+			gpios = <2 0x0>;
+			output-high;
+			line-name = "led3-en";
+		};
+
+		spi2d2-d3 {
+			gpio-hog;
+			gpios = <3 0x0>;
+			output-low;
+			line-name = "~spi2d2-d3-en";
+		};
+
+		spi2flash-cs {
+			gpio-hog;
+			gpios = <4 0x0>;
+			output-low;
+			line-name = "~spi2flash-cs";
+		};
+
+		uart0 {
+			gpio-hog;
+			gpios = <5 0x0>;
+			output-low;
+			line-name = "~uart0-en";
+		};
+
+		uart0-flow-en {
+			gpio-hog;
+			gpios = <6 0x0>;
+			output-high;
+			line-name = "~uart0-flow-en";
+		};
+
+		emmc {
+			gpio-hog;
+			gpios = <8 0x0>;
+			output-low;
+			line-name = "emmc-en";
+		};
+
+		emmc-som-en {
+			gpio-hog;
+			gpios = <9 0x0>;
+			output-high;
+			line-name = "emmc-som-en";
 		};
 	};
 
@@ -260,8 +321,119 @@
 		#gpio-cells = <2>;
 		reg = <0x22>;
 		status = "okay";
-	};
 
+		eeprom {
+			gpio-hog;
+			gpios = <0 0x0>;
+			output-low;
+			line-name = "eeprom-en";
+		};
+
+		pushbutton {
+			gpio-hog;
+			gpios = <1 0x0>;
+			output-low;
+			line-name = "pushbutton-en";
+		};
+
+		microsd {
+			gpio-hog;
+			gpios = <2 0x0>;
+			output-high;
+			line-name = "~microsd-spi";
+		};
+
+		ftdi {
+			gpio-hog;
+			gpios = <3 0x0>;
+			output-low;
+			line-name = "~ftdi-usb-en";
+		};
+
+		can {
+			gpio-hog;
+			gpios = <4 0x0>;
+			output-high;
+			line-name = "~can-en";
+		};
+
+		adau {
+			gpio-hog;
+			gpios = <5 0x0>;
+			output-low;
+			line-name = "~adau-reset";
+		};
+
+		adau1962 {
+			gpio-hog;
+			gpios = <6 0x0>;
+			output-high;
+			line-name = "~adau1962-en";
+		};
+
+		adau1979 {
+			gpio-hog;
+			gpios = <7 0x0>;
+			output-high;
+			line-name = "~adau1979-en";
+		};
+
+		octal {
+			gpio-hog;
+			gpios = <8 0x0>;
+			output-low;
+			line-name = "octal-spi-cs-en";
+		};
+
+		spdif-dig {
+			gpio-hog;
+			gpios = <9 0x0>;
+			output-high;
+			line-name = "~spdif-digital-en";
+		};
+
+		spdif-opt {
+			gpio-hog;
+			gpios = <10 0x0>;
+			output-high;
+			line-name = "~spdif-optical-en";
+		};
+
+		audio-jack {
+			gpio-hog;
+			gpios = <11 0x0>;
+			output-low;
+			line-name = "audio-jack-sel";
+		};
+
+		mlb {
+			gpio-hog;
+			gpios = <12 0x0>;
+			output-high;
+			line-name = "~mlb-en";
+		};
+
+		eth1 {
+			gpio-hog;
+			gpios = <13 0x0>;
+			output-high;
+			line-name = "~eth1-en";
+		};
+
+		eth1-reset {
+			gpio-hog;
+			gpios = <14 0x0>;
+			output-low;
+			line-name = "~eth1-reset";
+		};
+
+		gige-reset {
+			gpio-hog;
+			gpios = <15 0x0>;
+			output-high;
+			line-name = "~gige-reset";
+		};
+	};
 };
 
 &emac0 {
@@ -292,5 +464,17 @@
 	bus-width = <8>;
 	max-frequency = <50000000>;
 	non-removable;
+	status = "okay";
+};
+
+&usb0_phy {
+	reset-gpios = <&gpg 11 GPIO_ACTIVE_LOW>;
+	status = "okay";
+};
+
+&usb0 {
+	dr_mode = "host";
+	pinctrl-names = "default";
+	pinctrl-0 = <&usbc0_default>;
 	status = "okay";
 };
