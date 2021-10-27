@@ -105,6 +105,7 @@ struct sport_register {
 struct sport_device {
 	struct platform_device *pdev;
 	const unsigned short *pin_req;
+	unsigned int sport_channel;
 	struct sport_register *tx_regs;
 	struct sport_register *rx_regs;
 	int tx_dma_chan;
@@ -146,10 +147,6 @@ struct sport_device {
 
 #if IS_ENABLED(CONFIG_SND_SC5XX_SPORT_SHARC)
 
-	s32 tx_frags_in_dma[SHARC_CORES_NUM];
-	s32 rx_frags_in_dma[SHARC_CORES_NUM];
-
-	spinlock_t icc_spinlock;
 	struct mutex rpmsg_lock;
 
 	struct rpmsg_device *sharc_rpmsg[SHARC_CORES_NUM];
@@ -158,24 +155,13 @@ struct sport_device {
 	dma_addr_t sharc_tx_buf_phy;
 	size_t tx_buf_size;
 	size_t sharc_tx_buf_pos;
+	struct mutex sharc_tx_buf_pos_lock;
 
 	unsigned char *sharc_rx_buf;
 	dma_addr_t sharc_rx_buf_phy;
 	size_t rx_buf_size;
 	size_t sharc_rx_buf_pos;
-
-	struct workqueue_struct *sharc_workqueue;
-
-	//can't be array due to container_of usage
-	// Works to be scheduled form rx_irq or tx_irq
-	struct work_struct sharc0_underrun_work;
-	struct work_struct sharc0_overrun_work;
-	struct work_struct sharc0_playback_frag_ready_work;
-	struct work_struct sharc0_record_frag_ready_work;
-	struct work_struct sharc1_underrun_work;
-	struct work_struct sharc1_overrun_work;
-	struct work_struct sharc1_playback_frag_ready_work;
-	struct work_struct sharc1_record_frag_ready_work;
+	struct mutex sharc_rx_buf_pos_lock;
 
 	struct completion sharc_msg_ack_complete[SHARC_CORES_NUM];
 #endif

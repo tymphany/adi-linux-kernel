@@ -41,7 +41,7 @@
 		i2c1 = &i2c1;
 		i2c2 = &i2c2;
 		rtc0 = &rtc0;
-		i2s0 = &i2s0;
+		i2s4 = &i2s4;
 		mmc0 = &mmc0;
 	};
 
@@ -265,9 +265,14 @@
 			status = "disabled";
 		};
 
-		i2s0: i2s@0 {
+		i2s4: i2s@4 {
 			compatible = "sc5xx,i2s-dai";
 			status = "disabled";
+			reg = <0x31002400 0x80>, <0x31002480 0x80>;
+			sport-channel = <4>;
+			interrupt-names = "tx_staus", "rx_staus";
+			interrupts = <GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI 100 IRQ_TYPE_LEVEL_HIGH>;
+			dma-channel = <10>, <11>;
 		};
 
 		watchdog@0x31008000 {
