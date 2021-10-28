@@ -306,6 +306,12 @@ static int tc_init(struct stmmac_priv *priv)
 	return 0;
 }
 
+/* Never fails but we only use this with dwmac1000 3.7+ so that nothing
+ * is configured */
+static int tc_cbs_only_init(struct stmmac_priv *priv) {
+	return 0;
+}
+
 static int tc_setup_cbs(struct stmmac_priv *priv,
 			struct tc_cbs_qopt_offload *qopt)
 {
@@ -607,4 +613,9 @@ const struct stmmac_tc_ops dwmac510_tc_ops = {
 	.setup_cls_u32 = tc_setup_cls_u32,
 	.setup_cbs = tc_setup_cbs,
 	.setup_cls = tc_setup_cls,
+};
+
+const struct stmmac_tc_ops dwmac1000_tc_ops = {
+	.init = tc_cbs_only_init,
+	.setup_cbs = tc_setup_cbs,
 };
