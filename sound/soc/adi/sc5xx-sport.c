@@ -310,6 +310,13 @@ static int sport_get_resource(struct sport_device *sport)
 		return PTR_ERR(sport->rx_regs);
 	}
 
+	ret = of_property_read_u32(dev->of_node,
+			"sport-channel", &sport->sport_channel);
+	if (ret) {
+		dev_err(dev, "No sport-channel resource\n");
+		return -ENODEV;
+	}
+
 	ret = of_property_read_u32_index(dev->of_node,
 			"dma-channel", 0, &sport->tx_dma_chan);
 	if (ret) {

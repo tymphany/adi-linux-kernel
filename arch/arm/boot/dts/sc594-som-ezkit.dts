@@ -76,6 +76,7 @@
 			core-id = <1>;
 			core-irq = <74>; /* was 77 */
 			firmware-name = "adi_adsp_core1_fw.ldr";
+			interrupts = <GIC_SPI 165 IRQ_TYPE_EDGE_RISING>;
 		};
 
 		core2-rproc@0x3108c000 {
@@ -84,11 +85,12 @@
 			core-id = <2>;
 			core-irq = <75>; /* was 78 */
 			firmware-name = "adi_adsp_core2_fw.ldr";
+			interrupts = <GIC_SPI 165 IRQ_TYPE_EDGE_RISING>;
 		};
 
 		sound {
 			compatible = "sc5xx,asoc-card";
-			adi,cpu-dai = <&i2s0>;
+			adi,cpu-dai = <&i2s4>;
 			adi,codec = <&adau1962>, <&adau1979>;
 		};
 
@@ -305,13 +307,7 @@
 	};
 };
 
-&i2s0 {
-	reg = <0x31002400 0x80>, <0x31002480 0x80>;
-	interrupts = <GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>,
-			<GIC_SPI 100 IRQ_TYPE_LEVEL_HIGH>,
-			<GIC_SPI 165 IRQ_TYPE_EDGE_RISING>
-			;
-	dma-channel = <10>, <11>;
+&i2s4 {
 	status = "okay";
 };
 

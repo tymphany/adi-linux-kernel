@@ -105,6 +105,7 @@ struct sport_register {
 struct sport_device {
 	struct platform_device *pdev;
 	const unsigned short *pin_req;
+	unsigned int sport_channel;
 	struct sport_register *tx_regs;
 	struct sport_register *rx_regs;
 	int tx_dma_chan;
@@ -146,45 +147,23 @@ struct sport_device {
 
 #if IS_ENABLED(CONFIG_SND_SC5XX_SPORT_SHARC)
 
-	s32 tx_frags_in_dma[SHARC_CORES_NUM];
-	s32 rx_frags_in_dma[SHARC_CORES_NUM];
+	struct mutex rpmsg_lock;
 
-	spinlock_t icc_spinlock;
-	int icc_irq;
-	int icc_irq_type;
-	atomic_t in_interrupt;
-	struct sharc_msg *messages;
-	int message_queue_pointer;
-	struct sharc_msg *received_messages;
-	int receive_message_queue_pointer;
+	struct rpmsg_device *sharc_rpmsg[SHARC_CORES_NUM];
 
 	unsigned char *sharc_tx_buf;
 	dma_addr_t sharc_tx_buf_phy;
 	size_t tx_buf_size;
 	size_t sharc_tx_buf_pos;
+	struct mutex sharc_tx_buf_pos_lock;
 
 	unsigned char *sharc_rx_buf;
 	dma_addr_t sharc_rx_buf_phy;
 	size_t rx_buf_size;
 	size_t sharc_rx_buf_pos;
+	struct mutex sharc_rx_buf_pos_lock;
 
-	struct workqueue_struct *sharc_workqueue;
-
-	//can't be array due to container_of usage
-	struct work_struct sharc0_wait_playback_ack_work;
-	struct work_struct sharc0_wait_record_ack_work;
-	struct work_struct sharc1_wait_playback_ack_work;
-	struct work_struct sharc1_wait_record_ack_work;
-
-	struct work_struct sharc0_underrun_work;
-	struct work_struct sharc0_overrun_work;
-	struct work_struct sharc1_underrun_work;
-	struct work_struct sharc1_overrun_work;
-
-	struct completion sharc_playback_ack_complete[SHARC_CORES_NUM];
-	struct completion sharc_record_ack_complete[SHARC_CORES_NUM];
-	struct completion sharc_sync_ack_complete[SHARC_CORES_NUM];
-	int sharc_last_sync_msg[SHARC_CORES_NUM];
+	struct completion sharc_msg_ack_complete[SHARC_CORES_NUM];
 #endif
 };
 
@@ -215,5 +194,11 @@ int sport_config_rx_dma(struct sport_device *sport, void *buf,
 	int fragcount, size_t fragsize, struct snd_pcm_substream *substream);
 unsigned long sport_curr_offset_tx(struct sport_device *sport);
 unsigned long sport_curr_offset_rx(struct sport_device *sport);
+
+#if IS_ENABLED(CONFIG_SND_SC5XX_SPORT_SHARC)
+int rpmsg_sharc_alsa_probe(struct rpmsg_device *rpdev);
+int rpmsg_sharc_alsa_cb(struct rpmsg_device *rpdev, void *data, int len, void *priv, u32 src);
+void rpmsg_sharc_alsa_remove(struct rpmsg_device *rpdev);
+#endif
 
 #endif

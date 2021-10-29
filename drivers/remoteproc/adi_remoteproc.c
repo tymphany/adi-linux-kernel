@@ -15,6 +15,8 @@
 
 #include <linux/clk.h>
 #include <linux/firmware.h>
+#include <linux/elf.h>
+#include <linux/virtio_ids.h>
 #include <linux/interrupt.h>
 #include <linux/module.h>
 #include <linux/of_address.h>
@@ -54,11 +56,77 @@
 #define VALID_CORE_MIN			1
 #define VALID_CORE_MAX			2
 
+#define CORE_INIT_TIMEOUT msecs_to_jiffies(2000)
+
 #if defined(VERIFY_LDR_DATA)
 #define MEMORY_COUNT 2
 #else
 #define MEMORY_COUNT 1
 #endif
+
+#define ADI_FW_LDR 0
+#define ADI_FW_ELF 1
+
+#define NUM_TABLE_ENTRIES         1
+/* Resource table for the given remote */
+struct adi_sharc_resource_table {
+	struct resource_table table_hdr;
+	unsigned int offset[NUM_TABLE_ENTRIES];
+	struct fw_rsc_hdr rsc_hdr;
+	struct fw_rsc_vdev rpmsg_vdev;
+	struct fw_rsc_vdev_vring vring[2];
+} __packed;
+
+#define VRING_ALIGN 0x1000
+#define VRING_SIZE 0x8000
+
+static struct adi_sharc_resource_table resources_sharc0 = {
+	.table_hdr = {
+		/* resource table header */
+		1, 								 /* version */
+		NUM_TABLE_ENTRIES, /* number of table entries */
+		{0, 0,},					 /* reserved fields */
+	},
+	.offset = {offsetof(struct adi_sharc_resource_table, rsc_hdr),},
+	/* virtio device entry */
+	.rsc_hdr = {RSC_VDEV,}, /* virtio dev type */
+	.rpmsg_vdev = {
+		VIRTIO_ID_RPMSG, /* it's rpmsg virtio */
+		1, /* kick sharc0 */
+		/* 1<<0 is VIRTIO_RPMSG_F_NS bit defined in virtio_rpmsg_bus.c */
+		1<<0, 0, 0, 0, /* dfeatures, gfeatures, config len, status */
+		2, /* num_of_vrings */
+		{0, 0,}, /* reserved */
+	},
+	.vring = {
+		{FW_RSC_ADDR_ANY, VRING_ALIGN, VRING_SIZE, 1, 0}, /* da allocated by remoteproc driver */
+		{FW_RSC_ADDR_ANY, VRING_ALIGN, VRING_SIZE, 1, 0}, /* da allocated by remoteproc driver */
+	},
+};
+
+static struct adi_sharc_resource_table resources_sharc1 = {
+	.table_hdr = {
+		/* resource table header */
+		1, 								 /* version */
+		NUM_TABLE_ENTRIES, /* number of table entries */
+		{0, 0,},					 /* reserved fields */
+	},
+	.offset = {offsetof(struct adi_sharc_resource_table, rsc_hdr),},
+	/* virtio device entry */
+	.rsc_hdr = {RSC_VDEV,}, /* virtio dev type */
+	.rpmsg_vdev = {
+		VIRTIO_ID_RPMSG, /* it's rpmsg virtio */
+		2, /* kick sharc0 */
+		/* 1<<0 is VIRTIO_RPMSG_F_NS bit defined in virtio_rpmsg_bus.c */
+		1<<0, 0, 0, 0, /* dfeatures, gfeatures, config len, status */
+		2, /* num_of_vrings */
+		{0, 0,}, /* reserved */
+	},
+	.vring = {
+		{FW_RSC_ADDR_ANY, VRING_ALIGN, VRING_SIZE, 2, 0}, /* da allocated by remoteproc driver */
+		{FW_RSC_ADDR_ANY, VRING_ALIGN, VRING_SIZE, 2, 0}, /* da allocated by remoteproc driver */
+	},
+};
 
 struct adi_rproc_data {
 	struct device *dev;
@@ -66,11 +134,20 @@ struct adi_rproc_data {
 	const char *firmware_name;
 	int core_id;
 	int core_irq;
+	int icc_irq;
+	int icc_irq_type;
 	void *mem_virt;
 	dma_addr_t mem_handle;
 	size_t fw_size;
 	unsigned long ldr_load_addr;
 	struct rcu_reg __iomem *rcu_base;
+	int firmware_format;
+	void __iomem *L1_shared_base;
+	void __iomem *L2_shared_base;
+	struct completion sharc_platform_init_complete;
+	struct workqueue_struct *core_workqueue;
+	int wait_platform_init;
+	struct delayed_work core_kick_work;
 };
 
 typedef struct block_code_flag {
@@ -117,12 +194,25 @@ static int adi_core_set_svect(struct adi_rproc_data *rproc_data,
 	return 0;
 }
 
+static irqreturn_t sharc_virtio_irq_threded_handler(int irq, void *p);
 /* Active SHARC core */
 static int adi_core_start(struct adi_rproc_data *rproc_data)
 {
+	int ret;
 	int coreid = rproc_data->core_id;
 
 	struct rcu_reg __iomem *rcu_base = rproc_data->rcu_base;
+
+	rproc_data->wait_platform_init = 1;
+
+	ret = devm_request_threaded_irq(rproc_data->dev,
+			rproc_data->icc_irq, NULL, sharc_virtio_irq_threded_handler,
+			rproc_data->icc_irq_type | IRQF_ONESHOT,
+			"ICC virtio IRQ", rproc_data);
+	if (ret) {
+		dev_err(rproc_data->dev, "Fail to request ICC receive IRQ\n");
+		return -ENOENT;
+	}
 
 	if ((coreid < VALID_CORE_MIN) || (coreid > VALID_CORE_MAX)) {
 		printk(" %s: invalid Core ID:%d\n", __func__, coreid);
@@ -191,8 +281,12 @@ static int adi_core_stop(struct adi_rproc_data *rproc_data)
 	int coreid = rproc_data->core_id;
 	int coreirq = rproc_data->core_irq;
 	struct rcu_reg __iomem *rcu_base = rproc_data->rcu_base;
-	unsigned long timeout = jiffies + HZ*5;
+	unsigned long timeout = jiffies + CORE_INIT_TIMEOUT;
 	bool is_timeout = true;
+
+	cancel_delayed_work_sync(&rproc_data->core_kick_work);
+
+	devm_free_irq(rproc_data->dev, rproc_data->icc_irq, rproc_data);
 
 	if ((coreid < VALID_CORE_MIN) || (coreid > VALID_CORE_MAX)) {
 		printk(" %s: invalid Core ID:%d\n", __func__, coreid);
@@ -320,15 +414,23 @@ static void ldr_load(struct adi_rproc_data *rproc_data)
 
 }
 
-static bool ldr_phdr_valid(const LDR_Ehdr_t *phdr)
+static int adi_valid_firmware(struct rproc *rproc, const struct firmware *fw)
 {
-	if (!phdr->byte_count
-				&& (phdr->bcode_flag.bHdrSIGN == 0xAD
-					|| phdr->bcode_flag.bHdrSIGN == 0xAC
-					|| phdr->bcode_flag.bHdrSIGN == 0xAB))
-		return true;
-	else
-		return false;
+	LDR_Ehdr_t *adi_ldr_hdr = (LDR_Ehdr_t *)fw->data;
+
+	if (!adi_ldr_hdr->byte_count
+				&& (adi_ldr_hdr->bcode_flag.bHdrSIGN == 0xAD
+					|| adi_ldr_hdr->bcode_flag.bHdrSIGN == 0xAC
+					|| adi_ldr_hdr->bcode_flag.bHdrSIGN == 0xAB))
+		return ADI_FW_LDR;
+
+	if(!rproc_elf_sanity_check(rproc, fw)){
+		dev_err(&rproc->dev, "ELF format not supported\n");
+		return -ENOTSUPP;
+	}
+
+	dev_err(&rproc->dev, "## No valid image at address 0x%08x\n", (unsigned int)fw->data);
+	return -EINVAL;
 }
 
 void set_spu_securep_msec(uint16_t n, bool msec);
@@ -347,8 +449,6 @@ static void disable_spu(void)
 static int adi_ldr_load(struct adi_rproc_data *rproc_data,
 						const struct firmware *fw)
 {
-	int ret = 0;
-
 	rproc_data->fw_size = fw->size;
 	if (!rproc_data->mem_virt) {
 		rproc_data->mem_virt = dma_alloc_coherent(rproc_data->dev,
@@ -363,20 +463,11 @@ static int adi_ldr_load(struct adi_rproc_data *rproc_data,
 
 	memcpy((char*)rproc_data->mem_virt, fw->data, fw->size);
 
-	/* Check if it is a LDR file */
-	if (ldr_phdr_valid((LDR_Ehdr_t*)rproc_data->mem_virt)) {
-		enable_spu();
-		ldr_load(rproc_data);
-		disable_spu();
-	} else {
-		printk("## No ldr image at address 0x%x\n", (unsigned long)rproc_data->mem_virt);
-		dma_free_coherent(rproc_data->dev, rproc_data->fw_size * MEMORY_COUNT,
-						rproc_data->mem_virt, rproc_data->mem_handle);
-		rproc_data->mem_virt = NULL;
-		ret = -1;
-	}
+	enable_spu();
+	ldr_load(rproc_data);
+	disable_spu();
 
-	return ret;
+	return 0;
 }
 
 /*
@@ -387,13 +478,23 @@ static int adi_ldr_load(struct adi_rproc_data *rproc_data,
  */
 static int adi_rproc_load(struct rproc *rproc, const struct firmware *fw)
 {
-	int ret = 0;
 	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)rproc->priv;
+	int ret;
 
-	ret = adi_ldr_load(rproc_data, fw);
+	switch (rproc_data->firmware_format){
+		case ADI_FW_LDR:
+			ret = adi_ldr_load(rproc_data, fw);
+			break;
+		case ADI_FW_ELF:
+			ret = rproc_elf_load_segments(rproc, fw);
+			break;
+		default:
+			BUG();
+			break;
+	}
+
 	if (ret) {
 		dev_err(rproc_data->dev, "Failed to load ldr, ret:%d\n", ret);
-		return ret;
 	}
 
 	return ret;
@@ -456,10 +557,189 @@ static int adi_rproc_stop(struct rproc *rproc)
 	return ret;
 }
 
+static int adi_ldr_load_rsc_table(struct rproc *rproc, const struct firmware *fw){
+	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)rproc->priv;
+	struct resource_table *table = NULL;
+	size_t size;
+
+	if(rproc_data->core_id == 1){
+		table = (struct resource_table *)(&resources_sharc0);
+		size = sizeof(resources_sharc0);
+	}else{
+		table = (struct resource_table *)(&resources_sharc1);
+		size = sizeof(resources_sharc1);
+	}
+
+	rproc->cached_table = kmemdup(table, size, GFP_KERNEL);
+	if (!rproc->cached_table){
+		return -ENOMEM;
+	}
+
+	rproc->table_ptr = rproc->cached_table;
+	rproc->table_sz = size;
+
+	return 0;
+}
+
+static int adi_rproc_load_rsc_table(struct rproc *rproc, const struct firmware *fw)
+{
+	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)rproc->priv;
+	int ret;
+
+	switch (rproc_data->firmware_format){
+		case ADI_FW_LDR:
+			ret = adi_ldr_load_rsc_table(rproc, fw);
+			break;
+		case ADI_FW_ELF:
+			ret = rproc_elf_load_rsc_table(rproc, fw);
+			break;
+		default:
+			BUG();
+			break;
+	}
+	return ret;
+}
+
+static struct resource_table *adi_ldr_find_loaded_rsc_table(struct rproc *rproc, const struct firmware *fw){
+	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)rproc->priv;
+
+	if(rproc_data->core_id == 1){
+		return rproc_da_to_va(rproc, 0x20001000, sizeof(resources_sharc0)); //FIXME fix address range for other platfoms
+	}else{
+		return rproc_da_to_va(rproc, 0x20001000 + sizeof(resources_sharc0), sizeof(resources_sharc0)); //FIXME fix address range for other platfoms
+	}
+}
+
+static struct resource_table *adi_rproc_find_loaded_rsc_table(struct rproc *rproc, const struct firmware *fw)
+{
+	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)rproc->priv;
+	struct resource_table * ret = NULL;
+
+	switch (rproc_data->firmware_format){
+		case ADI_FW_LDR:
+			ret = adi_ldr_find_loaded_rsc_table(rproc, fw);
+			break;
+		case ADI_FW_ELF:
+			ret = rproc_elf_find_loaded_rsc_table(rproc, fw);
+			break;
+		default:
+			BUG();
+			break;
+	}
+	return ret;
+}
+
+static irqreturn_t sharc_virtio_irq_threded_handler(int irq, void *p){
+	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)p;
+	struct adi_sharc_resource_table *table = (struct adi_sharc_resource_table *)adi_ldr_find_loaded_rsc_table(rproc_data->rproc, NULL);
+
+	/* Process incoming buffers on all our vrings */
+	if(rproc_data->wait_platform_init){
+		complete(&rproc_data->sharc_platform_init_complete);
+	}
+
+	rproc_vq_interrupt(rproc_data->rproc, table->vring[0].notifyid);
+	rproc_vq_interrupt(rproc_data->rproc, table->vring[1].notifyid);
+
+	return IRQ_HANDLED;
+}
+
+/* kick a virtqueue */
+static void adi_rproc_kick(struct rproc *rproc, int vqid)
+{
+	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)rproc->priv;
+	int ret;
+
+	while(rproc_data->wait_platform_init){
+		ret = wait_for_completion_interruptible_timeout(&rproc_data->sharc_platform_init_complete, CORE_INIT_TIMEOUT);
+		if(ret > 0){
+			rproc_data->wait_platform_init = 0;
+		}else if(ret < 0){
+			if (ret != -ERESTARTSYS){
+				dev_err(rproc_data->dev, "Core%d init error %d\n", rproc_data->core_id, ret);
+			}
+		}else{
+			dev_warn(rproc_data->dev, "Core%d init timeout\n", rproc_data->core_id);
+			// Delay the kick until core is initialized
+			queue_delayed_work(rproc_data->core_workqueue, &rproc_data->core_kick_work, CORE_INIT_TIMEOUT);
+			return;
+		}
+	}
+
+	platform_send_ipi_cpu(rproc_data->core_id, 0);
+}
+
+static void adi_rproc_kick_work(struct work_struct *work){
+	struct delayed_work *dw = to_delayed_work(work);
+	struct adi_rproc_data *rproc_data = container_of(dw, struct adi_rproc_data, core_kick_work);
+
+	adi_rproc_kick(rproc_data->rproc, 0);
+}
+
+static int adi_rproc_sanity_check(struct rproc *rproc, const struct firmware *fw)
+{
+	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)rproc->priv;
+
+	/* Check if it is a LDR or ELF file */
+	rproc_data->firmware_format = adi_valid_firmware(rproc, fw);
+
+	if (rproc_data->firmware_format < 0)
+		return rproc_data->firmware_format;
+	else
+		return 0;
+}
+
+static u32 adi_rproc_get_boot_addr(struct rproc *rproc, const struct firmware *fw)
+{
+	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)rproc->priv;
+	u32 ret;
+
+	switch (rproc_data->firmware_format){
+		case ADI_FW_LDR:
+			ret = 0;
+			break;
+		case ADI_FW_ELF:
+			ret = rproc_elf_get_boot_addr(rproc, fw);
+			break;
+		default:
+			BUG();
+			break;
+	}
+	return ret;
+}
+
+static void *adi_da_to_va(struct rproc *rproc, u64 da, int len)
+{
+	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)rproc->priv;
+	void __iomem *L1_shared_base = rproc_data->L1_shared_base;
+	void __iomem *L2_shared_base = rproc_data->L2_shared_base;
+	void *ret=NULL;
+	int offset = 0;
+
+	if(len == 0){
+		return NULL;
+	}
+
+	if((da >= 0x00240000) && (da < 0x003A0000)){
+		ret = L1_shared_base + da;
+	}else	if((da >= 0x20000000) && (da < 0x20200000)){ //FIXME fix address range for other platfoms
+		offset = da - 0x20000000;
+		ret = L2_shared_base + offset;
+	}
+
+	return ret;
+}
+
 static const struct rproc_ops adi_rproc_ops = {
 	.start = adi_rproc_start,
 	.stop = adi_rproc_stop,
+	.kick		= adi_rproc_kick,
 	.load = adi_rproc_load,
+	.da_to_va = adi_da_to_va,
+	.parse_fw = adi_rproc_load_rsc_table,
+	.find_loaded_rsc_table = adi_rproc_find_loaded_rsc_table,
+	.sanity_check = adi_rproc_sanity_check,
+	.get_boot_addr = adi_rproc_get_boot_addr,
 };
 
 static int adi_remoteproc_probe(struct platform_device *pdev)
@@ -489,6 +769,15 @@ static int adi_remoteproc_probe(struct platform_device *pdev)
 	rproc_data = (struct adi_rproc_data *)rproc->priv;
 	platform_set_drvdata(pdev, rproc);
 
+	rproc_data->core_workqueue = alloc_workqueue("Core workqueue", WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
+	if (rproc_data->core_workqueue == NULL){
+		dev_err(dev, "Unable to allocate core workqueue\n");
+		goto free_rproc;
+	}
+
+	init_completion(&rproc_data->sharc_platform_init_complete);
+	INIT_DELAYED_WORK(&rproc_data->core_kick_work, adi_rproc_kick_work);
+
 	ret = of_property_read_u32(np, "core-id",
 					&rproc_data->core_id);
 	if (ret) {
@@ -503,6 +792,14 @@ static int adi_remoteproc_probe(struct platform_device *pdev)
 		goto free_rproc;
 	}
 
+	rproc_data->icc_irq = platform_get_irq(pdev, 0);
+	if (rproc_data->icc_irq <= 0) {
+		dev_err(dev, "No ICC IRQ specified\n");
+		return -ENOENT;
+	}
+	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
+	rproc_data->icc_irq_type = (res->flags & IORESOURCE_BITS) | IRQF_PERCPU;
+
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (res == NULL) {
 		dev_err(dev, "Cannot get IORESOURCE_MEM\n");
@@ -513,6 +810,24 @@ static int adi_remoteproc_probe(struct platform_device *pdev)
 	if (IS_ERR((void *)rproc_data->rcu_base)) {
 		dev_err(dev, "Cannot map rcu memory\n");
 		ret = PTR_ERR((void *)rproc_data->rcu_base);
+		goto free_rproc;
+	}
+
+	if(rproc_data->core_id == 1){
+		rproc_data->L1_shared_base = devm_ioremap_nocache(dev, 0x28240000, 0x160000);
+	}else{
+		rproc_data->L1_shared_base = devm_ioremap_nocache(dev, 0x28A40000, 0x160000);
+	}
+	if (IS_ERR((void *)rproc_data->L1_shared_base)) {
+		dev_err(dev, "Cannot map L1 shared memory\n");
+		ret = PTR_ERR((void *)rproc_data->L1_shared_base);
+		goto free_rproc;
+	}
+
+	rproc_data->L2_shared_base = devm_ioremap_nocache(dev, 0x20000000, 0x200000); //FIXME fix address range for other platfoms
+	if (IS_ERR((void *)rproc_data->L2_shared_base)) {
+		dev_err(dev, "Cannot map L2 shared memory\n");
+		ret = PTR_ERR((void *)rproc_data->L2_shared_base);
 		goto free_rproc;
 	}
 
