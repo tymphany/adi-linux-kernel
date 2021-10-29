@@ -82,14 +82,16 @@
 		#size-cells = <1>;
 		reg = <0x20000000 0x1000>;
 		ranges = <0 0x20000000 0x1000>;
+
 	};
 
-	sram1: sram-reserved@20004000 {
+	/* Audio buffers 1MB */
+	sram1: sram-audio@20100000 {
 		compatible = "mmio-sram";
+		reg = <0x20100000 0x100000>;
 		#address-cells = <1>;
 		#size-cells = <1>;
-		reg = <0x20004000 0x3B000>;
-		ranges = <0 0x20004000 0x3B000>;
+		ranges = <0 0x20100000 0x100000>;
 	};
 
 	scb {
@@ -102,8 +104,7 @@
 			compatible = "adi,sram-controller";
 			#address-cells = <1>;
 			#size-cells = <1>;
-			adi,sram = <&sram0>,
-					<&sram1>;
+			adi,sram = <&sram0>, <&sram1>;
 
 			sram-ecc-err@31080000 {
 				compatible = "adi,sram-ecc-err";
@@ -273,6 +274,7 @@
 			interrupt-names = "tx_staus", "rx_staus";
 			interrupts = <GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI 100 IRQ_TYPE_LEVEL_HIGH>;
 			dma-channel = <10>, <11>;
+			iram = <&sram1>;
 		};
 
 		watchdog@0x31008000 {

@@ -148,19 +148,14 @@ struct sport_device {
 #if IS_ENABLED(CONFIG_SND_SC5XX_SPORT_SHARC)
 
 	struct mutex rpmsg_lock;
-
 	struct rpmsg_device *sharc_rpmsg[SHARC_CORES_NUM];
 
-	unsigned char *sharc_tx_buf;
-	dma_addr_t sharc_tx_buf_phy;
-	size_t tx_buf_size;
-	size_t sharc_tx_buf_pos;
-	struct mutex sharc_tx_buf_pos_lock;
+	struct snd_dma_buffer sharc_tx_dma_buf;
+	struct snd_dma_buffer sharc_rx_dma_buf;
 
-	unsigned char *sharc_rx_buf;
-	dma_addr_t sharc_rx_buf_phy;
-	size_t rx_buf_size;
+	size_t sharc_tx_buf_pos;
 	size_t sharc_rx_buf_pos;
+	struct mutex sharc_tx_buf_pos_lock;
 	struct mutex sharc_rx_buf_pos_lock;
 
 	struct completion sharc_msg_ack_complete[SHARC_CORES_NUM];

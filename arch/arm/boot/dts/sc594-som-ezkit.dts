@@ -95,6 +95,7 @@
 			compatible = "sc5xx,asoc-card";
 			adi,cpu-dai = <&i2s4>;
 			adi,codec = <&adau1962>, <&adau1979>;
+			iram = <&sram1>;
 		};
 
 		lcd@0 {

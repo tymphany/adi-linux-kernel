@@ -34,7 +34,7 @@
 
 #include "sc5xx-sport.h"
 
-#define _DEBUG 1
+#define _DEBUG 0
 
 #define SHARC_MSG_TIMEOUT usecs_to_jiffies(1000)
 
@@ -222,8 +222,8 @@ void parse_sharc_messages(struct sport_device *sport, int core, struct sharc_msg
 			//update buffer pointer
 			mutex_lock(&sport->sharc_tx_buf_pos_lock);
 			sport->sharc_tx_buf_pos += msg->payload.ui * sport->tx_fragsize;
-			if(sport->sharc_tx_buf_pos >= sport->tx_buf_size){
-				sport->sharc_tx_buf_pos = sport->sharc_tx_buf_pos - sport->tx_buf_size;
+			if(sport->sharc_tx_buf_pos >= sport->sharc_tx_dma_buf.bytes){
+				sport->sharc_tx_buf_pos = sport->sharc_tx_buf_pos - sport->sharc_tx_dma_buf.bytes;
 			}
 			mutex_unlock(&sport->sharc_tx_buf_pos_lock);
 
@@ -240,8 +240,8 @@ void parse_sharc_messages(struct sport_device *sport, int core, struct sharc_msg
 		case SHARC_MSG_PLAYBACK_FRAG_READY:
 			mutex_lock(&sport->sharc_tx_buf_pos_lock);
 			sport->sharc_tx_buf_pos += msg->payload.ui * sport->tx_fragsize;
-			if(sport->sharc_tx_buf_pos >= sport->tx_buf_size){
-				sport->sharc_tx_buf_pos = sport->sharc_tx_buf_pos - sport->tx_buf_size;
+			if(sport->sharc_tx_buf_pos >= sport->sharc_tx_dma_buf.bytes){
+				sport->sharc_tx_buf_pos = sport->sharc_tx_buf_pos - sport->sharc_tx_dma_buf.bytes;
 			}
 			mutex_unlock(&sport->sharc_tx_buf_pos_lock);
 			send_sharc_msg(sport, core, SHARC_MSG_PLAYBACK_FRAG_READY_ACK, NULL);
@@ -268,8 +268,8 @@ void parse_sharc_messages(struct sport_device *sport, int core, struct sharc_msg
 		case SHARC_MSG_RECORD_FRAG_READY:
 			mutex_lock(&sport->sharc_rx_buf_pos_lock);
 			sport->sharc_rx_buf_pos += msg->payload.ui * sport->rx_fragsize;
-			if(sport->sharc_rx_buf_pos >= sport->rx_buf_size){
-				sport->sharc_rx_buf_pos = sport->sharc_rx_buf_pos - sport->rx_buf_size;
+			if(sport->sharc_rx_buf_pos >= sport->sharc_rx_dma_buf.bytes){
+				sport->sharc_rx_buf_pos = sport->sharc_rx_buf_pos - sport->sharc_rx_dma_buf.bytes;
 			}
 			mutex_unlock(&sport->sharc_rx_buf_pos_lock);
 
@@ -417,6 +417,7 @@ int sport_config_tx_dma(struct sport_device *sport, void *buf,
 {
 	unsigned int cfg;
 	union sharc_msg_payload payload;
+	int ret;
 
 	if (sport->tx_desc)
 		dma_free_coherent(&sport->pdev->dev, sport->tx_desc_size,
@@ -427,16 +428,16 @@ int sport_config_tx_dma(struct sport_device *sport, void *buf,
 	if (!sport->tx_desc)
 		return -ENOMEM;
 
-	if (sport->sharc_tx_buf)
-		dma_free_coherent(&sport->pdev->dev, sport->tx_buf_size, sport->sharc_tx_buf, sport->sharc_tx_buf_phy);
-	sport->sharc_tx_buf = dma_alloc_coherent(&sport->pdev->dev, fragsize * fragcount, &sport->sharc_tx_buf_phy, GFP_KERNEL);
-	if (!sport->sharc_tx_buf)
-		return -ENOMEM;
+	/* Allocate buffer for SHARC output - DMA, prefers iram pool, if not available it fallbacks to CMA */
+	snd_dma_free_pages(&sport->sharc_tx_dma_buf);
+	ret = snd_dma_alloc_pages(SNDRV_DMA_TYPE_DEV_IRAM, &sport->pdev->dev, fragsize * fragcount, &sport->sharc_tx_dma_buf);
+	if (ret){
+		return ret;
+	}
 
-	sport->tx_buf = sport->sharc_tx_buf_phy;
+	sport->tx_buf = sport->sharc_tx_dma_buf.addr;
 	sport->tx_fragsize = fragsize;
 	sport->tx_frags = fragcount;
-	sport->tx_buf_size = fragsize * fragcount;
 	sport->sharc_tx_buf_pos = 0;
 
 	cfg = DMAFLOW_LIST | DI_EN | compute_wdsize(sport->wdsize)
@@ -460,7 +461,7 @@ int sport_config_tx_dma(struct sport_device *sport, void *buf,
 	payload.audio_buf[0].format.pcm_rate = params_rate(&sport->tx_hw_params);
 
 	// Set DMA buffer size and pointer
-	payload.audio_buf[1].buf = (void*)sport->sharc_tx_buf_phy;//TODO rename sharc_tx_buf_phy to DMA_tx_buf_phy
+	payload.audio_buf[1].buf = (void*)sport->sharc_tx_dma_buf.addr;
 	payload.audio_buf[1].offset = 0;
 	payload.audio_buf[1].buf_size = fragsize * fragcount;
 	payload.audio_buf[1].frag_size = fragsize;
@@ -468,6 +469,11 @@ int sport_config_tx_dma(struct sport_device *sport, void *buf,
 	payload.audio_buf[1].frames_per_frag = bytes_to_frames(substream->runtime, fragsize);
 	// Set audio data format - same as ALSA buffer
 	payload.audio_buf[1].format = payload.audio_buf[0].format;
+
+#if _DEBUG
+	dev_info(&sport->pdev->dev, "ALSA  playback buf PA:0x%08x size:%d fragsize:%d fragcount:%d\n", (u32)payload.audio_buf[0].buf, payload.audio_buf[0].buf_size, payload.audio_buf[0].frag_size, payload.audio_buf[0].fragcount);
+	dev_info(&sport->pdev->dev, "SHARC playback buf PA:0x%08x size:%d fragsize:%d fragcount:%d\n", (u32)payload.audio_buf[1].buf, payload.audio_buf[1].buf_size, payload.audio_buf[1].frag_size, payload.audio_buf[1].fragcount);
+#endif
 
 	return send_sharc_msg(sport, 0, SHARC_MSG_PLAYBACK_INIT, &payload); //TODO select core
 }
@@ -478,6 +484,7 @@ int sport_config_rx_dma(struct sport_device *sport, void *buf,
 {
 	unsigned int cfg;
 	union sharc_msg_payload payload;
+	int ret;
 
 	if (sport->rx_desc)
 		dma_free_coherent(&sport->pdev->dev, sport->rx_desc_size,
@@ -488,16 +495,16 @@ int sport_config_rx_dma(struct sport_device *sport, void *buf,
 	if (!sport->rx_desc)
 		return -ENOMEM;
 
-	if (sport->sharc_rx_buf)
-		dma_free_coherent(&sport->pdev->dev, sport->rx_buf_size, sport->sharc_rx_buf, sport->sharc_rx_buf_phy);
-	sport->sharc_rx_buf = dma_alloc_coherent(&sport->pdev->dev, fragsize * fragcount, &sport->sharc_rx_buf_phy, GFP_KERNEL);
-	if (!sport->sharc_rx_buf)
-		return -ENOMEM;
+	/* Allocate buffer for SHARC input - DMA, prefers iram pool, if not available it fallbacks to CMA */
+	snd_dma_free_pages(&sport->sharc_rx_dma_buf);
+	ret = snd_dma_alloc_pages(SNDRV_DMA_TYPE_DEV_IRAM, &sport->pdev->dev, fragsize * fragcount, &sport->sharc_rx_dma_buf);
+	if (ret){
+		return ret;
+	}
 
-	sport->rx_buf = sport->sharc_rx_buf_phy;
+	sport->rx_buf = sport->sharc_rx_dma_buf.addr;
 	sport->rx_fragsize = fragsize;
 	sport->rx_frags = fragcount;
-	sport->rx_buf_size = fragsize * fragcount;
 	sport->sharc_rx_buf_pos = 0;
 
 	cfg = DMAFLOW_LIST | DI_EN | compute_wdsize(sport->wdsize)
@@ -521,7 +528,7 @@ int sport_config_rx_dma(struct sport_device *sport, void *buf,
 	payload.audio_buf[1].format.pcm_rate = params_rate(&sport->rx_hw_params);
 
 	// Set DMA buffer size and pointer
-	payload.audio_buf[0].buf = (void*)sport->sharc_rx_buf_phy; //TODO rename sharc_rx_buf_phy to DMA_rx_buf_phy
+	payload.audio_buf[0].buf = (void*)sport->sharc_rx_dma_buf.addr;
 	payload.audio_buf[0].offset = 0;
 	payload.audio_buf[0].buf_size = fragsize * fragcount;
 	payload.audio_buf[0].frag_size = fragsize;
@@ -529,6 +536,11 @@ int sport_config_rx_dma(struct sport_device *sport, void *buf,
 	payload.audio_buf[0].frames_per_frag = bytes_to_frames(substream->runtime, fragsize);
 	// Set audio data format - same as ALSA buffer
 	payload.audio_buf[0].format = payload.audio_buf[1].format;
+
+#if _DEBUG
+	dev_info(&sport->pdev->dev, "ALSA  record buf PA:0x%08x size:%d fragsize:%d fragcount:%d\n", (u32)payload.audio_buf[1].buf, payload.audio_buf[1].buf_size, payload.audio_buf[1].frag_size, payload.audio_buf[1].fragcount);
+	dev_info(&sport->pdev->dev, "SHARC record buf PA:0x%08x size:%d fragsize:%d fragcount:%d\n", (u32)payload.audio_buf[0].buf, payload.audio_buf[0].buf_size, payload.audio_buf[0].frag_size, payload.audio_buf[0].fragcount);
+#endif
 
 	return send_sharc_msg(sport, 0, SHARC_MSG_RECORD_INIT, &payload); //TODO select core
 }
@@ -800,10 +812,8 @@ void sport_delete(struct sport_device *sport)
 		complete_all(&sport->sharc_msg_ack_complete[i]);
 	}
 
-	if (sport->sharc_tx_buf)
-		dma_free_coherent(&sport->pdev->dev, sport->tx_buf_size, sport->sharc_tx_buf, sport->sharc_tx_buf_phy);
-	if (sport->sharc_rx_buf)
-		dma_free_coherent(&sport->pdev->dev, sport->rx_buf_size, sport->sharc_rx_buf, sport->sharc_rx_buf_phy);
+	snd_dma_free_pages(&sport->sharc_tx_dma_buf);
+	snd_dma_free_pages(&sport->sharc_rx_dma_buf);
 
 	if (sport->tx_desc)
 		dma_free_coherent(&sport->pdev->dev, sport->tx_desc_size,
