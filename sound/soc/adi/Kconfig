@@ -39,7 +39,7 @@ choice
 		bool "Regular SPORT operation"
 
 	config SND_SC5XX_SPORT_SHARC
-		bool "SHARC process SPORT data"
+		bool "SHARC process SPORT data (EXPERIMENTAL)"
 		help
 		  Say Y if you want to process audio data in SHARC core,
 		  requires "SHARC ALSA" firmware running on a SHARC core.
