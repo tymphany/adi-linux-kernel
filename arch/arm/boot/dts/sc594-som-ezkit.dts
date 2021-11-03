@@ -25,6 +25,34 @@
 		reg = <0xC3000000 0xF000000>;
 	};
 
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		vdev0vrings: vdev0vring0@20010000 {
+			reg = <0x20010000 0x4000>;
+			no-map;
+		};
+
+		vdev0buffer: vdev0buffer@20014000 {
+			compatible = "shared-dma-pool";
+			reg = <0x20014000 0x20000>;
+			no-map;
+		};
+
+		vdev1vrings: vdev0vring0@20034000 {
+			reg = <0x20034000 0x4000>;
+			no-map;
+		};
+
+		vdev1buffer: vdev0buffer@20038000 {
+			compatible = "shared-dma-pool";
+			reg = <0x20038000 0x20000>;
+			no-map;
+		};
+	};
+
 	scb {
 		softconfig_default {
 			boot-pins = <&ssw0 0 GPIO_ACTIVE_LOW>,	 /* LED */
@@ -80,6 +108,9 @@
 			core-irq = <74>; /* was 77 */
 			firmware-name = "adi_adsp_core1_fw.ldr";
 			interrupts = <GIC_SPI 165 IRQ_TYPE_EDGE_RISING>;
+
+			vdev-vring = <&vdev0vrings>;
+			memory-region = <&vdev0buffer>;
 		};
 
 		core2-rproc@0x3108c000 {
@@ -89,6 +120,9 @@
 			core-irq = <75>; /* was 78 */
 			firmware-name = "adi_adsp_core2_fw.ldr";
 			interrupts = <GIC_SPI 165 IRQ_TYPE_EDGE_RISING>;
+
+			vdev-vring = <&vdev1vrings>;
+			memory-region = <&vdev1buffer>;
 		};
 
 		sound {

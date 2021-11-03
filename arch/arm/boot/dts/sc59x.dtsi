@@ -76,17 +76,26 @@
 		cache-level = <2>;
 	};
 
-	sram0: sram-icc@20000000 { /* ICC SRAM 4KB */
+	sram0: sram-icc@20000000 { /* ICC SRAM 8KB */
 		compatible = "mmio-sram";
 		#address-cells = <1>;
 		#size-cells = <1>;
-		reg = <0x20000000 0x1000>;
-		ranges = <0 0x20000000 0x1000>;
+		reg = <0x20000000 0x2000>;
+		ranges = <0 0x20000000 0x2000>;
 
+		/* 1KB - Shared between SHARC cores*/
+		reserved@0{
+			reg = <0x0 0x400>;
+			label = "SHARC_common";
+		};
+		/* 1KB - Reserved resource_tables for SHARC cores*/
+		resource_table@1000{
+			reg = <0x1000 0x400>;
+			label = "SHARC_resource_tables";
+		};
 	};
 
-	/* Audio buffers 1MB */
-	sram1: sram-audio@20100000 {
+	sram1: sram-reserved@20100000 {
 		compatible = "mmio-sram";
 		reg = <0x20100000 0x100000>;
 		#address-cells = <1>;
