@@ -207,7 +207,7 @@ static int adi_core_start(struct adi_rproc_data *rproc_data)
 
 	ret = devm_request_threaded_irq(rproc_data->dev,
 			rproc_data->icc_irq, NULL, sharc_virtio_irq_threded_handler,
-			rproc_data->icc_irq_type | IRQF_ONESHOT,
+			rproc_data->icc_irq_type | IRQF_ONESHOT | IRQF_SHARED,
 			"ICC virtio IRQ", rproc_data);
 	if (ret) {
 		dev_err(rproc_data->dev, "Fail to request ICC receive IRQ\n");
