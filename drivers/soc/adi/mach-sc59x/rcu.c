@@ -27,6 +27,7 @@ struct adi_rcu {
 	struct notifier_block reboot_notifier;
 	void __iomem *ioaddr;
 	struct device *dev;
+	struct adi_sec *sec;
 	int sharc_min_coreid;
 	int sharc_max_coreid;
 };
@@ -86,6 +87,10 @@ void put_adi_rcu(struct adi_rcu *rcu) {
 	put_device(rcu->dev);
 }
 EXPORT_SYMBOL(put_adi_rcu);
+
+void adi_rcu_set_sec(struct adi_rcu *rcu, struct adi_sec *sec) {
+	rcu->sec = sec;
+}
 
 /**
  * API for other drivers to interact with RCU
@@ -186,12 +191,11 @@ int adi_rcu_stop_core(struct adi_rcu *rcu, int coreid, int coreirq) {
 
 		/* Raise SOFT IRQ through SEC
 		 * DSP enter into ISR to release interrupts used by DSP program
-		 * @todo SEC still needs implementation
 		 */
-		sec_set_ssi_coreid(coreirq, coreid);
-		sec_enable_ssi(coreirq, false, true);
-		sec_enable_sci(coreid);
-		sec_raise_irq(coreirq);
+		sec_set_ssi_coreid(rcu->sec, coreirq, coreid);
+		sec_enable_ssi(rcu->sec, coreirq, false, true);
+		sec_enable_sci(rcu->sec, coreid);
+		sec_raise_irq(rcu->sec, coreirq);
 	}
 
 	/* Wait until the specific core enter into IDLE bit(8:10)

@@ -38,6 +38,7 @@
 #define RCU0_MSG_C2ACTIVATE		0x00100000		/* Core 2 Activated */
 
 struct adi_rcu;
+struct adi_sec;
 
 /*
  * Get the RCU instance connected to the given device as a device tree phandle
@@ -55,6 +56,8 @@ int adi_rcu_check_coreid_valid(struct adi_rcu *rcu, int coreid);
 int adi_rcu_reset_core(struct adi_rcu *rcu, int coreid);
 int adi_rcu_start_core(struct adi_rcu *rcu, int coreid);
 int adi_rcu_stop_core(struct adi_rcu *rcu, int coreid, int coreirq);
+
+void adi_rcu_set_sec(struct adi_rcu *rcu, struct adi_sec *sec);
 
 u32 adi_rcu_readl(struct adi_rcu *rcu, int offset);
 void adi_rcu_writel(u32 val, struct adi_rcu *rcu, int offset);

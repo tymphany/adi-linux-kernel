@@ -16,146 +16,194 @@
 #include <linux/printk.h>
 #include <linux/spinlock.h>
 
-#include <linux/soc/adi/hardware.h>
-#include <linux/soc/adi/sc59x.h>
+#include <linux/soc/adi/rcu.h>
 #include <linux/soc/adi/sec.h>
 
-static DEFINE_SPINLOCK(lock);
-
-struct sec_chip_data {
-	void __iomem *common_base;
-	void __iomem *sci_base;
-	void __iomem *ssi_base;
+struct adi_sec {
+	void __iomem *ioaddr;
+	struct adi_rcu *rcu;
+	struct device *dev;
+	int cores;
+	spinlock_t lock;
 };
 
-static struct sec_chip_data sec_data;
-static bool enable_sec = true;
-
-void sec_init(void __iomem *common_base, void __iomem *sci_base,
-		 void __iomem *ssi_base)
-{
-	struct sec_chip_data *sec = &sec_data;
-
-	pr_info("sec init...");
-	sec->common_base = common_base;
-	sec->sci_base = sci_base;
-	sec->ssi_base = ssi_base;
-
-	if (enable_sec) {
-
-	/* Disable SYSCD_RESETb input and clear the RCU0 reset status */
-	writel(0x0, __io_address(REG_RCU0_CTL));
-	writel(0xf, __io_address(REG_RCU0_STAT));
-
-	/* reset the SEC controller */
-	writel(0x2, sec->common_base + SEC_GCTL);
-	writel(0x2, sec->common_base + SEC_FCTL);
-# if CONFIG_ARCH_SC59X_SLAVECORE_COUNT == 1
-	writel(0x2, sec->sci_base + SEC_CCTL);
-# endif
-# if CONFIG_ARCH_SC59X_SLAVECORE_COUNT == 2
-	writel(0x2, sec->sci_base + SEC_CCTL);
-	writel(0x2, sec->sci_base + SEC_SCI_OFF + SEC_CCTL);
-# endif
-	udelay(100);
-
-	/* enable SEC fault event */
-	writel(0x1, sec->common_base + SEC_GCTL);
-
-	/* ANOMALY 36100004 Spurious External Fault event occurs when FCTL
-	 * is re-programmed when currently active fault is not cleared
-	 */
-	writel(0xc0, sec->common_base + SEC_FCTL);
-	writel(0xc1, sec->common_base + SEC_FCTL);
-
-	/* Enable SYSCD_RESETb input */
-	writel(0x100, __io_address(REG_RCU0_CTL));
-
-	pr_info("enabled\n");
-
-	} else {
-		pr_info("skipped\n");
-	}
-
-#ifdef CONFIG_ADI_WATCHDOG
-	/* enable SEC fault source for watchdog0 */
-	sec_enable_ssi(3, true, true);
-#endif
+void adi_sec_writel(u32 val, struct adi_sec *rcu, int offset) {
+	writel(val, rcu->ioaddr + offset);
 }
 
-void sec_raise_irq(unsigned int irq)
+u32 adi_sec_readl(struct adi_sec *rcu, int offset) {
+	return readl(rcu->ioaddr + offset);
+}
+
+void sec_raise_irq(struct adi_sec *sec, unsigned int irq)
 {
 	unsigned long flags;
 	unsigned int sid = irq - 32;
-	struct sec_chip_data *sec = &sec_data;
 
-	spin_lock_irqsave(&lock, flags);
-	writel(sid, sec->common_base + SEC_RAISE);
-	spin_unlock_irqrestore(&lock, flags);
+	spin_lock_irqsave(&sec->lock, flags);
+	adi_sec_writel(sid, sec, ADI_SEC_REG_RAISE);
+	spin_unlock_irqrestore(&sec->lock, flags);
 }
+EXPORT_SYMBOL(sec_raise_irq);
 
-void sec_enable_ssi(unsigned int sid, bool fault, bool source)
+void sec_enable_ssi(struct adi_sec *sec, unsigned int sid, bool fault, bool source)
 {
 	unsigned long flags;
-	uint32_t reg_sctl;
-	struct sec_chip_data *sec = &sec_data;
+	u32 val;
+	u32 offset;
 
-	spin_lock_irqsave(&lock, flags);
+	offset = ADI_SEC_REG_SCTL_BASE + 8*sid;
 
-	reg_sctl = readl(sec->ssi_base + 8 * sid);
+	spin_lock_irqsave(&sec->lock, flags);
+	val = adi_sec_readl(sec, offset);
 
 	if (fault)
-		reg_sctl |= SEC_SCTL_FAULT_EN;
+		val |= ADI_SEC_SCTL_FAULT_EN;
 	else
-		reg_sctl |= SEC_SCTL_INT_EN;
+		val |= ADI_SEC_SCTL_INT_EN;
 
 	if (source)
-		reg_sctl |= SEC_SCTL_SRC_EN;
+		val |= ADI_SEC_SCTL_SRC_EN;
 
-	writel(reg_sctl, sec->ssi_base + 8 * sid);
-
-	spin_unlock_irqrestore(&lock, flags);
+	adi_sec_writel(val, sec, offset);
+	spin_unlock_irqrestore(&sec->lock, flags);
 }
+EXPORT_SYMBOL(sec_enable_ssi);
 
-void sec_enable_sci(unsigned int coreid)
+void sec_enable_sci(struct adi_sec *sec, unsigned int coreid)
 {
 	unsigned long flags;
-	uint32_t reg_cctl;
-	unsigned int id = coreid - 1 ;
-	struct sec_chip_data *sec = &sec_data;
+	u32 val;
+	u32 offset;
 
-	spin_lock_irqsave(&lock, flags);
-	reg_cctl = readl(sec->sci_base + 0x40 * id);
-
-	reg_cctl |= SEC_CCTL_EN;
-	writel(reg_cctl, sec->sci_base + 0x40 * id);
-	spin_unlock_irqrestore(&lock, flags);
-}
-
-void sec_set_ssi_coreid(unsigned int sid, unsigned int coreid)
-{
-	unsigned long flags;
-	uint32_t reg_sctl;
-	struct sec_chip_data *sec = &sec_data;
-
-	if (coreid > CONFIG_ARCH_SC59X_SLAVECORE_COUNT || coreid == 0)
+	if (coreid == 0 || coreid > sec->cores) {
+		dev_err(sec->dev, "Invalid core ID given to sec_enable_sci: %d\n", coreid);
 		return;
+	}
 
-	spin_lock_irqsave(&lock, flags);
+	offset = ADI_SEC_REG_CCTL_BASE + coreid*ADI_SEC_CCTL_SIZE;
 
-	reg_sctl = readl(sec->ssi_base + 8 * sid);
-	reg_sctl &= ((uint32_t)~SEC_SCTL_CTG);
-	reg_sctl |= ((coreid << 24) & SEC_SCTL_CTG);
-	writel(reg_sctl, sec->ssi_base + 8 * sid);
-
-	spin_unlock_irqrestore(&lock, flags);
+	spin_lock_irqsave(&sec->lock, flags);
+	val = adi_sec_readl(sec, offset);
+	val |= ADI_SEC_CCTL_EN;
+	adi_sec_writel(val, sec, offset);
+	spin_unlock_irqrestore(&sec->lock, flags);
 }
+EXPORT_SYMBOL(sec_enable_sci);
+
+void sec_set_ssi_coreid(struct adi_sec *sec, unsigned int sid, unsigned int coreid)
+{
+	unsigned long flags;
+	u32 val;
+	u32 offset;
+
+	if (coreid == 0 || coreid > sec->cores) {
+		dev_err(sec->dev, "Invalid core ID given to sec_set_ssi_coreid: %d\n", coreid);
+		return;
+	}
+
+	offset = ADI_SEC_REG_SCTL_BASE + 8*sid;
+
+	spin_lock_irqsave(&sec->lock, flags);
+	val = adi_sec_readl(sec, offset);
+	val &= ~ADI_SEC_SCTL_CTG;
+	val |= ((coreid << 24) & ADI_SEC_SCTL_CTG);
+	adi_sec_writel(val, sec, offset);
+	spin_unlock_irqrestore(&sec->lock, flags);
+}
+EXPORT_SYMBOL(sec_set_ssi_coreid);
 
 static int adi_sec_probe(struct platform_device *pdev) {
+	struct device *dev = &pdev->dev;
+	struct device_node *np = dev->of_node;
+	struct adi_sec *adi_sec;
+	struct adi_rcu *adi_rcu;
+	struct resource *res;
+	void __iomem *base;
+	int cores;
+	int ret = 0;
+
+	adi_sec = devm_kzalloc(dev, sizeof(*adi_sec), GFP_KERNEL);
+	if (!adi_sec)
+		return -ENOMEM;
+
+	spin_lock_init(&adi_sec->lock);
+	dev_set_drvdata(dev, adi_sec);
+
+	adi_rcu = get_adi_rcu_from_node(dev);
+	if (IS_ERR(adi_rcu))
+		return PTR_ERR(adi_rcu);
+
+	adi_sec->dev = dev;
+	adi_sec->rcu = adi_rcu;
+
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res) {
+		ret = -ENOENT;
+		goto free_rcu;
+	}
+
+	base = devm_ioremap_nocache(dev, res->start, resource_size(res));
+	if (IS_ERR(base)) {
+		ret = PTR_ERR(base);
+		goto free_rcu;
+	}
+
+	adi_rcu_set_sec(adi_rcu, adi_sec);
+
+	if (of_property_read_u32(np, "adi,sharc-cores", &adi_sec->cores)) {
+		dev_warn(dev, "Missing property adi,sharc-cores, default to 0\n");
+		adi_sec->cores = 0;
+	}
+
+	adi_sec->ioaddr = base;
+
+	/* Disable SYSCD_RESETb and clear RCU reset status */
+	adi_rcu_writel(0x00, adi_rcu, ADI_RCU_REG_CTL);
+	adi_rcu_writel(0x0f, adi_rcu, ADI_RCU_REG_STAT);
+
+	/* Reset SEC */
+	adi_sec_writel(0x02, adi_sec, ADI_SEC_REG_GCTL);
+	adi_sec_writel(0x02, adi_sec, ADI_SEC_REG_FCTL);
+
+	/* Initialize each core */
+	for (cores = 0; cores < adi_sec->cores; ++cores) {
+		adi_sec_writel(0x02, adi_sec,
+			ADI_SEC_REG_CCTL_BASE + (cores+1)*ADI_SEC_CCTL_SIZE);
+	}
+	udelay(100);
+
+	/* Enable SEC fault event */
+	adi_sec_writel(0x01, adi_sec, ADI_SEC_REG_GCTL);
+
+	/* ANOMALY 36100004 spurious external fault event occurs when FCTL is
+	 * re-programmed when active fault is not cleared
+	 */
+	adi_sec_writel(0xc0, adi_sec, ADI_SEC_REG_FCTL);
+	adi_sec_writel(0xc1, adi_sec, ADI_SEC_REG_FCTL);
+
+	/* Enable SYSCD_RESETb input */
+	adi_rcu_writel(0x100, adi_rcu, ADI_RCU_REG_CTL);
+
+#ifdef CONFIG_ADI_WATCHDOG
+	/* @todo verify sec watchdog event number, make device tree based */
+	sec_enable_ssi(adi_sec, 3, true, true);
+#endif
+
 	return 0;
+
+free_rcu:
+	put_adi_rcu(adi_rcu);
+	return ret;
 }
 
 static int adi_sec_remove(struct platform_device *pdev) {
+	struct device *dev = &pdev->dev;
+	struct adi_sec *adi_sec;
+
+	adi_sec = dev_get_drvdata(dev);
+	put_adi_rcu(adi_sec->rcu);
+
 	return 0;
 }
 

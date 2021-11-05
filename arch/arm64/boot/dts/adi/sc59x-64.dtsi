@@ -125,6 +125,14 @@
 			status = "okay";
 		};
 
+		sec: sec@0x31089000 {
+			compatible = "adi,system-event-controller";
+			reg = <0x31089000 0x1000>;
+			adi,rcu = <&rcu>;
+			adi,sharc-cores = <2>;
+			status = "okay";
+		};
+
 		thermal: thermal@0x31016800 {
 			compatible = "adi,sc59x-thermal";
 			reg = <0x31016800 0x100>;
