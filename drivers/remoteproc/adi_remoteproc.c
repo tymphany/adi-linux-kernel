@@ -515,12 +515,10 @@ static void adi_rproc_kick(struct rproc *rproc, int vqid)
 			rproc_data->wait_platform_init = 0;
 		}else if(ret < 0){
 			if (ret != -ERESTARTSYS){
-				dev_err(rproc_data->dev, "Core%d init error %d\n", rproc_data->core_id, ret);
+				dev_info(rproc_data->dev, "Core%d init error %d\n", rproc_data->core_id, ret);
 			}
 		}else{
-			dev_warn(rproc_data->dev, "Core%d init timeout\n", rproc_data->core_id);
-			// Delay the kick until core is initialized
-			queue_delayed_work(rproc_data->core_workqueue, &rproc_data->core_kick_work, CORE_INIT_TIMEOUT);
+			dev_info(rproc_data->dev, "Core%d rpmsg init timeout, probably not supported.\n", rproc_data->core_id);
 			return;
 		}
 	}
