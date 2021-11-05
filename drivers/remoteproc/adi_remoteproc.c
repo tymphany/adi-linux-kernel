@@ -148,6 +148,7 @@ struct adi_rproc_data {
 	struct workqueue_struct *core_workqueue;
 	int wait_platform_init;
 	struct delayed_work core_kick_work;
+	struct adi_sharc_resource_table *loaded_rsc_table;
 };
 
 typedef struct block_code_flag {
@@ -626,12 +627,13 @@ static struct resource_table *adi_rproc_find_loaded_rsc_table(struct rproc *rpro
 			BUG();
 			break;
 	}
+	rproc_data->loaded_rsc_table = (struct adi_sharc_resource_table *)ret;
 	return ret;
 }
 
 static irqreturn_t sharc_virtio_irq_threded_handler(int irq, void *p){
 	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)p;
-	struct adi_sharc_resource_table *table = (struct adi_sharc_resource_table *)adi_ldr_find_loaded_rsc_table(rproc_data->rproc, NULL);
+	struct adi_sharc_resource_table *table = rproc_data->loaded_rsc_table;
 
 	/* Process incoming buffers on all our vrings */
 	if(rproc_data->wait_platform_init){
