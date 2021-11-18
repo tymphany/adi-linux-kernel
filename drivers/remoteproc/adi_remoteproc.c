@@ -3,6 +3,10 @@
  * Analog Device SHARC Image Loader for SC5XX processors
  *
  * Copyright (C) 2020, 2021 Analog Devices
+ * @todo:
+ * - sharc idle core as default with dts override
+ * - timeout as default with dts override
+ * - resource table dynamically constructed from dts data or executable file
  */
 
 #include <linux/clk.h>
@@ -25,16 +29,6 @@
 #include <linux/soc/adi/rcu.h>
 #include "remoteproc_internal.h"
 
-/* The VERIFY_LDR_DATA macro is used to verify LDR data loaded to
- * the target memory.
- *
- * Disable this macro by default to speed up the whole process
- * To enable it by adding below line:
- * #define VERIFY_LDR_DATA
- */
-
-#define VERIFY_LDR_DATA
-
 /* location of bootrom that loops idle */
 #define SHARC_IDLE_ADDR			(0x00090004)
 
@@ -43,11 +37,7 @@
 
 #define CORE_INIT_TIMEOUT msecs_to_jiffies(2000)
 
-#if defined(VERIFY_LDR_DATA)
 #define MEMORY_COUNT 2
-#else
-#define MEMORY_COUNT 1
-#endif
 
 #define ADI_FW_LDR 0
 #define ADI_FW_ELF 1
@@ -117,6 +107,7 @@ struct adi_rproc_data {
 	struct device *dev;
 	struct rproc *rproc;
 	struct adi_rcu *rcu;
+	struct adi_tru *tru;
 	const char *firmware_name;
 	int core_id;
 	int core_irq;
@@ -134,6 +125,7 @@ struct adi_rproc_data {
 	u64 l1_da_range[2];
 	u64 l2_da_range[2];
 	u32 rsc_offset;
+	u32 verify;
 };
 
 typedef struct block_code_flag {
@@ -184,6 +176,7 @@ static irqreturn_t sharc_virtio_irq_threaded_handler(int irq, void *p);
 static int adi_core_start(struct adi_rproc_data *rproc_data)
 {
 	rproc_data->wait_platform_init = 1;
+	reinit_completion(&rproc_data->sharc_platform_init_complete);
 	return adi_rcu_start_core(rproc_data->rcu, rproc_data->core_id);
 }
 
@@ -206,12 +199,10 @@ static void ldr_load(struct adi_rproc_data *rproc_data)
 	uint8_t* virbuf = (uint8_t*) rproc_data->mem_virt;
 	dma_addr_t phybuf = rproc_data->mem_handle;
 	int offset;
-#if defined(VERIFY_LDR_DATA)
 	int i;
 	uint32_t verfied = 0;
 	uint8_t* pCompareBuffer;
 	uint8_t* pVerifyBuffer;
-#endif
 
 	do {
 		/* read the header */
@@ -238,24 +229,25 @@ static void ldr_load(struct adi_rproc_data *rproc_data)
 			else {
 				dma_memcpy(block_hdr->target_addr, phybuf + sizeof(LDR_Ehdr_t), block_hdr->byte_count);
 
-#if defined(VERIFY_LDR_DATA)
-				pCompareBuffer = virbuf + sizeof(LDR_Ehdr_t);
-				pVerifyBuffer = virbuf + rproc_data->fw_size;
+				if (rproc_data->verify) {
+					pCompareBuffer = virbuf + sizeof(LDR_Ehdr_t);
+					pVerifyBuffer = virbuf + rproc_data->fw_size;
 
-				dma_memcpy(phybuf + rproc_data->fw_size, block_hdr->target_addr,
-							block_hdr->byte_count);
+					dma_memcpy(phybuf + rproc_data->fw_size, block_hdr->target_addr,
+								block_hdr->byte_count);
 
-				/* check the data */
-				for (i = 0; i < block_hdr->byte_count; i++) {
-					if (pCompareBuffer[i] != pVerifyBuffer[i]) {
-						dev_err(rproc_data->dev, "dirty data, pCompareBuffer[%d]:0x%x,\
-							pVerifyBuffer[%d]:0x%x\n",
-							i, pCompareBuffer[i], i, pVerifyBuffer[i]);
-						verfied++;
-						break;
+					/* check the data */
+					for (i = 0; i < block_hdr->byte_count; i++) {
+						if (pCompareBuffer[i] != pVerifyBuffer[i]) {
+							dev_err(rproc_data->dev,
+								"dirty data, pCompareBuffer[%d]:0x%x,"
+								"pVerifyBuffer[%d]:0x%x\n",
+								i, pCompareBuffer[i], i, pVerifyBuffer[i]);
+							verfied++;
+							break;
+						}
 					}
 				}
-#endif
 			}
 		}
 
@@ -268,12 +260,12 @@ static void ldr_load(struct adi_rproc_data *rproc_data)
 		phybuf += offset;
 	} while (1);
 
-#if defined(VERIFY_LDR_DATA)
-	if (verfied == 0)
-		dev_err(rproc_data->dev, "success to verify all the data\n");
-	else
-		dev_err(rproc_data->dev, "fail to verify all the data %d\n", verfied);
-#endif
+	if (rproc_data->verify) {
+		if (verfied == 0)
+			dev_err(rproc_data->dev, "success to verify all the data\n");
+		else
+			dev_err(rproc_data->dev, "fail to verify all the data %d\n", verfied);
+	}
 
 }
 
@@ -496,14 +488,14 @@ static struct resource_table *adi_rproc_find_loaded_rsc_table(struct rproc *rpro
 	return ret;
 }
 
+/* @todo store number of vrings from resource table and use it to dynamically
+ * notify the correct number of vrings */
 static irqreturn_t sharc_virtio_irq_threaded_handler(int irq, void *p){
 	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)p;
 	struct adi_sharc_resource_table *table = (struct adi_sharc_resource_table *)adi_ldr_find_loaded_rsc_table(rproc_data->rproc, NULL);
 
-	/* Process incoming buffers on all our vrings */
-	if(rproc_data->wait_platform_init){
+	if (rproc_data->wait_platform_init)
 		complete(&rproc_data->sharc_platform_init_complete);
-	}
 
 	rproc_vq_interrupt(rproc_data->rproc, table->vring[0].notifyid);
 	rproc_vq_interrupt(rproc_data->rproc, table->vring[1].notifyid);
@@ -533,7 +525,7 @@ static void adi_rproc_kick(struct rproc *rproc, int vqid)
 		}
 	}
 
-	platform_send_ipi_cpu(rproc_data->core_id, 0);
+	adi_tru_trigger_device(rproc_data->tru, rproc_data->dev);
 }
 
 static void adi_rproc_kick_work(struct work_struct *work){
@@ -611,6 +603,7 @@ static int adi_remoteproc_probe(struct platform_device *pdev)
 	struct adi_rproc_data *rproc_data;
 	struct device_node *np = dev->of_node;
 	struct adi_rcu *adi_rcu;
+	struct adi_tru *adi_tru;
 	struct rproc *rproc;
 	struct resource *res;
 	u32 addr[2];
@@ -628,12 +621,18 @@ static int adi_remoteproc_probe(struct platform_device *pdev)
 	if (IS_ERR(adi_rcu))
 		return PTR_ERR(adi_rcu);
 
+	adi_tru = get_adi_tru_from_node(dev);
+	if (IS_ERR(adi_tru)) {
+		ret = PTR_ERR(adi_tru);
+		goto free_adi_rcu;
+	}
+
 	rproc = rproc_alloc(dev, np->name, &adi_rproc_ops,
 					name, sizeof(*rproc_data));
 	if (!rproc) {
 		dev_err(dev, "Unable to allocate remoteproc\n");
 		ret = -ENOMEM;
-		goto free_adi_rcu;
+		goto free_adi_tru;
 	}
 
 	rproc_data = (struct adi_rproc_data *)rproc->priv;
@@ -732,13 +731,21 @@ static int adi_remoteproc_probe(struct platform_device *pdev)
 		goto free_workqueue;
 	}
 
+	rproc_data->verify = 0;
+	of_property_read_u32(np, "adi,verify", &rproc_data->verify);
+	rproc_data->verify = !!rproc_data->verify;
+	if (rproc_data->verify)
+		dev_info(dev, "Load verification enabled\n");
+
 	rproc_data->dev = &pdev->dev;
 	rproc_data->rcu = adi_rcu;
+	rproc_data->tru = adi_tru;
 	rproc_data->rproc = rproc;
 	rproc_data->firmware_name = name;
 	rproc_data->mem_virt = NULL;
 	rproc_data->fw_size = 0;
 	rproc_data->ldr_load_addr = SHARC_IDLE_ADDR;
+	rproc_data->wait_platform_init = 0;
 
 	ret = rproc_add(rproc);
 	if (ret) {
@@ -754,6 +761,9 @@ free_workqueue:
 free_rproc:
 	rproc_free(rproc);
 
+free_adi_tru:
+	put_adi_tru(adi_tru);
+
 free_adi_rcu:
 	put_adi_rcu(adi_rcu);
 
@@ -764,6 +774,7 @@ static int adi_remoteproc_remove(struct platform_device *pdev)
 {
 	struct adi_rproc_data *rproc_data = platform_get_drvdata(pdev);
 
+	put_adi_tru(rproc_data->tru);
 	put_adi_rcu(rproc_data->rcu);
 	rproc_del(rproc_data->rproc);
 	rproc_free(rproc_data->rproc);

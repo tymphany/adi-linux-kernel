@@ -7,10 +7,20 @@
 #ifndef SOC_ADI_ICC_H
 #define SOC_ADI_ICC_H
 
+#include <linux/device.h>
+#include <linux/types.h>
+
 #ifdef CONFIG_ARCH_SC59X_64
 #include <linux/soc/adi/mach-sc59x/icc.h>
 #else
 #include <mach/icc.h>
 #endif
+
+struct adi_tru;
+
+struct adi_tru *get_adi_tru_from_node(struct device *dev);
+void put_adi_tru(struct adi_tru *tru);
+int adi_tru_trigger_device(struct adi_tru *tru, struct device *dev);
+int adi_tru_trigger(struct adi_tru *tru, u32 master);
 
 #endif

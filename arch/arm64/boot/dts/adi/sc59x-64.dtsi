@@ -133,6 +133,14 @@
 			status = "okay";
 		};
 
+		tru: tru@0x3108a000 {
+			compatible = "adi,trigger-routing-unit";
+			reg = <0x3108a000 0x1000>;
+			adi,max-master-id = <182>;
+			adi,max-slave-id = <187>;
+			status = "okay";
+		};
+
 		thermal: thermal@0x31016800 {
 			compatible = "adi,sc59x-thermal";
 			reg = <0x31016800 0x100>;
