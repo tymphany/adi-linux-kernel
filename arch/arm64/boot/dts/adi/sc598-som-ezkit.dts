@@ -147,22 +147,22 @@
 
 		partition@1 {
 			label = "U-Boot Environment";
-			reg = <0x80000 0x20000>;
+			reg = <0xC0000 0x20000>;
 		};
 
 		partition@2 {
 			label = "Device Tree Blob";
-			reg = <0xA0000 0x20000>;
+			reg = <0xE0000 0x20000>;
 		};
 
 		partition@3 {
 			label = "Kernel zImage";
-			reg = <0xC0000 0xF00000>;
+			reg = <0x100000 0xF00000>;
 		};
 
 		partition@4 {
 			label = "JFFS2 Formatted RFS";
-			reg = <0xFC0000 0x3040000>;
+			reg = <0x1000000 0x3000000>;
 		};
 
 	};
@@ -203,22 +203,22 @@
 
 			ospi_1: partition@1 {
 				label = "U-Boot Environment";
-				reg = <0x80000 0x20000>;
+				reg = <0xC0000 0x20000>;
 			};
 
 			ospi_2: partition@2 {
 				label = "Device Tree Blob";
-				reg = <0xA0000 0x20000>;
+				reg = <0xE0000 0x20000>;
 			};
 
 			ospi_3: partition@3 {
 				label = "Kernel zImage";
-				reg = <0xC0000 0xF00000>;
+				reg = <0x100000 0xF00000>;
 			};
 
 			ospi_4: partition@4 {
 				label = "JFFS2 Formatted RFS";
-				reg = <0xFC0000 0x3040000>;
+				reg = <0x1000000 0x3000000>;
 			};
 		};
 	};
