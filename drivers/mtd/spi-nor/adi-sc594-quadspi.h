@@ -1,7 +1,7 @@
 #ifndef ADSP594_H
 #define ADSP594_H
 
-static int cqspi_adi_direct_read_execute(struct spi_nor *nor, u_char *buf,
+static void cqspi_adi_direct_read_execute(struct spi_nor *nor, u_char *buf,
 				     loff_t from, size_t len);
 
 static int cqspi_adi_direct_write_execute(struct spi_nor *nor, loff_t to,

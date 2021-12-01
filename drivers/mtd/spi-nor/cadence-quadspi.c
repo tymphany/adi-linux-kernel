@@ -1573,7 +1573,7 @@ MODULE_AUTHOR("Graham Moore <grmoore@opensource.altera.com>");
 #define ADI_OCTAL
 #define ADI_OCTAL_USE_DMA
 
-static int cqspi_adi_direct_read_execute(struct spi_nor *nor, u_char *buf,
+static void cqspi_adi_direct_read_execute(struct spi_nor *nor, u_char *buf,
 				     loff_t from, size_t len){
 
     unsigned int reg;
@@ -1730,7 +1730,6 @@ static int cqspi_adi_direct_read_execute(struct spi_nor *nor, u_char *buf,
 
     iounmap(pFlashAddress);
 #endif
-
 }
 
 static int cqspi_adi_direct_write_execute(struct spi_nor *nor, loff_t to,
