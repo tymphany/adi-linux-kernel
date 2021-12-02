@@ -255,6 +255,7 @@ int adi_tru_probe(struct platform_device *pdev) {
 	while ((child = of_get_next_child(np, child))) {
 		ret = adi_tru_set_trigger(tru, child, child);
 		if (ret) {
+			of_node_put(child);
 			dev_err(dev, "Invalid static trigger map in TRU device tree entry\n");
 			return ret;
 		}
