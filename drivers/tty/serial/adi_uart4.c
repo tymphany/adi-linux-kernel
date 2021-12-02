@@ -1,9 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * ADI UART4 Serial Driver
  *
- * Copyright 2013-2018 Analog Devices Inc.
- *
- * Licensed under the GPL-2 or later.
+ * Copyright 2013-2021 Analog Devices Inc.
  */
 
 #include <linux/module.h>
@@ -23,11 +22,12 @@
 #include <linux/irqflags.h>
 #include <linux/slab.h>
 #include <linux/dma-mapping.h>
+#include <linux/dmaengine.h>
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
 #include <asm/io.h>
 #include <linux/compiler.h>
-#include <linux/soc/adi/dma.h>
+
 #include <linux/soc/adi/hardware.h>
 #include <linux/soc/adi/portmux.h>
 #include <linux/soc/adi/gpio.h>
@@ -78,13 +78,15 @@ struct adi_uart4_serial_port {
 	/* DMA specific fields */
 	int tx_done;
 	int tx_count;
+	dma_addr_t tx_dma_phy;
+	struct scatterlist tx_sgl;
 	struct circ_buf rx_dma_buf;
 	dma_addr_t rx_dma_phy;
+	dma_cookie_t rx_cookie;
 	struct timer_list rx_dma_timer;
-	int rx_dma_nrows;
 	spinlock_t rx_lock;
-	unsigned int tx_dma_channel;
-	unsigned int rx_dma_channel;
+	struct dma_chan *tx_dma_channel;
+	struct dma_chan *rx_dma_channel;
 	struct work_struct tx_dma_workqueue;
 	/* Hardware flow control specific fields */
 	unsigned int hwflow_mode;
@@ -170,6 +172,7 @@ static struct adi_uart4_serial_port *adi_uart4_serial_ports[ADI_UART_NR_PORTS];
 #define DMA_RX_FLUSH_JIFFIES	(msecs_to_jiffies(50))
 
 static void adi_uart4_serial_dma_tx_chars(struct adi_uart4_serial_port *uart);
+static void adi_uart4_serial_dma_tx(void *data);
 static void adi_uart4_serial_tx_chars(struct adi_uart4_serial_port *uart);
 static void adi_uart4_serial_reset_irda(struct uart_port *port);
 
@@ -241,7 +244,9 @@ static void adi_uart4_serial_stop_tx(struct uart_port *port)
 		cpu_relax();
 
 	if (uart->tx_dma_channel) {
-		disable_dma(uart->tx_dma_channel);
+		if (!uart->tx_done)
+			dma_unmap_sg(uart->dev, &uart->tx_sgl, 1, DMA_TO_DEVICE);
+		dmaengine_terminate_sync(uart->tx_dma_channel);
 		xmit->tail = (xmit->tail + uart->tx_count) &
 			(UART_XMIT_SIZE - 1);
 		uart->port.icount.tx += uart->tx_count;
@@ -396,8 +401,8 @@ static irqreturn_t adi_uart4_serial_tx_int(int irq, void *dev_id)
 
 static void adi_uart4_serial_dma_tx_chars(struct adi_uart4_serial_port *uart)
 {
+	struct dma_async_tx_descriptor *desc;
 	struct circ_buf *xmit = &uart->port.state->xmit;
-	dma_addr_t dma_addr;
 
 	uart->tx_done = 0;
 
@@ -417,26 +422,29 @@ static void adi_uart4_serial_dma_tx_chars(struct adi_uart4_serial_port *uart)
 	if (uart->tx_count > (UART_XMIT_SIZE - xmit->tail))
 		uart->tx_count = UART_XMIT_SIZE - xmit->tail;
 
-	dma_addr = dma_map_single(uart->port.dev, xmit->buf+xmit->tail,
-				uart->tx_count, DMA_TO_DEVICE);
+	sg_init_one(&uart->tx_sgl, xmit->buf + xmit->tail, uart->tx_count);
+	dma_map_sg(uart->dev, &uart->tx_sgl, 1, DMA_TO_DEVICE);
 
-	set_dma_config(uart->tx_dma_channel,
-		gen_dma_config(DIR_READ, DMA_FLOW_STOP,
-			INTR_ON_BUF,
-			DIMENSION_LINEAR,
-			DATA_SIZE_8,
-			DMA_SYNC_RESTART));
-	set_dma_start_addr(uart->tx_dma_channel, dma_addr);
-	set_dma_x_count(uart->tx_dma_channel, uart->tx_count);
-	set_dma_x_modify(uart->tx_dma_channel, 1);
-	enable_dma(uart->tx_dma_channel);
+	desc = dmaengine_prep_slave_sg(uart->tx_dma_channel, &uart->tx_sgl, 1,
+		DMA_MEM_TO_DEV, 0);
+	if (!desc) {
+		dma_unmap_sg(uart->dev, &uart->tx_sgl, 1, DMA_TO_DEVICE);
+		return;
+	}
 
+	desc->callback = adi_uart4_serial_dma_tx;
+	desc->callback_param = uart;
+
+	dmaengine_submit(desc);
+	dma_async_issue_pending(uart->tx_dma_channel);
 	UART_SET_IER(uart, ETBEI);
 }
 
 static void adi_uart4_serial_dma_rx_chars(struct adi_uart4_serial_port *uart)
 {
 	int i, flg, status;
+
+	mod_timer(&uart->rx_dma_timer, jiffies + DMA_RX_FLUSH_JIFFIES);
 
 	status = UART_GET_LSR(uart);
 	UART_CLEAR_LSR(uart);
@@ -485,106 +493,89 @@ static void adi_uart4_serial_dma_rx_chars(struct adi_uart4_serial_port *uart)
 
 void adi_uart4_serial_rx_dma_timeout(struct timer_list *list)
 {
-	int x_pos, pos;
-	unsigned long flags;
-	
 	struct adi_uart4_serial_port *uart =
 		container_of(list, struct adi_uart4_serial_port, rx_dma_timer);
+	struct dma_tx_state state;
+	enum dma_status status;
+	unsigned long flags;
 
-	dma_disable_irq_nosync(uart->rx_dma_channel);
+	dmaengine_pause(uart->rx_dma_channel);
 	spin_lock_irqsave(&uart->rx_lock, flags);
 
-	/* 2D DMA RX buffer ring is used. Because curr_y_count and
-	 * curr_x_count can't be read as an atomic operation,
-	 * curr_y_count should be read before curr_x_count. When
-	 * curr_x_count is read, curr_y_count may already indicate
-	 * next buffer line. But, the position calculated here is
-	 * still indicate the old line. The wrong position data may
-	 * be smaller than current buffer tail, which cause garbages
-	 * are received if it is not prohibit.
-	 */
-	uart->rx_dma_nrows = get_dma_curr_ycount(uart->rx_dma_channel);
-	x_pos = get_dma_curr_xcount(uart->rx_dma_channel);
-	uart->rx_dma_nrows = DMA_RX_YCOUNT - uart->rx_dma_nrows;
-	if (uart->rx_dma_nrows == DMA_RX_YCOUNT || x_pos == 0)
-		uart->rx_dma_nrows = 0;
-	x_pos = DMA_RX_XCOUNT - x_pos;
-	if (x_pos == DMA_RX_XCOUNT)
-		x_pos = 0;
+	status = dmaengine_tx_status(uart->rx_dma_channel, uart->rx_cookie, &state);
 
-	pos = uart->rx_dma_nrows * DMA_RX_XCOUNT + x_pos;
-	/* Ignore receiving data if new position is in the same line of
-	 * current buffer tail and small.
-	 */
-	if (pos > uart->rx_dma_buf.tail ||
-		uart->rx_dma_nrows < (uart->rx_dma_buf.tail/DMA_RX_XCOUNT)) {
-		uart->rx_dma_buf.head = pos;
-		adi_uart4_serial_dma_rx_chars(uart);
-		uart->rx_dma_buf.tail = uart->rx_dma_buf.head;
+	if (DMA_ERROR == status) {
+		dev_err(uart->dev, "Error in RX DMA\n");
+		goto exit;
 	}
+
+	// Because resume will reset us to the start of the buffer, reset the tail
+	// pointer to 0 after, but use the previous tail for an offset buffer slice
+	// that timed out
+	uart->rx_dma_buf.head = UART_XMIT_SIZE - state.residue;
+	adi_uart4_serial_dma_rx_chars(uart);
+	uart->rx_dma_buf.tail = 0;
+
+exit:
+	spin_unlock_irqrestore(&uart->rx_lock, flags);
+	dmaengine_resume(uart->rx_dma_channel);
+}
+
+static void adi_uart4_serial_dma_tx(void *data)
+{
+	struct adi_uart4_serial_port *uart = data;
+	struct circ_buf *xmit = &uart->port.state->xmit;
+	unsigned long flags;
+
+	dma_unmap_sg(uart->dev, &uart->tx_sgl, 1, DMA_TO_DEVICE);
+
+	spin_lock_irqsave(&uart->port.lock, flags);
+	/* Anomaly notes:
+	 *  05000215 -	we always clear ETBEI within last UART TX
+	 *		interrupt to end a string. It is always set
+	 *		when start a new tx.
+	 */
+	UART_CLEAR_IER(uart, ETBEI);
+	uart->port.icount.tx += uart->tx_count;
+	if (!(xmit->tail == 0 && xmit->head == 0)) {
+		xmit->tail = (xmit->tail + uart->tx_count) & (UART_XMIT_SIZE - 1);
+
+		if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
+			uart_write_wakeup(&uart->port);
+	}
+
+	adi_uart4_serial_dma_tx_chars(uart);
+	spin_unlock_irqrestore(&uart->port.lock, flags);
+}
+
+static void adi_uart4_serial_dma_rx(void *data)
+{
+	struct adi_uart4_serial_port *uart = data;
+	struct dma_tx_state state;
+	enum dma_status status;
+	unsigned long flags;
+	int pos;
+
+	spin_lock_irqsave(&uart->rx_lock, flags);
+
+	status = dmaengine_tx_status(uart->rx_dma_channel, uart->rx_cookie, &state);
+
+	if (DMA_ERROR == status) {
+		dev_err(uart->dev, "Error in RX DMA\n");
+		spin_unlock_irqrestore(&uart->rx_lock, flags);
+		return;
+	}
+
+	// Update tail to start of the current block, so that we can receive multiple
+	// full blocks or a partial block not at the start of the buffer in event of
+	// a timeout
+	uart->rx_dma_buf.head = UART_XMIT_SIZE - state.residue;
+	pos = (uart->rx_dma_buf.head - 1) & (UART_XMIT_SIZE - 1);
+	pos = (pos / DMA_RX_XCOUNT) * DMA_RX_XCOUNT;
+	uart->rx_dma_buf.tail = pos;
+	adi_uart4_serial_dma_rx_chars(uart);
 
 	spin_unlock_irqrestore(&uart->rx_lock, flags);
-	dma_enable_irq(uart->rx_dma_channel);
-	mod_timer(&uart->rx_dma_timer, jiffies + DMA_RX_FLUSH_JIFFIES);
-}
-
-static irqreturn_t adi_uart4_serial_dma_tx_int(int irq, void *dev_id)
-{
-	struct adi_uart4_serial_port *uart = dev_id;
-	struct circ_buf *xmit = &uart->port.state->xmit;
-
-	spin_lock(&uart->port.lock);
-	if (!(get_dma_curr_irqstat(uart->tx_dma_channel)&DMA_RUN)) {
-		disable_dma(uart->tx_dma_channel);
-		clear_dma_irqstat(uart->tx_dma_channel);
-		/* Anomaly notes:
-		 *  05000215 -	we always clear ETBEI within last UART TX
-		 *		interrupt to end a string. It is always set
-		 *		when start a new tx.
-		 */
-		UART_CLEAR_IER(uart, ETBEI);
-		uart->port.icount.tx += uart->tx_count;
-		if (!(xmit->tail == 0 && xmit->head == 0)) {
-			xmit->tail = (xmit->tail + uart->tx_count) & (UART_XMIT_SIZE - 1);
-
-			if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
-				uart_write_wakeup(&uart->port);
-		}
-
-		adi_uart4_serial_dma_tx_chars(uart);
-	}
-
-	spin_unlock(&uart->port.lock);
-	return IRQ_HANDLED;
-}
-
-static irqreturn_t adi_uart4_serial_dma_rx_int(int irq, void *dev_id)
-{
-	struct adi_uart4_serial_port *uart = dev_id;
-	unsigned int irqstat;
-	int x_pos, pos;
-
-	spin_lock(&uart->rx_lock);
-	irqstat = get_dma_curr_irqstat(uart->rx_dma_channel);
-	clear_dma_irqstat(uart->rx_dma_channel);
-
-	uart->rx_dma_nrows = get_dma_curr_ycount(uart->rx_dma_channel);
-	x_pos = get_dma_curr_xcount(uart->rx_dma_channel);
-	uart->rx_dma_nrows = DMA_RX_YCOUNT - uart->rx_dma_nrows;
-	if (uart->rx_dma_nrows == DMA_RX_YCOUNT || x_pos == 0)
-		uart->rx_dma_nrows = 0;
-
-	pos = uart->rx_dma_nrows * DMA_RX_XCOUNT;
-	if (pos > uart->rx_dma_buf.tail ||
-		uart->rx_dma_nrows < (uart->rx_dma_buf.tail/DMA_RX_XCOUNT)) {
-		uart->rx_dma_buf.head = pos;
-		adi_uart4_serial_dma_rx_chars(uart);
-		uart->rx_dma_buf.tail = uart->rx_dma_buf.head;
-	}
-
-	spin_unlock(&uart->rx_lock);
-
-	return IRQ_HANDLED;
 }
 
 /*
@@ -619,53 +610,60 @@ static int adi_uart4_serial_startup(struct uart_port *port)
 {
 	struct adi_uart4_serial_port *uart =
 		container_of(port, struct adi_uart4_serial_port, port);
-	dma_addr_t dma_handle;
+	struct dma_slave_config dma_config = {0};
+	struct dma_async_tx_descriptor *desc;
+	int ret;
+
+	uart->tx_done = 1;
 
 	if (uart->tx_dma_channel) {
-		if (request_dma(uart->rx_dma_channel, "ADI_UART_RX") < 0) {
-			dev_err(port->dev, "Unable to attach UART RX DMA\n");
-			return -EBUSY;
-		}
-
-
-		if (request_dma(uart->tx_dma_channel, "ADI_UART_TX") < 0) {
-			dev_err(port->dev, "Unable to attach UART TX DMA\n");
-			free_dma(uart->rx_dma_channel);
-			return -EBUSY;
-		}
-
-
-		set_dma_callback(uart->rx_dma_channel,
-				adi_uart4_serial_dma_rx_int, uart);
-
-		set_dma_callback(uart->tx_dma_channel,
-				adi_uart4_serial_dma_tx_int, uart);
-
-		uart->rx_dma_buf.buf = (unsigned char *)
-					dma_alloc_coherent(uart->dev, PAGE_SIZE,
-						&dma_handle, GFP_KERNEL);
+		// RX channel
+		uart->rx_dma_buf.buf = dmam_alloc_coherent(uart->dev, UART_XMIT_SIZE,
+			&uart->rx_dma_phy, GFP_KERNEL);
 		if (!uart->rx_dma_buf.buf)
 			return -ENOMEM;
-		uart->rx_dma_phy = dma_handle;
+
 		uart->rx_dma_buf.head = 0;
 		uart->rx_dma_buf.tail = 0;
-		uart->rx_dma_nrows = 0;
 
-		set_dma_config(uart->rx_dma_channel,
-			gen_dma_config(DIR_WRITE, DMA_FLOW_AUTO,
-					INTR_ON_ROW, DIMENSION_2D,
-					DATA_SIZE_8,
-					DMA_SYNC_RESTART));
+		dma_config.direction = DMA_DEV_TO_MEM;
+		dma_config.src_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE;
+		dma_config.dst_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE;
+		// src_addr is not configured because we're attached to peripheral
+		dma_config.src_maxburst = 1;
+		dma_config.dst_maxburst = 1;
 
+		ret = dmaengine_slave_config(uart->rx_dma_channel, &dma_config);
+		if (ret) {
+			dev_err(uart->dev, "Error configuring RX DMA channel\n");
+			return -EINVAL;
+		}
 
-		set_dma_x_count(uart->rx_dma_channel, DMA_RX_XCOUNT);
-		set_dma_x_modify(uart->rx_dma_channel, 1);
-		set_dma_y_count(uart->rx_dma_channel, DMA_RX_YCOUNT);
-		set_dma_y_modify(uart->rx_dma_channel, 1);
-		set_dma_start_addr(uart->rx_dma_channel, uart->rx_dma_phy);
-		enable_dma(uart->rx_dma_channel);
+		desc = dmaengine_prep_dma_cyclic(uart->rx_dma_channel, uart->rx_dma_phy,
+			UART_XMIT_SIZE, DMA_RX_XCOUNT, DMA_DEV_TO_MEM, DMA_PREP_INTERRUPT);
+		desc->callback = adi_uart4_serial_dma_rx;
+		desc->callback_param = uart;
+
+		uart->rx_cookie = dmaengine_submit(desc);
+		dma_async_issue_pending(uart->rx_dma_channel);
+
 		timer_setup(&uart->rx_dma_timer, adi_uart4_serial_rx_dma_timeout, 0);
 		mod_timer(&uart->rx_dma_timer, jiffies + DMA_RX_FLUSH_JIFFIES);
+
+		// TX channel
+		dma_config = (struct dma_slave_config) {0};
+		dma_config.direction = DMA_MEM_TO_DEV;
+		dma_config.src_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE;
+		dma_config.dst_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE;
+		// dst_addr is not configured because we're attached to peripheral
+		dma_config.dst_maxburst = 1;
+		dma_config.src_maxburst = 1;
+
+		ret = dmaengine_slave_config(uart->tx_dma_channel, &dma_config);
+		if (ret) {
+			dev_err(uart->dev, "Error configuring TX DMA channel\n");
+			return -EINVAL;
+		}
 	} else {
 		if (request_irq(uart->rx_irq, adi_uart4_serial_rx_int, 0,
 			"ADI_UART_RX", uart)) {
@@ -721,14 +719,15 @@ static void adi_uart4_serial_shutdown(struct uart_port *port)
 	struct adi_uart4_serial_port *uart =
 		container_of(port, struct adi_uart4_serial_port, port);
 
+	dev_info(uart->dev, "in serial_shutdown\n");
+
 	if (uart->tx_dma_channel) {
-		disable_dma(uart->tx_dma_channel);
-		free_dma(uart->tx_dma_channel);
-		disable_dma(uart->rx_dma_channel);
-		free_dma(uart->rx_dma_channel);
+		dmaengine_terminate_sync(uart->tx_dma_channel);
+		dmaengine_terminate_sync(uart->rx_dma_channel);
+		dma_unmap_single(uart->dev, uart->tx_dma_phy, UART_XMIT_SIZE, DMA_TO_DEVICE);
+		dmam_free_coherent(uart->dev, UART_XMIT_SIZE, uart->rx_dma_buf.buf,
+			uart->rx_dma_phy);
 		del_timer(&uart->rx_dma_timer);
-		dma_free_coherent(uart->dev, PAGE_SIZE, uart->rx_dma_buf.buf,
-					uart->rx_dma_phy);
 	} else {
 		free_irq(uart->rx_irq, uart);
 		free_irq(uart->tx_irq, uart);
@@ -1129,23 +1128,21 @@ static int adi_uart4_serial_resume(struct platform_device *pdev)
 
 static int adi_uart4_serial_probe(struct platform_device *pdev)
 {
-	printk(KERN_ERR "Serial probe\r\n");
-
+	struct device *dev = &pdev->dev;
 	struct resource *res;
 	struct clk* clk;
 	struct adi_uart4_serial_port *uart = NULL;
 	int ret = 0;
 	int uartid;
-	unsigned int tx_dma_channel = 0, rx_dma_channel = 0;
+	struct dma_chan *tx_dma_channel = NULL;
+	struct dma_chan *rx_dma_channel = NULL;
+
+	dev_info(dev, "Serial probe\n");
 
 	if (pdev->dev.of_node) {
 		uartid = of_alias_get_id(pdev->dev.of_node, "serial");
-		ret = of_property_read_u32_index(pdev->dev.of_node,
-					"dma-channel", 0, &tx_dma_channel);
-
-		ret = of_property_read_u32_index(pdev->dev.of_node,
-					"dma-channel", 1, &rx_dma_channel);
-
+		tx_dma_channel = dma_request_chan(dev, "tx");
+		rx_dma_channel = dma_request_chan(dev, "rx");
 	} else {
 		uartid = pdev->id;
 	}
@@ -1208,7 +1205,6 @@ static int adi_uart4_serial_probe(struct platform_device *pdev)
 		uart->status_irq = platform_get_irq(pdev, 2);
 		uart->port.irq = uart->rx_irq;
 
-		uart->port.mapbase = res->start;
 		uart->port.membase = devm_ioremap(&pdev->dev, res->start,
 						resource_size(res));
 		if (!uart->port.membase) {
@@ -1260,7 +1256,7 @@ static int adi_uart4_serial_probe(struct platform_device *pdev)
 				}
 			}
 		}
-#endif		
+#endif
 	}
 
 
@@ -1291,6 +1287,10 @@ static int adi_uart4_serial_remove(struct platform_device *pdev)
 
 	if (uart) {
 		uart_remove_one_port(&adi_uart4_serial_reg, &uart->port);
+
+		dma_release_channel(uart->tx_dma_channel);
+		dma_release_channel(uart->rx_dma_channel);
+
 		iounmap(uart->port.membase);
 		if (uart->hwflow_en_pin && gpio_is_valid(uart->hwflow_en_pin))
 			gpio_direction_output(uart->hwflow_en_pin,
