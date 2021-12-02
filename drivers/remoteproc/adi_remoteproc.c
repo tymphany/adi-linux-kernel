@@ -10,6 +10,8 @@
  */
 
 #include <linux/clk.h>
+#include <linux/completion.h>
+#include <linux/dmaengine.h>
 #include <linux/firmware.h>
 #include <linux/elf.h>
 #include <linux/virtio_ids.h>
@@ -26,7 +28,6 @@
 
 #include <linux/soc/adi/hardware.h>
 #include <linux/soc/adi/sec.h>
-#include <linux/soc/adi/dma.h>
 #include <linux/soc/adi/icc.h>
 #include <linux/soc/adi/rcu.h>
 #include "remoteproc_internal.h"
@@ -216,10 +217,25 @@ static int adi_core_stop(struct adi_rproc_data *rproc_data)
 		rproc_data->core_id, rproc_data->core_irq);
 }
 
+static int is_final(LDR_Ehdr_t *hdr) {
+	return hdr->bcode_flag.bFlag_final;
+}
+
+static int is_empty(LDR_Ehdr_t *hdr) {
+	return hdr->bcode_flag.bFlag_ignore || (hdr->byte_count == 0);
+}
+
+static void load_callback(void *p) {
+	struct completion *cmp = p;
+	complete(cmp);
+}
+
 /* @todo this needs to return status */
+/* @todo the error paths here leak tremendously, this needs further cleanup */
 static void ldr_load(struct adi_rproc_data *rproc_data)
 {
 	LDR_Ehdr_t* block_hdr = NULL;
+	LDR_Ehdr_t *next_hdr = NULL;
 	uint8_t* virbuf = (uint8_t*) rproc_data->mem_virt;
 	dma_addr_t phybuf = rproc_data->mem_handle;
 	int offset;
@@ -227,70 +243,88 @@ static void ldr_load(struct adi_rproc_data *rproc_data)
 	uint32_t verfied = 0;
 	uint8_t* pCompareBuffer;
 	uint8_t* pVerifyBuffer;
+	struct dma_chan *chan = dma_find_channel(DMA_MEMCPY);
+	struct dma_async_tx_descriptor *tx;
+	struct completion cmp;
+
+	if (!chan) {
+		dev_err(rproc_data->dev, "Could not find dma memcpy channel\n");
+		return;
+	}
+
+	init_completion(&cmp);
 
 	do {
 		/* read the header */
 		block_hdr = (LDR_Ehdr_t*) virbuf;
+		offset = sizeof(LDR_Ehdr_t) + (block_hdr->bcode_flag.bFlag_fill ?
+							0 : block_hdr->byte_count);
+		next_hdr = (LDR_Ehdr_t *) (virbuf + offset);
+		tx = NULL;
 
 		/* Overwrite the ldr_load_addr */
 		if (block_hdr->bcode_flag.bFlag_first)
 			rproc_data->ldr_load_addr = (unsigned long)block_hdr->target_addr;
 
-		if (!block_hdr->bcode_flag.bFlag_ignore && block_hdr->byte_count) {
+		if (!is_empty(block_hdr)) {
 			if (block_hdr->bcode_flag.bFlag_fill) {
-				dma_addr_t fillphy;
-				void *fill = dma_alloc_coherent(rproc_data->dev,
-					block_hdr->byte_count, &fillphy, GFP_KERNEL);
-
-				if (!fill)
-					return;
-
-				memset(fill, block_hdr->argument, block_hdr->byte_count);
-				dma_memcpy(block_hdr->target_addr, fillphy, block_hdr->byte_count);
-				dma_free_coherent(rproc_data->dev, block_hdr->byte_count,
-					fill, fillphy);
+				tx = dmaengine_prep_dma_memset(chan, block_hdr->target_addr,
+					block_hdr->argument, block_hdr->byte_count, 0);
 			}
 			else {
-				dma_memcpy(block_hdr->target_addr, phybuf + sizeof(LDR_Ehdr_t), block_hdr->byte_count);
+				tx = dmaengine_prep_dma_memcpy(chan, block_hdr->target_addr,
+					phybuf + sizeof(LDR_Ehdr_t), block_hdr->byte_count, 0);
 
-				if (rproc_data->verify) {
-					pCompareBuffer = virbuf + sizeof(LDR_Ehdr_t);
-					pVerifyBuffer = virbuf + rproc_data->fw_size;
-
-					dma_memcpy(phybuf + rproc_data->fw_size, block_hdr->target_addr,
-								block_hdr->byte_count);
-
-					/* check the data */
-					for (i = 0; i < block_hdr->byte_count; i++) {
-						if (pCompareBuffer[i] != pVerifyBuffer[i]) {
-							dev_err(rproc_data->dev,
-								"dirty data, pCompareBuffer[%d]:0x%x,"
-								"pVerifyBuffer[%d]:0x%x\n",
-								i, pCompareBuffer[i], i, pVerifyBuffer[i]);
-							verfied++;
-							break;
-						}
-					}
-				}
+//				if (rproc_data->verify) {
+//					@todo implement verification
+//					pCompareBuffer = virbuf + sizeof(LDR_Ehdr_t);
+//					pVerifyBuffer = virbuf + rproc_data->fw_size;
+//
+//					dma_memcpy(phybuf + rproc_data->fw_size, block_hdr->target_addr,
+//								block_hdr->byte_count);
+//
+//					/* check the data */
+//					for (i = 0; i < block_hdr->byte_count; i++) {
+//						if (pCompareBuffer[i] != pVerifyBuffer[i]) {
+//							dev_err(rproc_data->dev,
+//								"dirty data, pCompareBuffer[%d]:0x%x,"
+//								"pVerifyBuffer[%d]:0x%x\n",
+//								i, pCompareBuffer[i], i, pVerifyBuffer[i]);
+//							verfied++;
+//							break;
+//						}
+//					}
+//				}
 			}
+
+			if (!tx) {
+				dev_err(rproc_data->dev, "Failed to allocate dma transaction\n");
+				return;
+			}
+
+			if (is_final(block_hdr) || (is_final(next_hdr) && is_empty(next_hdr))) {
+				tx->callback = load_callback;
+				tx->callback_param = &cmp;
+			}
+			dmaengine_submit(tx);
+			dma_async_issue_pending(chan);
 		}
 
-		if (block_hdr->bcode_flag.bFlag_final)
+		if (is_final(block_hdr)) {
+			wait_for_completion(&cmp);
 			break;
+		}
 
-		offset = sizeof(LDR_Ehdr_t) + (block_hdr->bcode_flag.bFlag_fill ?
-							0 : block_hdr->byte_count);
 		virbuf += offset;
 		phybuf += offset;
 	} while (1);
 
-	if (rproc_data->verify) {
-		if (verfied == 0)
-			dev_err(rproc_data->dev, "success to verify all the data\n");
-		else
-			dev_err(rproc_data->dev, "fail to verify all the data %d\n", verfied);
-	}
-
+//	if (rproc_data->verify) {
+//		if (verfied == 0)
+//			dev_err(rproc_data->dev, "success to verify all the data\n");
+//		else
+//			dev_err(rproc_data->dev, "fail to verify all the data %d\n", verfied);
+//	}
 }
 
 static int adi_valid_firmware(struct rproc *rproc, const struct firmware *fw)
@@ -881,6 +915,8 @@ static int adi_remoteproc_probe(struct platform_device *pdev)
 		goto free_workqueue;
 	}
 
+	dmaengine_get();
+
 	return 0;
 
 free_workqueue:
@@ -902,6 +938,7 @@ static int adi_remoteproc_remove(struct platform_device *pdev)
 {
 	struct adi_rproc_data *rproc_data = platform_get_drvdata(pdev);
 
+	dmaengine_put();
 	put_adi_tru(rproc_data->tru);
 	put_adi_rcu(rproc_data->rcu);
 	rproc_del(rproc_data->rproc);
