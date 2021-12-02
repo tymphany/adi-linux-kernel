@@ -1,22 +1,15 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Analog Devices SPI3 controller driver
  *
- * Copyright (c) 2014 - 2018 Analog Devices Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Copyright (c) 2014 - 2022 Analog Devices Inc.
  */
 
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/dma-mapping.h>
+#include <linux/dmaengine.h>
 #include <linux/errno.h>
 #include <linux/gpio.h>
 #include <linux/init.h>
@@ -31,10 +24,8 @@
 #include <linux/types.h>
 
 #ifdef CONFIG_ARCH_HEADER_IN_MACH
-#include <linux/soc/adi/dma.h>
 #include <linux/soc/adi/portmux.h>
 #else
-#include <asm/dma.h>
 #include <asm/portmux.h>
 #endif
 
@@ -57,6 +48,7 @@ struct adi_spi_transfer_ops {
 struct adi_spi_master {
 	/* SPI framework hookup */
 	struct spi_master *master;
+	struct device *dev;
 
 	/* Regs base of SPI controller */
 	struct adi_spi_regs __iomem *regs;
@@ -80,13 +72,16 @@ struct adi_spi_master {
 	void *rx_end;
 
 	/* dma info */
-	unsigned int tx_dma;
-	unsigned int rx_dma;
-	dma_addr_t tx_dma_addr;
-	dma_addr_t rx_dma_addr;
-	unsigned long dummy_buffer; /* used in unidirectional transfer */
-	unsigned long tx_dma_size;
-	unsigned long rx_dma_size;
+	struct dma_chan *tx_dma;
+	struct dma_chan *rx_dma;
+	int dummy_tx;
+	int dummy_rx;
+	int tx_mapped;
+	int rx_mapped;
+	dma_cookie_t tx_cookie;
+	dma_cookie_t rx_cookie;
+	struct scatterlist tx_sgl;
+	struct scatterlist rx_sgl;
 	int tx_num;
 	int rx_num;
 
@@ -112,6 +107,9 @@ struct adi_spi_device {
 	const struct adi_spi_transfer_ops *ops;
 };
 
+static void adi_spi_tx_dma_isr(void *data);
+static void adi_spi_rx_dma_isr(void *data);
+
 static void adi_spi_enable(struct adi_spi_master *drv_data)
 {
 	u32 ctl;
@@ -128,6 +126,42 @@ static void adi_spi_disable(struct adi_spi_master *drv_data)
 	ctl = ioread32(&drv_data->regs->control);
 	ctl &= ~SPI_CTL_EN;
 	iowrite32(ctl, &drv_data->regs->control);
+}
+
+static void adi_spi_dma_unmap_tx(struct adi_spi_master *drv_data) {
+	if (drv_data->tx && drv_data->dummy_tx) {
+		kfree(drv_data->tx);
+		drv_data->tx = NULL;
+		drv_data->dummy_tx = 0;
+	}
+
+	if (drv_data->tx_mapped) {
+		dma_unmap_sg(drv_data->dev, &drv_data->tx_sgl, 1, DMA_TO_DEVICE);
+		drv_data->tx_mapped = 0;
+	}
+}
+
+static void adi_spi_dma_unmap_rx(struct adi_spi_master *drv_data) {
+	if (drv_data->rx && drv_data->dummy_rx) {
+		kfree(drv_data->tx);
+		drv_data->tx = NULL;
+		drv_data->dummy_tx = 0;
+	}
+
+	if (drv_data->rx_mapped) {
+		dma_unmap_sg(drv_data->dev, &drv_data->rx_sgl, 1, DMA_FROM_DEVICE);
+		drv_data->rx_mapped = 0;
+	}
+}
+
+static void adi_spi_dma_unmap(struct adi_spi_master *drv_data) {
+	adi_spi_dma_unmap_tx(drv_data);
+	adi_spi_dma_unmap_rx(drv_data);
+}
+
+static void adi_spi_dma_terminate(struct adi_spi_master *drv_data) {
+	dmaengine_terminate_sync(drv_data->tx_dma);
+	dmaengine_terminate_sync(drv_data->rx_dma);
 }
 
 /* Caculate the SPI_CLOCK register value based on input HZ */
@@ -407,99 +441,87 @@ static int adi_spi_setup_transfer(struct adi_spi_master *drv)
 
 static int adi_spi_dma_xfer(struct adi_spi_master *drv_data)
 {
-	struct spi_transfer *t = drv_data->cur_transfer;
-	struct spi_message *msg = drv_data->cur_msg;
-	struct adi_spi_device *chip = drv_data->cur_chip;
-	u32 dma_config;
-	unsigned long word_count, word_size;
-	void *tx_buf, *rx_buf;
-
-	switch (t->bits_per_word) {
-	case 8:
-		dma_config = WDSIZE_8 | PSIZE_8;
-		word_count = drv_data->transfer_len;
-		word_size = 1;
-		break;
-	case 16:
-		dma_config = WDSIZE_16 | PSIZE_16;
-		word_count = drv_data->transfer_len / 2;
-		word_size = 2;
-		break;
-	default:
-		dma_config = WDSIZE_32 | PSIZE_32;
-		word_count = drv_data->transfer_len / 4;
-		word_size = 4;
-		break;
-	}
-
-	if (!drv_data->rx) {
-		tx_buf = drv_data->tx;
-		rx_buf = &drv_data->dummy_buffer;
-		drv_data->tx_dma_size = drv_data->transfer_len;
-		drv_data->rx_dma_size = sizeof(drv_data->dummy_buffer);
-		set_dma_x_modify(drv_data->tx_dma, word_size);
-		set_dma_x_modify(drv_data->rx_dma, 0);
-	} else if (!drv_data->tx) {
-		drv_data->dummy_buffer = chip->tx_dummy_val;
-		tx_buf = &drv_data->dummy_buffer;
-		rx_buf = drv_data->rx;
-		drv_data->tx_dma_size = sizeof(drv_data->dummy_buffer);
-		drv_data->rx_dma_size = drv_data->transfer_len;
-		set_dma_x_modify(drv_data->tx_dma, 0);
-		set_dma_x_modify(drv_data->rx_dma, word_size);
-	} else {
-		tx_buf = drv_data->tx;
-		rx_buf = drv_data->rx;
-		drv_data->tx_dma_size = drv_data->rx_dma_size
-					= drv_data->transfer_len;
-		set_dma_x_modify(drv_data->tx_dma, word_size);
-		set_dma_x_modify(drv_data->rx_dma, word_size);
-	}
-
-	drv_data->tx_dma_addr = dma_map_single(&msg->spi->dev,
-				(void *)tx_buf,
-				drv_data->tx_dma_size,
-				DMA_TO_DEVICE);
-	if (dma_mapping_error(&msg->spi->dev,
-				drv_data->tx_dma_addr))
-		return -ENOMEM;
-
-	drv_data->rx_dma_addr = dma_map_single(&msg->spi->dev,
-				(void *)rx_buf,
-				drv_data->rx_dma_size,
-				DMA_FROM_DEVICE);
-	if (dma_mapping_error(&msg->spi->dev,
-				drv_data->rx_dma_addr)) {
-		dma_unmap_single(&msg->spi->dev,
-				drv_data->tx_dma_addr,
-				drv_data->tx_dma_size,
-				DMA_TO_DEVICE);
-		return -ENOMEM;
-	}
+	struct dma_async_tx_descriptor *tx_desc;
+	struct dma_async_tx_descriptor *rx_desc;
 
 	dummy_read(drv_data);
-	set_dma_x_count(drv_data->tx_dma, word_count);
-	set_dma_x_count(drv_data->rx_dma, word_count);
-	set_dma_start_addr(drv_data->tx_dma, drv_data->tx_dma_addr);
-	set_dma_start_addr(drv_data->rx_dma, drv_data->rx_dma_addr);
-	dma_config |= DMAFLOW_STOP | RESTART | DI_EN;
-	set_dma_config(drv_data->tx_dma, dma_config);
-	set_dma_config(drv_data->rx_dma, dma_config | WNR);
-	enable_dma(drv_data->rx_dma);
 
-	if (!drv_data->tx && t->rx_nbits == SPI_NBITS_QUAD) {
-		iowrite32(SPI_RXCTL_REN | SPI_RXCTL_RTI | SPI_RXCTL_RDR_NE,
-				&drv_data->regs->rx_control);
-		iowrite32(0, &drv_data->regs->tx_control);
-	} else {
-		enable_dma(drv_data->tx_dma);
-		iowrite32(SPI_RXCTL_REN | SPI_RXCTL_RDR_NE,
-				&drv_data->regs->rx_control);
-		iowrite32(SPI_TXCTL_TEN | SPI_TXCTL_TTI | SPI_TXCTL_TDR_NF,
-				&drv_data->regs->tx_control);
+	drv_data->dummy_rx = 0;
+	drv_data->dummy_tx = 0;
+
+	if (!drv_data->rx) {
+		drv_data->rx = kzalloc(drv_data->transfer_len, GFP_ATOMIC);
+		drv_data->dummy_rx = 1;
+		if (!drv_data->rx)
+			goto cleanup;
 	}
 
+	if (!drv_data->tx) {
+		drv_data->tx = kzalloc(drv_data->transfer_len, GFP_ATOMIC);
+		drv_data->dummy_tx = 1;
+		if (!drv_data->tx)
+			goto cleanup;
+	}
+
+	sg_init_one(&drv_data->tx_sgl, drv_data->tx, drv_data->transfer_len);
+	drv_data->tx_mapped = dma_map_sg(drv_data->dev, &drv_data->tx_sgl, 1,
+		DMA_TO_DEVICE);
+
+	if (!drv_data->tx_mapped) {
+		dev_err(drv_data->dev, "unable to map tx buffer\n");
+		goto cleanup;
+	}
+
+	tx_desc = dmaengine_prep_slave_sg(drv_data->tx_dma, &drv_data->tx_sgl, 1,
+		DMA_MEM_TO_DEV, 0);
+
+	if (!tx_desc) {
+		dev_err(drv_data->dev, "unable to allocate tx dma descriptor\n");
+		goto cleanup;
+	}
+
+//	tx_desc->callback = adi_spi_tx_dma_isr;
+//	tx_desc->callback_param = drv_data;
+	drv_data->tx_cookie = dmaengine_submit(tx_desc);
+	dma_async_issue_pending(drv_data->tx_dma);
+
+	sg_init_one(&drv_data->rx_sgl, drv_data->rx, drv_data->transfer_len);
+	drv_data->rx_mapped = dma_map_sg(drv_data->dev, &drv_data->rx_sgl, 1,
+		DMA_FROM_DEVICE);
+
+	if (!drv_data->rx_mapped) {
+		dev_err(drv_data->dev, "unable to map rx buffer\n");
+		goto cleanup;
+	}
+
+	rx_desc = dmaengine_prep_slave_sg(drv_data->rx_dma, &drv_data->rx_sgl, 1,
+		DMA_DEV_TO_MEM, 0);
+
+	if (!rx_desc) {
+		dev_err(drv_data->dev, "unable to allocate rx dma descriptor\n");
+		goto cleanup;
+	}
+
+	rx_desc->callback = adi_spi_rx_dma_isr;
+	rx_desc->callback_param = drv_data;
+	drv_data->rx_cookie = dmaengine_submit(rx_desc);
+	dma_async_issue_pending(drv_data->rx_dma);
+
+	// Make sure we start rx/tx at the same time by disabling everything before
+	// configuring them to use RTI+TTI
+	adi_spi_disable(drv_data);
+	iowrite32(SPI_RXCTL_REN | SPI_RXCTL_RTI | SPI_RXCTL_RDR_NE,
+			&drv_data->regs->rx_control);
+	iowrite32(SPI_TXCTL_TEN | SPI_TXCTL_TTI | SPI_TXCTL_TDR_NF,
+			&drv_data->regs->tx_control);
+	adi_spi_enable(drv_data);
+
 	return 0;
+
+cleanup:
+	adi_spi_dma_terminate(drv_data);
+	adi_spi_dma_unmap(drv_data);
+	return -ENOENT;
 }
 
 static int adi_spi_pio_xfer(struct adi_spi_master *drv_data)
@@ -700,52 +722,50 @@ static void adi_spi_cleanup(struct spi_device *spi)
 	spi_set_ctldata(spi, NULL);
 }
 
-static irqreturn_t adi_spi_tx_dma_isr(int irq, void *dev_id)
+static void adi_spi_tx_dma_isr(void *data)
 {
-	struct adi_spi_master *drv_data = dev_id;
-	u32 dma_stat = get_dma_curr_irqstat(drv_data->tx_dma);
-	u32 tx_ctl;
-
-	clear_dma_irqstat(drv_data->tx_dma);
-	if (dma_stat & DMA_DONE) {
-		drv_data->tx_num++;
-	} else {
-		dev_err(&drv_data->master->dev,
-				"spi tx dma error: %d\n", dma_stat);
-		if (drv_data->tx)
-			drv_data->state = ERROR_STATE;
-	}
-	tx_ctl = ioread32(&drv_data->regs->tx_control);
-	tx_ctl &= ~SPI_TXCTL_TDR_NF;
-	iowrite32(tx_ctl, &drv_data->regs->tx_control);
-	return IRQ_HANDLED;
+//	struct adi_spi_master *drv_data = data;
+//	struct dma_tx_state state;
+//	enum dma_status status;
+//	u32 tx_ctl;
+//
+//	status = dmaengine_tx_status(drv_data->tx_dma, drv_data->tx_cookie, &state);
+//	if (DMA_ERROR == status) {
+//		dev_err(&drv_data->master->dev, "spi tx dma error\n");
+//		if (drv_data->tx)
+//			drv_data->state = ERROR_STATE;
+//	}
+//	else {
+//		drv_data->tx_num++;
+//	}
+//
+//	tx_ctl = ioread32(&drv_data->regs->tx_control);
+//	tx_ctl &= ~SPI_TXCTL_TDR_NF;
+//	iowrite32(tx_ctl, &drv_data->regs->tx_control);
+//
+//	adi_spi_dma_unmap_tx(drv_data);
+//	tasklet_schedule(&drv_data->pump_transfers);
 }
 
-static irqreturn_t adi_spi_rx_dma_isr(int irq, void *dev_id)
+static void adi_spi_rx_dma_isr(void *data)
 {
-	struct adi_spi_master *drv_data = dev_id;
+	struct adi_spi_master *drv_data = data;
 	struct spi_message *msg = drv_data->cur_msg;
-	u32 dma_stat = get_dma_curr_irqstat(drv_data->rx_dma);
+	struct dma_tx_state state;
+	enum dma_status status;
 
-	clear_dma_irqstat(drv_data->rx_dma);
-	if (dma_stat & DMA_DONE) {
-		drv_data->rx_num++;
-		/* we may fail on tx dma */
-		if (drv_data->state != ERROR_STATE)
-			msg->actual_length += drv_data->transfer_len;
-	} else {
+	status = dmaengine_tx_status(drv_data->rx_dma, drv_data->rx_cookie, &state);
+	if (DMA_ERROR == status) {
 		drv_data->state = ERROR_STATE;
-		dev_err(&drv_data->master->dev,
-				"spi rx dma error: %d\n", dma_stat);
+		dev_err(&drv_data->master->dev, "spi rx dma error\n");
 	}
+
+	msg->actual_length += drv_data->transfer_len;
 	iowrite32(0, &drv_data->regs->tx_control);
 	iowrite32(0, &drv_data->regs->rx_control);
-	if (drv_data->rx_num != drv_data->tx_num)
-		dev_dbg(&drv_data->master->dev,
-				"dma interrupt missing: tx=%d,rx=%d\n",
-				drv_data->tx_num, drv_data->rx_num);
+
+	adi_spi_dma_unmap(drv_data);
 	tasklet_schedule(&drv_data->pump_transfers);
-	return IRQ_HANDLED;
 }
 
 static irqreturn_t spi_irq_err(int irq, void *dev_id)
@@ -760,13 +780,13 @@ static irqreturn_t spi_irq_err(int irq, void *dev_id)
 	drv_data->state = ERROR_STATE;
 	iowrite32(0, &drv_data->regs->tx_control);
 	iowrite32(0, &drv_data->regs->rx_control);
-	disable_dma(drv_data->tx_dma);
-	disable_dma(drv_data->rx_dma);
+
+	adi_spi_dma_terminate(drv_data);
+	adi_spi_dma_unmap(drv_data);
 	tasklet_schedule(&drv_data->pump_transfers);
 	return IRQ_HANDLED;
 }
 
-#ifdef CONFIG_OF
 static const struct of_device_id adi_spi_of_match[] = {
 	{
 		.compatible = "adi,spi3",
@@ -774,7 +794,6 @@ static const struct of_device_id adi_spi_of_match[] = {
 	{},
 };
 MODULE_DEVICE_TABLE(of, adi_spi_of_match);
-#endif
 
 static int adi_spi_probe(struct platform_device *pdev)
 {
@@ -783,7 +802,7 @@ static int adi_spi_probe(struct platform_device *pdev)
 	struct spi_master *master;
 	struct adi_spi_master *drv_data;
 	struct resource *mem, *res;
-	unsigned int tx_dma, rx_dma, num_cs, bus_num;
+	unsigned int num_cs;
 	struct clk *sclk;
 	int ret;
 
@@ -798,41 +817,10 @@ static int adi_spi_probe(struct platform_device *pdev)
 		return PTR_ERR(sclk);
 	}
 
-	if (dev->of_node) {
-		ret = of_property_read_u32_index(dev->of_node,
-				"dma-channel", 0, &tx_dma);
-		if (ret) {
-			dev_err(dev, "can not get tx dma resource\n");
-			return ret;
-		}
-		ret = of_property_read_u32_index(dev->of_node,
-				"dma-channel", 1, &rx_dma);
-		if (ret) {
-			dev_err(dev, "can not get rx dma resource\n");
-			return ret;
-		}
-		ret = of_property_read_u32(dev->of_node, "num-cs", &num_cs);
-		if (ret) {
-			dev_err(dev, "can not get total number of cs\n");
-			return ret;
-		}
-		bus_num = -1;
-	} else {
-		res = platform_get_resource(pdev, IORESOURCE_DMA, 0);
-		if (!res) {
-			dev_err(dev, "can not get tx dma resource\n");
-			return -ENXIO;
-		}
-		tx_dma = res->start;
-
-		res = platform_get_resource(pdev, IORESOURCE_DMA, 1);
-		if (!res) {
-			dev_err(dev, "can not get rx dma resource\n");
-			return -ENXIO;
-		}
-		rx_dma = res->start;
-		num_cs = info->num_chipselect;
-		bus_num = pdev->id;
+	ret = of_property_read_u32(dev->of_node, "num-cs", &num_cs);
+	if (ret) {
+		dev_err(dev, "can not get total number of cs\n");
+		return ret;
 	}
 
 	/* allocate master with space for drv_data */
@@ -849,7 +837,7 @@ static int adi_spi_probe(struct platform_device *pdev)
 				SPI_RX_DUAL | SPI_RX_QUAD;
 
 	master->dev.of_node = dev->of_node;
-	master->bus_num = bus_num;
+	master->bus_num = -1;
 	master->num_chipselect = num_cs;
 	master->cleanup = adi_spi_cleanup;
 	master->setup = adi_spi_setup;
@@ -858,9 +846,20 @@ static int adi_spi_probe(struct platform_device *pdev)
 
 	drv_data = spi_master_get_devdata(master);
 	drv_data->master = master;
-	drv_data->tx_dma = tx_dma;
-	drv_data->rx_dma = rx_dma;
 	drv_data->sclk = clk_get_rate(sclk);
+	drv_data->dev = dev;
+
+	drv_data->tx_dma = dma_request_chan(dev, "tx");
+	if (!drv_data->tx_dma) {
+		dev_err(dev, "Could not get TX DMA channel\n");
+		return -ENOENT;
+	}
+
+	drv_data->rx_dma = dma_request_chan(dev, "rx");
+	if (!drv_data->rx_dma) {
+		dev_err(dev, "Could not get RX DMA channel\n");
+		return -ENOENT;
+	}
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	drv_data->regs = devm_ioremap_resource(dev, mem);
@@ -882,21 +881,6 @@ static int adi_spi_probe(struct platform_device *pdev)
 		goto err_put_master;
 	}
 
-	/* request tx and rx dma */
-	ret = request_dma(tx_dma, "SPI_TX_DMA");
-	if (ret) {
-		dev_err(dev, "can not request SPI TX DMA channel\n");
-		goto err_put_master;
-	}
-	set_dma_callback(tx_dma, adi_spi_tx_dma_isr, drv_data);
-
-	ret = request_dma(rx_dma, "SPI_RX_DMA");
-	if (ret) {
-		dev_err(dev, "can not request SPI RX DMA channel\n");
-		goto err_free_tx_dma;
-	}
-	set_dma_callback(drv_data->rx_dma, adi_spi_rx_dma_isr, drv_data);
-
 	iowrite32(SPI_CTL_MSTR | SPI_CTL_CPHA, &drv_data->regs->control);
 	iowrite32(0x0000FE00, &drv_data->regs->ssel);
 	iowrite32(0x0, &drv_data->regs->delay);
@@ -916,9 +900,9 @@ static int adi_spi_probe(struct platform_device *pdev)
 	return ret;
 
 err_free_rx_dma:
-	free_dma(rx_dma);
-err_free_tx_dma:
-	free_dma(tx_dma);
+	dma_release_channel(drv_data->tx_dma);
+	dma_release_channel(drv_data->rx_dma);
+
 err_put_master:
 	spi_master_put(master);
 
@@ -931,8 +915,8 @@ static int adi_spi_remove(struct platform_device *pdev)
 	struct adi_spi_master *drv_data = spi_master_get_devdata(master);
 
 	adi_spi_disable(drv_data);
-	free_dma(drv_data->rx_dma);
-	free_dma(drv_data->tx_dma);
+	dma_release_channel(drv_data->tx_dma);
+	dma_release_channel(drv_data->rx_dma);
 	return 0;
 }
 
@@ -948,8 +932,8 @@ static int __maybe_unused adi_spi_suspend(struct device *dev)
 
 	iowrite32(SPI_CTL_MSTR | SPI_CTL_CPHA, &drv_data->regs->control);
 	iowrite32(0x0000FE00, &drv_data->regs->ssel);
-	dma_disable_irq(drv_data->rx_dma);
-	dma_disable_irq(drv_data->tx_dma);
+	dmaengine_pause(drv_data->tx_dma);
+	dmaengine_pause(drv_data->rx_dma);
 
 	return 0;
 }
@@ -961,17 +945,17 @@ static int __maybe_unused adi_spi_resume(struct device *dev)
 	int ret = 0;
 
 	/* bootrom may modify spi and dma status when resume in spi boot mode */
-	disable_dma(drv_data->rx_dma);
+	dmaengine_terminate_sync(drv_data->rx_dma);
 
-	dma_enable_irq(drv_data->rx_dma);
-	dma_enable_irq(drv_data->tx_dma);
+	dmaengine_resume(drv_data->rx_dma);
+	dmaengine_resume(drv_data->tx_dma);
 	iowrite32(drv_data->control, &drv_data->regs->control);
 	iowrite32(drv_data->ssel, &drv_data->regs->ssel);
 
 	ret = spi_master_resume(master);
 	if (ret) {
-		free_dma(drv_data->rx_dma);
-		free_dma(drv_data->tx_dma);
+		dma_release_channel(drv_data->tx_dma);
+		dma_release_channel(drv_data->rx_dma);
 	}
 
 	return ret;
