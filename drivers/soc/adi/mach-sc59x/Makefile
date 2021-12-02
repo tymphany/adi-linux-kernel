@@ -4,4 +4,4 @@
 
 # todo modularize with kconfigs
 
-obj-y := core.o gptimers.o dma.o icc.o clock.o rcu.o sec.o
+obj-y := core.o gptimers.o icc.o clock.o rcu.o sec.o

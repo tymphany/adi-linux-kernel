@@ -1,9 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * isa_dma.h - SC59x DMA defines/structures/etc...
- *
- * Copyright 2018 Analog Devices Inc.
- *
- * Licensed under the GPL-2 or later.
+ * SC598 DMA definitions
  */
 
 #ifndef __ASM_DMA_H__
@@ -15,65 +12,6 @@
 #include <linux/soc/adi/sc59x.h>
 #include <asm-generic/dma.h>
 #include <asm/io.h>
-
-#define CH_SPORT0_TX                   0
-#define CH_SPORT0_RX                   1
-#define CH_SPORT1_TX                   2
-#define CH_SPORT1_RX                   3
-#define CH_SPORT2_TX                   4
-#define CH_SPORT2_RX                   5
-#define CH_SPORT3_TX                   6
-#define CH_SPORT3_RX                   7
-#define CH_MEM_STREAM0_SRC             8
-#define CH_MEM_STREAM0_DEST            9
-#define CH_SPORT4_TX                  10
-#define CH_SPORT4_RX                  11
-#define CH_SPORT5_TX                  12
-#define CH_SPORT5_RX                  13
-#define CH_SPORT6_TX                  14
-#define CH_SPORT6_RX                  15
-#define CH_SPORT7_TX                  16
-#define CH_SPORT7_RX                  17
-#define CH_MEM_STREAM1_SRC            18
-#define CH_MEM_STREAM1_DEST           19
-#define CH_UART0_TX                   20
-#define CH_UART0_RX                   21
-#define CH_SPI0_TX                    22
-#define CH_SPI0_RX                    23
-#define CH_SPI1_TX                    24
-#define CH_SPI1_RX                    25
-#define CH_SPI2_TX                    26
-#define CH_SPI2_RX                    27
-#define CH_EPPI0_CH0                  28
-#define CH_EPPI0_CH1                  29
-#define CH_LP0                        30
-#define CH_HAE_OUT                    31
-#define CH_HAE_IN0                    32
-#define CH_HAE_IN1                    33
-#define CH_UART1_TX                   34
-#define CH_UART1_RX                   35
-#define CH_LP1                        36
-#define CH_UART2_TX                   37
-#define CH_UART2_RX                   38
-#define CH_MEM_STREAM2_SRC            39
-#define CH_MEM_STREAM2_DEST           40
-#define CH_FFTA0_RX                   41
-#define CH_FFTA0_TX                   42
-#define CH_MEM_STREAM3_SRC            43
-#define CH_MEM_STREAM3_DEST           44
-
-#define MAX_DMA_CHANNELS	57
-
-#define MDMA_S0_NEXT_DESC_PTR	(REG_DMA8_DSCPTR_NXT)
-#define MDMA_S0_CONFIG		(REG_DMA8_CFG)
-#define MDMA_D0_NEXT_DESC_PTR	(REG_DMA9_DSCPTR_NXT)
-#define MDMA_D0_CONFIG		(REG_DMA9_CFG)
-#define MDMA_D0_IRQ_STATUS	(REG_DMA9_STAT)
-#define MDMA_S1_NEXT_DESC_PTR	(REG_DMA18_DSCPTR_NXT)
-#define MDMA_S1_CONFIG		(REG_DMA18_CFG)
-#define MDMA_D1_NEXT_DESC_PTR	(REG_DMA19_DSCPTR_NXT)
-#define MDMA_D1_CONFIG		(REG_DMA19_CFG)
-#define MDMA_D1_IRQ_STATUS	(REG_DMA19_STAT)
 
 /* DMA_CONFIG Masks */
 #define DMAEN			0x00000001	/* DMA Channel Enable */
@@ -92,7 +30,7 @@
 #define WDSIZE_256		0x00000500	/* Transfer Word Size = 32 */
 
 #define DMA2D			0x04000000	/* DMA Mode (2D/1D*) */
-#define RESTART			0x00000004	/* DMA Buffer Clear SYNC */
+#define DMARESTART		0x00000004	/* DMA Buffer Clear SYNC */
 
 #define DI_EN_X			0x00100000	/* Data Interrupt Enable in X count */
 #define DI_EN_Y			0x00200000	/* Data Interrupt Enable in Y count */
@@ -166,59 +104,44 @@ struct dmasg {
 #define ADI_DMA_BWMCNT			0x48
 #define ADI_DMA_BWMCNT_CUR		0x4c
 
-/* @todo scatter-gather mode doesn't work yet */
-struct dma_channel {
-	const char *device_id;
-	atomic_t chan_status;
-	void __iomem *ioaddr;
-	struct dmasg *sg;		/* large mode descriptor */
-	unsigned int irq;
-	irq_handler_t callback;
-	unsigned int spu_securep_id;
-	void *data;
-};
-
 /*******************************************************************************
 *	DMA API's
 *******************************************************************************/
-extern struct dma_channel dma_ch[MAX_DMA_CHANNELS];
-extern int channel2irq(unsigned int channel);
-
-static inline void set_dma_start_addr(unsigned int channel, dma_addr_t addr)
+static inline void set_dma_start_addr(void __iomem *ioaddr, dma_addr_t addr)
 {
-	writel(lower_32_bits(addr), dma_ch[channel].ioaddr + ADI_DMA_ADDRSTART);
+	writel(lower_32_bits(addr), ioaddr + ADI_DMA_ADDRSTART);
 }
-static inline void set_dma_next_desc_addr(unsigned int channel, dma_addr_t addr)
+static inline void set_dma_next_desc_addr(void __iomem *ioaddr, dma_addr_t addr)
 {
-	writel(lower_32_bits(addr), dma_ch[channel].ioaddr + ADI_DMA_NEXT_DESC);
+	writel(lower_32_bits(addr), ioaddr + ADI_DMA_NEXT_DESC);
 }
-static inline void set_dma_curr_desc_addr(unsigned int channel, dma_addr_t addr)
+static inline void set_dma_curr_desc_addr(void __iomem *ioaddr, dma_addr_t addr)
 {
-	writel(lower_32_bits(addr), dma_ch[channel].ioaddr + ADI_DMA_DSCPTR_CUR);
+	writel(lower_32_bits(addr), ioaddr + ADI_DMA_DSCPTR_CUR);
 }
-static inline void set_dma_x_count(unsigned int channel, unsigned long x_count)
+static inline void set_dma_x_count(void __iomem *ioaddr, unsigned long x_count)
 {
-	writel(x_count, dma_ch[channel].ioaddr + ADI_DMA_XCNT);
+	writel(x_count, ioaddr + ADI_DMA_XCNT);
 }
-static inline void set_dma_y_count(unsigned int channel, unsigned long y_count)
+static inline void set_dma_y_count(void __iomem *ioaddr, unsigned long y_count)
 {
-	writel(y_count, dma_ch[channel].ioaddr + ADI_DMA_YCNT);
+	writel(y_count, ioaddr + ADI_DMA_YCNT);
 }
-static inline void set_dma_x_modify(unsigned int channel, long x_modify)
+static inline void set_dma_x_modify(void __iomem *ioaddr, long x_modify)
 {
-	writel(x_modify, dma_ch[channel].ioaddr + ADI_DMA_XMOD);
+	writel(x_modify, ioaddr + ADI_DMA_XMOD);
 }
-static inline void set_dma_y_modify(unsigned int channel, long y_modify)
+static inline void set_dma_y_modify(void __iomem *ioaddr, long y_modify)
 {
-	writel(y_modify, dma_ch[channel].ioaddr + ADI_DMA_YMOD);
+	writel(y_modify, ioaddr + ADI_DMA_YMOD);
 }
-static inline void set_dma_config(unsigned int channel, unsigned long config)
+static inline void set_dma_config(void __iomem *ioaddr, unsigned long config)
 {
-	writel(config, dma_ch[channel].ioaddr + ADI_DMA_CFG);
+	writel(config, ioaddr + ADI_DMA_CFG);
 }
-static inline void set_dma_curr_addr(unsigned int channel, dma_addr_t addr)
+static inline void set_dma_curr_addr(void __iomem *ioaddr, dma_addr_t addr)
 {
-	writel(lower_32_bits(addr), dma_ch[channel].ioaddr + ADI_DMA_ADDR_CUR);
+	writel(lower_32_bits(addr), ioaddr + ADI_DMA_ADDR_CUR);
 }
 
 /* set_dma_config parameter valid values */
@@ -295,80 +218,38 @@ gen_dma_config(char direction, char flow_mode,
 		mem_width, syncmode, mem_width);
 }
 
-static inline unsigned long get_dma_curr_irqstat(unsigned int channel)
+static inline unsigned long get_dma_curr_irqstat(void __iomem *ioaddr)
 {
-	return readl(dma_ch[channel].ioaddr + ADI_DMA_STAT);
+	return readl(ioaddr + ADI_DMA_STAT);
 }
-static inline unsigned long get_dma_curr_xcount(unsigned int channel)
+static inline unsigned long get_dma_curr_xcount(void __iomem *ioaddr)
 {
-	return readl(dma_ch[channel].ioaddr + ADI_DMA_XCNT_CUR);
+	return readl(ioaddr + ADI_DMA_XCNT_CUR);
 }
-static inline unsigned long get_dma_curr_ycount(unsigned int channel)
+static inline unsigned long get_dma_curr_ycount(void __iomem *ioaddr)
 {
-	return readl(dma_ch[channel].ioaddr + ADI_DMA_YCNT_CUR);
+	return readl(ioaddr + ADI_DMA_YCNT_CUR);
 }
-static inline dma_addr_t get_dma_next_desc_ptr(unsigned int channel)
+static inline dma_addr_t get_dma_next_desc_ptr(void __iomem *ioaddr)
 {
-	return readl(dma_ch[channel].ioaddr + ADI_DMA_NEXT_DESC);
+	return readl(ioaddr + ADI_DMA_NEXT_DESC);
 }
-static inline dma_addr_t get_dma_curr_desc_ptr(unsigned int channel)
+static inline dma_addr_t get_dma_curr_desc_ptr(void __iomem *ioaddr)
 {
-	return readl(dma_ch[channel].ioaddr + ADI_DMA_DSCPTR_CUR);
+	return readl(ioaddr + ADI_DMA_DSCPTR_CUR);
 }
-static inline unsigned long get_dma_config(unsigned int channel)
+static inline unsigned long get_dma_config(void __iomem *ioaddr)
 {
-	return readl(dma_ch[channel].ioaddr + ADI_DMA_CFG);
+	return readl(ioaddr + ADI_DMA_CFG);
 }
-static inline unsigned long get_dma_curr_addr(unsigned int channel)
+static inline unsigned long get_dma_curr_addr(void __iomem *ioaddr)
 {
-	return readl(dma_ch[channel].ioaddr + ADI_DMA_ADDR_CUR);
-}
-
-static inline void set_dma_sg(unsigned int channel, struct dmasg *sg, int ndsize)
-{
-	u32 cfg;
-	writel(lower_32_bits(__pa(sg)), dma_ch[channel].ioaddr + ADI_DMA_NEXT_DESC);
-	cfg = readl(dma_ch[channel].ioaddr + ADI_DMA_CFG);
-	writel((cfg & ~NDSIZE) | ((ndsize << NDSIZE_OFFSET) & NDSIZE),
-		dma_ch[channel].ioaddr + ADI_DMA_CFG);
+	return readl(ioaddr + ADI_DMA_ADDR_CUR);
 }
 
-static inline int dma_channel_active(unsigned int channel)
+static inline void clear_dma_irqstat(void __iomem *ioaddr)
 {
-	return atomic_read(&dma_ch[channel].chan_status);
+	writel(DMA_DONE | DMA_ERR | DMA_PIRQ, ioaddr + ADI_DMA_STAT);
 }
-
-static inline void disable_dma(unsigned int channel)
-{
-	writel(readl(dma_ch[channel].ioaddr + ADI_DMA_CFG) & ~DMAEN,
-		dma_ch[channel].ioaddr + ADI_DMA_CFG);
-}
-static inline void enable_dma(unsigned int channel)
-{
-	writel(readl(dma_ch[channel].ioaddr + ADI_DMA_CFG) | DMAEN,
-		dma_ch[channel].ioaddr + ADI_DMA_CFG);
-}
-int set_dma_callback(unsigned int channel, irq_handler_t callback, void *data);
-
-static inline void dma_disable_irq(unsigned int channel)
-{
-	disable_irq(dma_ch[channel].irq);
-}
-static inline void dma_disable_irq_nosync(unsigned int channel)
-{
-	disable_irq_nosync(dma_ch[channel].irq);
-}
-static inline void dma_enable_irq(unsigned int channel)
-{
-	enable_irq(dma_ch[channel].irq);
-}
-static inline void clear_dma_irqstat(unsigned int channel)
-{
-	writel(DMA_DONE | DMA_ERR | DMA_PIRQ, dma_ch[channel].ioaddr + ADI_DMA_STAT);
-}
-
-dma_addr_t dma_memcpy(dma_addr_t dest, const dma_addr_t src, size_t count);
-void early_dma_memcpy(void *dest, const void *src, size_t count);
-void early_dma_memcpy_done(void);
 
 #endif
