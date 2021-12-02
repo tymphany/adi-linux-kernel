@@ -1,11 +1,9 @@
 #ifndef ADSP594_H
 #define ADSP594_H
 
-static void cqspi_adi_direct_read_execute(struct spi_nor *nor, u_char *buf,
-				     loff_t from, size_t len);
+static void cqspi_adi_direct_read_execute(struct spi_nor *nor);
 
-static int cqspi_adi_direct_write_execute(struct spi_nor *nor, loff_t to,
-			   size_t len, const u_char *buf);
+static void cqspi_adi_direct_write_execute(struct spi_nor *nor);
 
 #define _ADI_MSK_3( mask, smask, type ) ((type)(smask))
 

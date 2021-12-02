@@ -1135,13 +1135,29 @@ static ssize_t cqspi_write(struct spi_nor *nor, loff_t to,
 		return ret;
 
 	if (f_pdata->use_direct_mode) {
+		bool useTemp = false;
+		const u_char *bufTemp;
+		u_char *bufEven;
+
+		bufTemp = buf;
 
 		#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC59X_64)
-			return cqspi_adi_direct_write_execute(nor, to, len, buf);
+		if (f_pdata->use_dtr && (len % 2)) {
+			bufEven = kmalloc(len+1, GFP_KERNEL);
+			memcpy(bufEven, buf, len);
+			bufEven[len] = '\xff';
+			bufTemp = bufEven;
+			len += 1;
+		}
+		cqspi_adi_direct_write_execute(nor);
 		#endif
 
-		memcpy_toio(cqspi->ahb_base + to, buf, len);
+		memcpy_toio(cqspi->ahb_base + to, bufTemp, len);
 		ret = cqspi_wait_idle(cqspi);
+
+		if (useTemp) {
+			kfree(bufEven);
+		}
 	} else {
 		ret = cqspi_indirect_write_execute(nor, to, buf, len);
 	}
@@ -1166,18 +1182,27 @@ static int cqspi_direct_read_execute(struct spi_nor *nor, u_char *buf,
 	enum dma_ctrl_flags flags = DMA_CTRL_ACK | DMA_PREP_INTERRUPT;
 	dma_addr_t dma_src = (dma_addr_t)cqspi->mmap_phys_base + from;
 	int ret = 0;
+	bool useTemp = false;
+	u_char *bufOrig = NULL;
 	struct dma_async_tx_descriptor *tx;
 	dma_cookie_t cookie;
 	dma_addr_t dma_dst;
 
+	if (f_pdata->use_dtr && (len % 2)) {
+		useTemp = true;
+		bufOrig = buf;
+		len = len + 1;
+		buf = kmalloc(len, GFP_KERNEL);
+	}
+
 	#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC59X_64)
-		cqspi_adi_direct_read_execute(nor, buf, from, len);
-		return 0;
+		cqspi_adi_direct_read_execute(nor);
 	#endif
 
 	if (!cqspi->rx_chan || !virt_addr_valid(buf)) {
 		memcpy_fromio(buf, cqspi->ahb_base + from, len);
-		return 0;
+		ret = cqspi_wait_idle(cqspi);
+		goto buf_cleanup;
 	}
 
 	dma_dst = dma_map_single(nor->dev, buf, len, DMA_FROM_DEVICE);
@@ -1216,6 +1241,13 @@ static int cqspi_direct_read_execute(struct spi_nor *nor, u_char *buf,
 
 err_unmap:
 	dma_unmap_single(nor->dev, dma_dst, len, DMA_FROM_DEVICE);
+
+buf_cleanup:
+	if (useTemp) {
+		len = len - 1;
+		memcpy(bufOrig, buf, len);
+		kfree(buf);
+	}
 
 	return ret;
 }
@@ -1768,9 +1800,6 @@ module_param(ospi_id, int, 0644);
 MODULE_PARM_DESC(ospi_id, "OSPI ID coming from bootloader");
 
 #define SCB5_SPI2_OSPI_REMAP 0x30400000
-#define OSPI0_MMAP_ADDRESS 0x60000000
-
-#define ADI_OCTAL_USE_DMA
 
 void cadence_qspi_setup_octal_read(struct cqspi_flash_pdata *f_pdata){
 	unsigned int curVal;
@@ -1826,7 +1855,6 @@ void cadence_qspi_setup_octal_write(struct cqspi_flash_pdata *f_pdata){
 }
 
 void cadence_qspi_setup_octal(struct cqspi_flash_pdata *f_pdata){
-	unsigned int reg;
 	unsigned int curVal;
 	struct cqspi_st *cqspi = f_pdata->cqspi;
 	void __iomem *reg_base = cqspi->iobase;
@@ -1950,10 +1978,7 @@ void cadence_qspi_enter_octal(struct spi_nor *nor, struct cqspi_flash_pdata *f_p
 	}
 }
 
-static void cqspi_adi_direct_read_execute(struct spi_nor *nor, u_char *buf,
-				     loff_t from, size_t len){
-
-	unsigned int reg;
+static void cqspi_adi_direct_read_execute(struct spi_nor *nor) {
 	unsigned int curVal;
 
 	struct cqspi_flash_pdata *f_pdata = nor->priv;
@@ -1963,12 +1988,6 @@ static void cqspi_adi_direct_read_execute(struct spi_nor *nor, u_char *buf,
 	uint8_t * remap = ioremap_nocache(SCB5_SPI2_OSPI_REMAP, 4);
 	*(uint32_t*)remap = 0x1U;
 	iounmap(remap);
-
-	//Round up to an even number of bytes while in DTR mode!
-	if(f_pdata->use_dtr){
-		if(len % 2)
-			len++;
-	}
 
 	// Configure the read opcode
 	curVal = readl(reg_base + CQSPI_REG_RD_INSTR);
@@ -2017,97 +2036,14 @@ static void cqspi_adi_direct_read_execute(struct spi_nor *nor, u_char *buf,
 		//curVal &= ~(3UL << BITP_OSPI_DRICTL_ADDRTRNSFR);
 		//writel(curVal, reg_base + CQSPI_REG_RD_INSTR);
 	}
-
-#ifdef ADI_OCTAL_USE_DMA
-	dma_addr_t dma_dest = NULL;
-	u_char * tempbuf = NULL;
-	loff_t address = (loff_t)OSPI0_MMAP_ADDRESS;
-	address += from;
-
-	//Check that the address is somewhere in lowmem and can therefore
-	//be transferred to via DMA
-#ifdef CONFIG_SC59X_64
-	if(buf >= 0xA0000000 && buf <= 0xFFFFFFFF){ //512MB of RAM
-#else
-	if(buf >= 0xC0000000 && buf <= 0xFFFFFFFF){ //1GB of RAM
-#endif
-		dma_dest = dma_map_single(nor->dev, buf, len, DMA_DEV_TO_MEM);
-	}else{
-		//Not in lowmem, we need a new temporary buffer
-		tempbuf = kmalloc(len, GFP_KERNEL);
-		dma_dest = dma_map_single(nor->dev, tempbuf, len, DMA_DEV_TO_MEM);
-	}
-
-	if (dma_mapping_error(nor->dev, dma_dest)) {
-		dev_err(nor->dev, "dma mapping failed\n");
-	}
-	dma_memcpy(dma_dest, address, len);
-	dma_unmap_single(nor->dev, dma_dest, len, DMA_DEV_TO_MEM);
-
-	if(tempbuf){
-		memcpy(buf, tempbuf, len);
-		kfree(tempbuf);
-		tempbuf = NULL;
-	}
-#else
-	/* Perform the transfer */
-	uint32_t count = 0;
-	uint64_t *pReadBuffer = (uint64_t*)buf;
-	loff_t address = (loff_t)OSPI0_MMAP_ADDRESS;
-	address += from;
-
-	uint64_t *pFlashAddress = (uint64_t *)ioremap_nocache(address, len);
-
-	uint8_t *pReadBuffer8;
-	uint8_t *pFlashAddress8;
-
-	for (count = 0U; count < (len / 8); count++)
-	{
-		*(uint64_t*)pReadBuffer++ = *(uint64_t*)pFlashAddress++;
-	}
-
-	if(len % 8){
-		pReadBuffer8 = (uint8_t*)pReadBuffer;
-		pFlashAddress8 = (uint8_t*)pFlashAddress;
-
-		for (count = 0U; count < (len % 8); count++)
-		{
-			*(uint8_t*)pReadBuffer8++ = *(uint8_t*)pFlashAddress8++;
-		}
-	}
-
-	iounmap(pFlashAddress);
-#endif
-
-	/* Make sure the OSPI controller is no longer busy */
-	int nCount = 4U;
-	while(nCount-- > 0U){
-		while( ! ((readl(reg_base + CQSPI_REG_CONFIG) & BITM_OSPI_CTL_IDLE) >> BITP_OSPI_CTL_IDLE) );
-	}
 }
 
-static int cqspi_adi_direct_write_execute(struct spi_nor *nor, loff_t to,
-			   size_t len, const u_char *buf){
-
-	unsigned int reg;
+static void cqspi_adi_direct_write_execute(struct spi_nor *nor) {
 	unsigned int curVal;
-	u_char *bufTemp;
-	bool needFreeBuf = false;
 
 	struct cqspi_flash_pdata *f_pdata = nor->priv;
 	struct cqspi_st *cqspi = f_pdata->cqspi;
 	void __iomem *reg_base = cqspi->iobase;
-
-	if(f_pdata->use_dtr){
-		if(len % 2){
-			bufTemp = buf;
-			buf = kmalloc(len+1, GFP_KERNEL);
-			memcpy(buf, bufTemp, len);
-			((u_char*)buf)[len] = 0xFF;
-			len++;
-			needFreeBuf = true;
-		}
-	}
 
 	uint8_t * remap = ioremap_nocache(SCB5_SPI2_OSPI_REMAP, 4);
 	*(uint32_t*)remap = 0x1U;
@@ -2159,79 +2095,6 @@ static int cqspi_adi_direct_write_execute(struct spi_nor *nor, loff_t to,
 		//curVal &= ~((3UL << BITP_OSPI_DRICTL_ADDRTRNSFR));
 		//writel(curVal, reg_base + CQSPI_REG_WR_INSTR);
 	}
-
-#ifdef ADI_OCTAL_USE_DMA
-	dma_addr_t dma_src = NULL;
-	u_char * tempbuf = NULL;
-	loff_t address = (loff_t)OSPI0_MMAP_ADDRESS;
-	address += to;
-
-	//Check that the address is somewhere in lowmem and can therefore
-	//be transferred to via DMA
-#ifdef CONFIG_SC59X_64
-	if(buf >= 0xA0000000 && buf <= 0xFFFFFFFF){ //512MB of RAM
-#else
-	if(buf >= 0xC0000000 && buf <= 0xFFFFFFFF){ //1GB of RAM
-#endif
-		dma_src = dma_map_single(nor->dev, buf, len, DMA_MEM_TO_DEV);
-	}else{
-		//Not in lowmem, we need a new temporary buffer
-		tempbuf = kmalloc(len, GFP_KERNEL);
-		memcpy(tempbuf, buf, len);
-		dma_src = dma_map_single(nor->dev, tempbuf, len, DMA_MEM_TO_DEV);
-	}
-
-	if (dma_mapping_error(nor->dev, dma_src)) {
-		dev_err(nor->dev, "dma mapping failed\n");
-	}
-	dma_memcpy(address, dma_src, len);
-	dma_unmap_single(nor->dev, dma_src, len, DMA_MEM_TO_DEV);
-
-	if(tempbuf){
-		kfree(tempbuf);
-		tempbuf = NULL;
-	}
-#else
-	/* Perform the transfer */
-	uint32_t count = 0;
-	uint64_t *pWriteBuffer = (uint64_t *)buf;
-	loff_t address = (loff_t)OSPI0_MMAP_ADDRESS;
-	address += to;	
-	uint64_t *pFlashAddress = (uint64_t *)ioremap_nocache(address, len);
-	uint8_t *pWriteBuffer8;
-	uint8_t *pFlashAddress8;
-
-	for (count = 0U; count < (len / 8); count++)
-	{
-		*(uint64_t*)pFlashAddress++ = *(uint64_t*)pWriteBuffer++;
-	}
-
-	if(len % 8){
-		pWriteBuffer8 = (uint8_t*)pWriteBuffer;
-		pFlashAddress8 = (uint8_t*)pFlashAddress;
-
-		for (count = 0U; count < (len % 8); count++)
-		{
-			*(uint8_t*)pFlashAddress8++ = *(uint8_t*)pWriteBuffer8++;
-		}
-	}
-
-	iounmap(pFlashAddress);
-#endif
-
-	/* Make sure the OSPI controller is no longer busy */
-	int nCount = 4U;
-	while(nCount-- > 0U){
-		while( ! ((readl(reg_base + CQSPI_REG_CONFIG) & BITM_OSPI_CTL_IDLE) >> BITP_OSPI_CTL_IDLE) );
-	}
-
-	if(needFreeBuf){
-		kfree(buf);
-		buf = bufTemp;
-		len--;
-	}
-
-	return len;
 }
 
 #endif
