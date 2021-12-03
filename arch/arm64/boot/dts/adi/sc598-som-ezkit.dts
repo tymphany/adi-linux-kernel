@@ -163,7 +163,7 @@
 
 		partition@0 {
 			label = "U-Boot";
-			reg = <0x0 0x80000>;
+			reg = <0x0 0xC0000>;
 		};
 
 		partition@1 {
@@ -200,7 +200,7 @@
 		#size-cells = <1>;
 		compatible = "mx66lm1g45";
 		reg = <0>;
-		spi-max-frequency = <112000000>;
+		spi-max-frequency = <83333334>;
 
 		/*m25p,fast-read;*/
 
@@ -219,7 +219,7 @@
 
 			ospi_0: partition@0 {
 				label = "U-Boot";
-				reg = <0x0 0x80000>;
+				reg = <0x0 0xC0000>;
 			};
 
 			ospi_1: partition@1 {
