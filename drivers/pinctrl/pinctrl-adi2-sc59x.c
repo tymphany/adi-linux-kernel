@@ -180,12 +180,12 @@ static const unsigned uart1_hwflow_pins[] = {
 };
 
 static const unsigned uart2_pins[] = {
-	GPIO_PE10, GPIO_PE11,
+	GPIO_PD10, GPIO_PD11,
 };
 
 static const unsigned uart2_hwflow_pins[] = {
-	GPIO_PE10, GPIO_PE11,
-	GPIO_PE12, GPIO_PE13,
+	GPIO_PD10, GPIO_PD11,
+	GPIO_PD12, GPIO_PD13,
 };
 
 static const unsigned eth0_pins[] = {
