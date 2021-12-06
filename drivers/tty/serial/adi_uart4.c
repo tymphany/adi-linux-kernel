@@ -105,7 +105,7 @@ struct adi_uart4_serial_port {
 #define ADI_UART_HWFLOW_GPIO	2
 
 
-#define ADI_UART_NR_PORTS 3
+#define ADI_UART_NR_PORTS 4
 static struct adi_uart4_serial_port *adi_uart4_serial_ports[ADI_UART_NR_PORTS];
 
 /* UART_IER Masks */
