@@ -18,6 +18,8 @@
 
 	aliases {
 		serial0 = &uart0;
+		serial2 = &uart2;
+		serial3 = &uart3;
 		timer0 = &gptimer0;
 		timer1 = &gptimer1;
 		timer2 = &gptimer2;
@@ -201,6 +203,18 @@
 			interrupts = <GIC_SPI 144 IRQ_TYPE_LEVEL_HIGH>,
 			             <GIC_SPI 145 IRQ_TYPE_LEVEL_HIGH>,
 			             <GIC_SPI 146 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
+		};
+
+		uart3: uart@0x31003C00 {
+			compatible = "arm,adi-uart4";
+			reg = <0x31003C00 0x40>;
+			dmas = <&dma_cluster2 53>, <&dma_cluster2 54>;
+			dma-names = "tx", "rx";
+			interrupt-parent = <&gic>;
+			interrupts = <GIC_SPI 147 IRQ_TYPE_LEVEL_HIGH>,
+			             <GIC_SPI 148 IRQ_TYPE_LEVEL_HIGH>,
+			             <GIC_SPI 149 IRQ_TYPE_LEVEL_HIGH>;
 			status = "disabled";
 		};
 
@@ -517,6 +531,10 @@
 					adi,group = "uart2_hwflowgrp";
 					adi,function = "uart2";
 				};
+			};
+			uart3_default: uart3@0 {
+				adi,group = "uart3grp";
+				adi,function = "uart3";
 			};
 
 			spi {
@@ -1246,6 +1264,22 @@
 					<GIC_SPI 274 IRQ_TYPE_LEVEL_HIGH>;
 				interrupt-names = "complete", "error";
 				adi,src-offset = <0x200>;
+			};
+
+			uart3_tx: channel@53 {
+				adi,id = <53>;
+				interrupts = <GIC_SPI 147 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 275 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "complete", "error";
+				adi,src-offset = <0x380>;
+			};
+
+			uart3_rx: channel@54 {
+				adi,id = <54>;
+				interrupts = <GIC_SPI 148 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 276 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "complete", "error";
+				adi,src-offset = <0x300>;
 			};
 		};
 
