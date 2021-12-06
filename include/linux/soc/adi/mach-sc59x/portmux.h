@@ -72,6 +72,9 @@ void pinmux_free_list(const unsigned short per[]);
 #define P_UART2_RTS     (P_DEFINED | P_IDENT(GPIO_PD12) | P_FUNCT(1))
 #define P_UART2_CTS     (P_DEFINED | P_IDENT(GPIO_PD13) | P_FUNCT(1))
 
+#define P_UART3_TX      (P_DEFINED | P_IDENT(GPIO_PG3) | P_FUNCT(0))
+#define P_UART3_RX      (P_DEFINED | P_IDENT(GPIO_PG4) | P_FUNCT(0))
+
 /* SPI Port Mux */
 #define P_SPI0_SCK      (P_DEFINED | P_IDENT(GPIO_PA6) | P_FUNCT(0))
 #define P_SPI0_MISO     (P_DEFINED | P_IDENT(GPIO_PA7) | P_FUNCT(0))
