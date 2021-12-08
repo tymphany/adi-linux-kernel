@@ -1964,6 +1964,12 @@ static void cqspi_adi_direct_read_execute(struct spi_nor *nor, u_char *buf,
 	*(uint32_t*)remap = 0x1U;
 	iounmap(remap);
 
+	//Round up to an even number of bytes while in DTR mode!
+	if(f_pdata->use_dtr){
+		if(len % 2)
+			len++;
+	}
+
 	// Configure the read opcode
 	curVal = readl(reg_base + CQSPI_REG_RD_INSTR);
 	if(f_pdata->cadenceMode == CADENCE_OSPI_MODE){
