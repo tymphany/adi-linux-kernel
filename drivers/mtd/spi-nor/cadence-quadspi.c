@@ -2091,10 +2091,23 @@ static int cqspi_adi_direct_write_execute(struct spi_nor *nor, loff_t to,
 
 	unsigned int reg;
 	unsigned int curVal;
+	u_char *bufTemp;
+	bool needFreeBuf = false;
 
 	struct cqspi_flash_pdata *f_pdata = nor->priv;
 	struct cqspi_st *cqspi = f_pdata->cqspi;
 	void __iomem *reg_base = cqspi->iobase;
+
+	if(f_pdata->use_dtr){
+		if(len % 2){
+			bufTemp = buf;
+			buf = kmalloc(len+1, GFP_KERNEL);
+			memcpy(buf, bufTemp, len);
+			((u_char*)buf)[len] = 0xFF;
+			len++;
+			needFreeBuf = true;
+		}
+	}
 
 	uint8_t * remap = ioremap_nocache(SCB5_SPI2_OSPI_REMAP, 4);
 	*(uint32_t*)remap = 0x1U;
@@ -2210,6 +2223,12 @@ static int cqspi_adi_direct_write_execute(struct spi_nor *nor, loff_t to,
 	int nCount = 4U;
 	while(nCount-- > 0U){
 		while( ! ((readl(reg_base + CQSPI_REG_CONFIG) & BITM_OSPI_CTL_IDLE) >> BITP_OSPI_CTL_IDLE) );
+	}
+
+	if(needFreeBuf){
+		kfree(buf);
+		buf = bufTemp;
+		len--;
 	}
 
 	return len;
