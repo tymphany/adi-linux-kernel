@@ -1,0 +1,322 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * sharc-alsa-asoc-card.c - Analog Devices SHARC-ALSA ASoC card driver
+ *
+ * Copyright 2021 Analog Devices Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+#include <linux/device.h>
+#include <linux/platform_device.h>
+#include <linux/init.h>
+#include <linux/module.h>
+#include <sound/pcm.h>
+#include <sound/pcm_params.h>
+#include <sound/soc.h>
+#include <sound/soc-dai.h>
+#include <linux/rpmsg.h>
+
+struct sharc_alsa_card_data {
+	char card_name[64];
+	struct snd_soc_card card;
+	struct snd_soc_dai_link dai_link;
+
+	struct snd_soc_dai_link_component cpu_link;
+	struct snd_soc_dai_link_component codec_link;
+	struct snd_soc_dai_link_component platform_link;
+
+	struct platform_device *asoc_cpu_dev;
+	struct platform_device *asoc_codec_dev;
+	struct platform_device *asoc_platform_dev;
+};
+
+struct sharc_alsa_component_data {
+	char dai_driver_name[64];
+	struct snd_soc_dai_driver dai_driver;
+	char component_driver_name[64];
+	struct snd_soc_component_driver component_driver;
+};
+
+#define SHARC_ALSA_RATES	SNDRV_PCM_RATE_8000_192000
+#define SHARC_ALSA_FORMATS	(SNDRV_PCM_FMTBIT_S8 | \
+			SNDRV_PCM_FMTBIT_U8 | \
+			SNDRV_PCM_FMTBIT_S16_LE | \
+			SNDRV_PCM_FMTBIT_U16_LE | \
+			SNDRV_PCM_FMTBIT_S24_LE | \
+			SNDRV_PCM_FMTBIT_U24_LE | \
+			SNDRV_PCM_FMTBIT_S32_LE | \
+			SNDRV_PCM_FMTBIT_U32_LE | \
+			SNDRV_PCM_FMTBIT_IEC958_SUBFRAME_LE)
+
+
+static int sharc_alsa_rpmsg_cb(struct rpmsg_device *rpdev, void *data, int len, void *priv, u32 src)
+{
+	struct sharc_alsa_card_data *sharc_alsa = (struct sharc_alsa_card_data *)priv;
+
+	dev_err(&rpdev->dev, "Got message: size %d \n", len);
+
+	return 0;
+}
+
+static int sharc_alsa_probe(struct rpmsg_device *rpdev)
+{
+	struct device *dev = &rpdev->dev;
+	struct sharc_alsa_card_data *sharc_alsa;
+	const u32 card_id = rpdev->dst;
+	struct sharc_alsa_component_data sharc_alsa_component;
+	struct sharc_alsa_component_data *sharc_alsa_component_priv;
+	int ret = 0;
+
+	sharc_alsa = devm_kzalloc(dev, sizeof(struct sharc_alsa_card_data), GFP_KERNEL);
+	if (!sharc_alsa) {
+		return -ENOMEM;
+	}
+	rpdev->ept->priv = sharc_alsa;
+
+	/* Initilize ASoC cpu component and dai drivers */
+	memset(&sharc_alsa_component, 0, sizeof(sharc_alsa_component));
+	sprintf(sharc_alsa_component.dai_driver_name, "sharc-alsa-cpu-dai_%d", card_id);
+	sharc_alsa_component.dai_driver.name = sharc_alsa_component.dai_driver_name;
+	sharc_alsa_component.dai_driver.playback.stream_name = "Playback";
+	sharc_alsa_component.dai_driver.playback.channels_min = 1;
+	sharc_alsa_component.dai_driver.playback.channels_max = 16;
+	sharc_alsa_component.dai_driver.playback.rates = SHARC_ALSA_RATES;
+	sharc_alsa_component.dai_driver.playback.formats = SHARC_ALSA_FORMATS;
+	sharc_alsa_component.dai_driver.capture.stream_name = "Capture";
+	sharc_alsa_component.dai_driver.capture.channels_min = 1;
+	sharc_alsa_component.dai_driver.capture.channels_max = 16;
+	sharc_alsa_component.dai_driver.capture.rates = SHARC_ALSA_RATES;
+	sharc_alsa_component.dai_driver.capture.formats = SHARC_ALSA_FORMATS;
+
+	sprintf(sharc_alsa_component.component_driver_name, "sharc-alsa-cpu_%d", card_id);
+	sharc_alsa_component.component_driver.name = sharc_alsa_component.component_driver_name;
+	sharc_alsa_component.component_driver.idle_bias_on = 1;
+	sharc_alsa_component.component_driver.use_pmdown_time = 1;
+	sharc_alsa_component.component_driver.endianness = 1;
+	sharc_alsa_component.component_driver.non_legacy_dai_naming = 1;
+
+	sharc_alsa->asoc_cpu_dev = platform_device_register_data(
+		dev,"sharc-alsa-cpu", card_id,	&sharc_alsa_component, sizeof(sharc_alsa_component));
+	if (IS_ERR(sharc_alsa->asoc_cpu_dev)){
+		dev_err(dev, "Failed to register cpu component\n");
+		ret = PTR_ERR(sharc_alsa->asoc_cpu_dev);
+		goto fail_cpu_dev;
+	}
+
+	/* Initilize ASoC codec component and dai drivers */
+	memset(&sharc_alsa_component, 0, sizeof(sharc_alsa_component));
+	sprintf(sharc_alsa_component.dai_driver_name, "sharc-alsa-codec-dai_%d", card_id);
+	sharc_alsa_component.dai_driver.name = sharc_alsa_component.dai_driver_name;
+	sharc_alsa_component.dai_driver.playback.stream_name = "Playback";
+	sharc_alsa_component.dai_driver.playback.channels_min = 1;
+	sharc_alsa_component.dai_driver.playback.channels_max = 16;
+	sharc_alsa_component.dai_driver.playback.rates = SHARC_ALSA_RATES;
+	sharc_alsa_component.dai_driver.playback.formats = SHARC_ALSA_FORMATS;
+	sharc_alsa_component.dai_driver.capture.stream_name = "Capture";
+	sharc_alsa_component.dai_driver.capture.channels_min = 1;
+	sharc_alsa_component.dai_driver.capture.channels_max = 16;
+	sharc_alsa_component.dai_driver.capture.rates = SHARC_ALSA_RATES;
+	sharc_alsa_component.dai_driver.capture.formats = SHARC_ALSA_FORMATS;
+
+	sprintf(sharc_alsa_component.component_driver_name, "sharc-alsa-codec_%d", card_id);
+	sharc_alsa_component.component_driver.name = sharc_alsa_component.component_driver_name;
+	sharc_alsa_component.component_driver.idle_bias_on = 1;
+	sharc_alsa_component.component_driver.use_pmdown_time = 1;
+	sharc_alsa_component.component_driver.endianness = 1;
+	sharc_alsa_component.component_driver.non_legacy_dai_naming = 1;
+
+	sharc_alsa->asoc_codec_dev = platform_device_register_data(
+		dev,"sharc-alsa-codec", card_id,	&sharc_alsa_component, sizeof(sharc_alsa_component));
+	if (IS_ERR(sharc_alsa->asoc_codec_dev)){
+		dev_err(dev, "Failed to register codec component\n");
+		ret = PTR_ERR(sharc_alsa->asoc_codec_dev);
+		goto fail_codec_dev;
+	}
+
+	/* Initilize ASoC platfrom driver */
+	memset(&sharc_alsa_component, 0, sizeof(sharc_alsa_component));
+	sprintf(sharc_alsa_component.component_driver_name, "sharc-alsa-platform_%d", card_id);
+	sharc_alsa_component.component_driver.name = sharc_alsa_component.component_driver_name;
+
+	sharc_alsa->asoc_platform_dev = platform_device_register_data(
+		dev,"sharc-alsa-platform", card_id,	&sharc_alsa_component, sizeof(sharc_alsa_component));
+	if (IS_ERR(sharc_alsa->asoc_platform_dev)){
+		dev_err(dev, "Failed to register platform component\n");
+		ret = PTR_ERR(sharc_alsa->asoc_platform_dev);
+		goto fail_platform_dev;
+	}
+
+	/* Initilize ASoC links */
+	sharc_alsa_component_priv = (struct sharc_alsa_component_data *) dev_get_platdata(&sharc_alsa->asoc_cpu_dev->dev);
+	sharc_alsa->cpu_link.of_node = NULL;
+	sharc_alsa->cpu_link.name = dev_name(&sharc_alsa->asoc_cpu_dev->dev);
+	sharc_alsa->cpu_link.dai_name = sharc_alsa_component_priv->dai_driver_name;
+
+	sharc_alsa_component_priv = (struct sharc_alsa_component_data *) dev_get_platdata(&sharc_alsa->asoc_codec_dev->dev);
+	sharc_alsa->codec_link.of_node = NULL;
+	sharc_alsa->codec_link.name = dev_name(&sharc_alsa->asoc_codec_dev->dev);
+	sharc_alsa->codec_link.dai_name = sharc_alsa_component_priv->dai_driver_name;
+
+	sharc_alsa->platform_link.of_node = NULL;
+	sharc_alsa->platform_link.name = dev_name(&sharc_alsa->asoc_platform_dev->dev);
+	sharc_alsa->platform_link.dai_name = NULL;
+
+	sharc_alsa->dai_link.name = sharc_alsa->card_name;
+	sharc_alsa->dai_link.stream_name = sharc_alsa->card_name;
+	sharc_alsa->dai_link.cpus = &sharc_alsa->cpu_link;
+	sharc_alsa->dai_link.num_cpus = 1;
+	sharc_alsa->dai_link.codecs = &sharc_alsa->codec_link;
+	sharc_alsa->dai_link.num_codecs = 1;
+	sharc_alsa->dai_link.platforms = &sharc_alsa->platform_link;
+	sharc_alsa->dai_link.num_platforms = 1;
+	sharc_alsa->dai_link.init = NULL;
+	sharc_alsa->dai_link.ops = NULL;
+
+	/* Initilize ASoC card */
+	sprintf(sharc_alsa->card_name, "sharc-alsa-card_%d", card_id);
+	sharc_alsa->card.name = sharc_alsa->card_name;
+	sharc_alsa->card.owner		= THIS_MODULE;
+	sharc_alsa->card.dev		= dev;
+	sharc_alsa->card.probe		= NULL;
+	sharc_alsa->card.dai_link	= &sharc_alsa->dai_link;
+	sharc_alsa->card.num_links	= 1;
+
+	ret = devm_snd_soc_register_card(dev, &sharc_alsa->card);
+	if (ret < 0)
+		goto fail_card;
+
+	dev_info(dev, "sharc-alsa card probed for rpmsg endpoint addr: 0x%03x\n", rpdev->dst);
+
+	return 0;
+
+fail_card:
+	platform_device_unregister(sharc_alsa->asoc_platform_dev);
+fail_platform_dev:
+	platform_device_unregister(sharc_alsa->asoc_codec_dev);
+fail_codec_dev:
+	platform_device_unregister(sharc_alsa->asoc_cpu_dev);
+fail_cpu_dev:
+	return ret;
+}
+
+static void sharc_alsa_remove(struct rpmsg_device *rpdev)
+{
+	struct sharc_alsa_card_data *sharc_alsa = (struct sharc_alsa_card_data *)rpdev->ept->priv;
+	dev_info(&rpdev->dev, "sharc-alsa card removed for rpmsg endpoint addr: 0x%03x\n", rpdev->dst);
+	platform_device_unregister(sharc_alsa->asoc_cpu_dev);
+	platform_device_unregister(sharc_alsa->asoc_codec_dev);
+	platform_device_unregister(sharc_alsa->asoc_platform_dev);
+}
+
+static int sharc_alsa_component_probe(struct platform_device *pdev)
+{
+	struct sharc_alsa_component_data *sharc_alsa_component = (struct sharc_alsa_component_data *) dev_get_platdata(&pdev->dev);
+	struct snd_soc_dai_driver *dai_drv;
+	int dai_num;
+
+	if (sharc_alsa_component->dai_driver.name){
+		dai_drv = &sharc_alsa_component->dai_driver;
+		dai_num = 1;
+	}else{
+		dai_drv = NULL;
+		dai_num = 0;
+	}
+	return devm_snd_soc_register_component(&pdev->dev, &sharc_alsa_component->component_driver, dai_drv, dai_num);
+}
+
+static struct rpmsg_device_id sharc_alsa_id_table[] = {
+	{ .name = "sharc-alsa" },
+	{ },
+};
+static struct rpmsg_driver sharc_alsa_rpmsg_driver = {
+	.drv.name  = KBUILD_MODNAME,
+	.drv.owner = THIS_MODULE,
+	.id_table  = sharc_alsa_id_table,
+	.probe     = sharc_alsa_probe,
+	.callback  = sharc_alsa_rpmsg_cb,
+	.remove    = sharc_alsa_remove,
+};
+
+static struct platform_driver sharc_alsa_cpu_driver = {
+	.driver = {
+		.name = "sharc-alsa-cpu",
+	},
+	.probe = sharc_alsa_component_probe,
+};
+
+static struct platform_driver sharc_alsa_codec_driver = {
+	.driver = {
+		.name = "sharc-alsa-codec",
+	},
+	.probe = sharc_alsa_component_probe,
+};
+
+static struct platform_driver sharc_alsa_platform_driver = {
+	.driver = {
+		.name = "sharc-alsa-platform",
+	},
+	.probe = sharc_alsa_component_probe,
+};
+
+static int sharc_alsa_driver_init(void)
+{
+	int ret;
+
+	ret = platform_driver_register(&sharc_alsa_cpu_driver);
+	if (ret != 0){
+		pr_err("sharc_alsa: failed to register cpu driver\n");
+		goto fail_cpu_driver;
+	}
+
+	ret = platform_driver_register(&sharc_alsa_codec_driver);
+	if (ret != 0){
+		pr_err("sharc_alsa: failed to register codec driver\n");
+		goto fail_codec_driver;
+	}
+
+	ret = platform_driver_register(&sharc_alsa_platform_driver);
+	if (ret != 0){
+		pr_err("sharc_alsa: failed to register platform driver\n");
+		goto fail_platform_driver;
+	}
+
+	ret = register_rpmsg_driver(&sharc_alsa_rpmsg_driver);
+	if (ret < 0) {
+		pr_err("sharc_alsa: failed to register rpmsg driver\n");
+		goto fail_rpmsg_driver;
+	}
+
+	return 0;
+
+fail_rpmsg_driver:
+	platform_driver_unregister(&sharc_alsa_platform_driver);
+fail_platform_driver:
+	platform_driver_unregister(&sharc_alsa_codec_driver);
+fail_codec_driver:
+	platform_driver_unregister(&sharc_alsa_cpu_driver);
+fail_cpu_driver:
+	return ret;
+}
+module_init(sharc_alsa_driver_init);
+
+static void sharc_alsa_driver_exit(void)
+{
+	unregister_rpmsg_driver(&sharc_alsa_rpmsg_driver);
+	platform_driver_unregister(&sharc_alsa_platform_driver);
+	platform_driver_unregister(&sharc_alsa_codec_driver);
+	platform_driver_unregister(&sharc_alsa_cpu_driver);
+}
+module_exit(sharc_alsa_driver_exit);
+
+MODULE_DESCRIPTION("Analog Devices SHARC-ALSA ASoC card driver");
+MODULE_AUTHOR("Piotr Wojtaszczyk <piotr.wojtaszczyk@timesys.com>");
+MODULE_LICENSE("GPL v2");
+MODULE_ALIAS("sharc-alsa");
