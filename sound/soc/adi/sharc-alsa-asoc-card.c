@@ -16,6 +16,7 @@
 
 #include <linux/device.h>
 #include <linux/platform_device.h>
+#include <linux/dma-mapping.h>
 #include <linux/init.h>
 #include <linux/module.h>
 #include <sound/pcm.h>
@@ -63,6 +64,78 @@ static int sharc_alsa_rpmsg_cb(struct rpmsg_device *rpdev, void *data, int len, 
 
 	dev_err(&rpdev->dev, "Got message: size %d \n", len);
 
+	return 0;
+}
+
+static int sharc_alsa_pcm_hw_params(struct snd_pcm_substream *substream,
+	struct snd_pcm_hw_params *params)
+{
+	size_t size = params_buffer_bytes(params);
+	snd_pcm_lib_malloc_pages(substream, size);
+
+	return 0;
+}
+
+
+static int sharc_alsa_pcm_hw_free(struct snd_pcm_substream *substream)
+{
+	snd_pcm_lib_free_pages(substream);
+
+	return 0;
+}
+
+//FIXME implement actuall number
+snd_pcm_uframes_t __frames = 0;
+static snd_pcm_uframes_t sharc_alsa_pcm_pointer(struct snd_pcm_substream *substream)
+{
+	__frames++;
+	return __frames;
+}
+
+static const struct snd_pcm_hardware sharc_alsa_pcm_params = {
+	/* Random values to keep userspace happy when checking constraints */
+	.info			= SNDRV_PCM_INFO_INTERLEAVED |
+				  SNDRV_PCM_INFO_BLOCK_TRANSFER,
+	.buffer_bytes_max	= 128*1024,
+	.period_bytes_min	= PAGE_SIZE,
+	.period_bytes_max	= PAGE_SIZE*2,
+	.periods_min		= 2,
+	.periods_max		= 128,
+};
+
+static int sharc_alsa_pcm_open(struct snd_pcm_substream *substream)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+
+	/* BE's dont need dummy params */
+	if (!rtd->dai_link->no_pcm)
+		snd_soc_set_runtime_hwparams(substream, &sharc_alsa_pcm_params);
+
+	return 0;
+}
+
+static const struct snd_pcm_ops sharc_alsa_pcm_ops = {
+	.open		= sharc_alsa_pcm_open,
+	.ioctl		= snd_pcm_lib_ioctl,
+	.hw_params	= sharc_alsa_pcm_hw_params,
+	.hw_free	= sharc_alsa_pcm_hw_free,
+	//.prepare	= ,
+	//.trigger	= ,
+	.pointer	= sharc_alsa_pcm_pointer,
+};
+
+static int sharc_alsa_pcm_new(struct snd_soc_pcm_runtime *rtd)
+{
+	struct snd_card *card = rtd->card->snd_card;
+	size_t size = 0x20000; // 128KiB
+	int ret = 0;
+
+	ret = dma_coerce_mask_and_coherent(card->dev, DMA_BIT_MASK(32));
+	if (ret)
+		return ret;
+
+	snd_pcm_lib_preallocate_pages_for_all(rtd->pcm,
+				SNDRV_DMA_TYPE_DEV, card->dev, size, size);
 	return 0;
 }
 
@@ -145,6 +218,8 @@ static int sharc_alsa_probe(struct rpmsg_device *rpdev)
 	memset(&sharc_alsa_component, 0, sizeof(sharc_alsa_component));
 	sprintf(sharc_alsa_component.component_driver_name, "sharc-alsa-platform_%d", card_id);
 	sharc_alsa_component.component_driver.name = sharc_alsa_component.component_driver_name;
+	sharc_alsa_component.component_driver.pcm_new = sharc_alsa_pcm_new;
+	sharc_alsa_component.component_driver.ops = &sharc_alsa_pcm_ops;
 
 	sharc_alsa->asoc_platform_dev = platform_device_register_data(
 		dev,"sharc-alsa-platform", card_id,	&sharc_alsa_component, sizeof(sharc_alsa_component));
