@@ -32,17 +32,23 @@ config SND_SC5XX_PCM
 
 choice
 	prompt "SPORT data feed"
-	depends on SND_SC5XX_PCM && I2C
+	depends on SND_SC5XX_PCM
 	default SND_SC5XX_SPORT
 
 	config SND_SC5XX_SPORT
 		bool "Regular SPORT operation"
+		help
+		SPORT interface driver for SC5XX audio, audio data are sent and
+		received through the SPORT DMA buffers
 
 	config SND_SC5XX_SPORT_SHARC
 		bool "SHARC process SPORT data"
 		help
 		  Say Y if you want to process audio data in SHARC core,
-		  requires "SHARC ALSA" firmware running on a SHARC core.
+		  requires firmware with ICAP (Inter Core Audio Protocol)
+		  running on a SHARC core.
+		  SPORT DMA is configured and controlled by linux,
+		  DMA intrrupt handed over to SHARC firmware.
 endchoice
 
 config SND_SC5XX_ADAU1761
@@ -75,18 +81,9 @@ config SND_SC5XX_ADAU1962
 	Say Y if you want to add support for the Analog Devices ADAU1962
         machine driver on the SC5XX ezkit board.
 
-config SND_SC5XX_SPORT
-	tristate
-	depends on ARCH_SC59X || ARCH_SC58X || ARCH_SC57X
-	help
-	SPORT interface driver for SC5XX audio, audio data are sent and
-	received through the SPORT DMA buffers
-	Most audio devices on SC5xx requires this
-	Say Y or M if you want to enable this
-
 config SND_SOC_ADI_SC5XX_I2S
 	tristate
-	depends on ARCH_SC59X || ARCH_SC58X || ARCH_SC57X
+	depends on ARCH_SC59X_64 || ARCH_SC59X || ARCH_SC58X || ARCH_SC57X
 	help
 	Describes the Digital Audio Interface format, which is physcally
 	built on the SPORT
@@ -95,7 +92,7 @@ config SND_SOC_ADI_SC5XX_I2S
 
 config SND_SC5XX_MACHINE
 	tristate
-	depends on ARCH_SC59X || ARCH_SC58X || ARCH_SC57X
+	depends on ARCH_SC59X_64 || ARCH_SC59X || ARCH_SC58X || ARCH_SC57X
 	help
 	Describes the ASoC Machine driver for ADI SC5XX based boards
 	Audio devices on SC5xx requires this
