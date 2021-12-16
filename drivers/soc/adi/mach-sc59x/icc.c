@@ -123,6 +123,7 @@ int adi_tru_trigger_device(struct adi_tru *tru, struct device *dev) {
 
 	return adi_tru_trigger(tru, master);
 }
+EXPORT_SYMBOL(adi_tru_trigger_device);
 
 int adi_tru_trigger(struct adi_tru *tru, u32 master) {
 	if (master == 0 || master > tru->max_master_id) {

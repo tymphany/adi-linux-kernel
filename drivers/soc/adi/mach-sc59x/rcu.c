@@ -46,6 +46,7 @@ u32 adi_rcu_readl(struct adi_rcu *rcu, int offset) {
 void adi_rcu_writel(u32 val, struct adi_rcu *rcu, int offset) {
 	writel(val, rcu->ioaddr + offset);
 }
+EXPORT_SYMBOL(adi_rcu_writel);
 
 void adi_rcu_msg_set(struct adi_rcu *rcu, u32 bits) {
 	writel(bits, rcu->ioaddr + ADI_RCU_REG_MSG_SET);
@@ -218,6 +219,7 @@ int adi_rcu_stop_core(struct adi_rcu *rcu, int coreid, int coreirq) {
 	adi_rcu_msg_clear(rcu, RCU0_MSG_C1ACTIVATE << (coreid-1));
 	return 0;
 }
+EXPORT_SYMBOL(adi_rcu_stop_core);
 
 static int adi_rcu_reboot(struct notifier_block *nb, unsigned long mode, void *cmd)
 {
