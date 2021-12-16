@@ -144,7 +144,7 @@ static irqreturn_t adi_musb_interrupt(int irq, void *__hci)
 	musb->int_rx = musb_readw(musb->mregs, MUSB_INTRRX);
 
 	if (musb->int_usb & MUSB_INTR_VBUSERROR) {
-		dev_warn(&parent->dev, "VBUS error recovery\n");
+		//dev_warn(&parent->dev, "VBUS error recovery\n");
 		musb->int_usb &= ~MUSB_INTR_VBUSERROR;
 		devctl = musb_readw(musb->mregs, MUSB_DEVCTL);
 		devctl |= MUSB_DEVCTL_SESSION;
