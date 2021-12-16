@@ -21,6 +21,11 @@
 #include <linux/completion.h>
 #include <sound/pcm_params.h>
 
+#if IS_ENABLED(CONFIG_SND_SC5XX_SPORT_SHARC)
+#include <linux/rpmsg.h>
+#include "icap/include/icap_application.h"
+#endif
+
 #define TDM_MAX_SLOTS 8
 #define SHARC_CORES_NUM 2
 
@@ -148,7 +153,7 @@ struct sport_device {
 #if IS_ENABLED(CONFIG_SND_SC5XX_SPORT_SHARC)
 
 	struct mutex rpmsg_lock;
-	struct rpmsg_device *sharc_rpmsg[SHARC_CORES_NUM];
+	struct icap_instance icap[SHARC_CORES_NUM];
 
 	struct snd_dma_buffer sharc_tx_dma_buf;
 	struct snd_dma_buffer sharc_rx_dma_buf;
@@ -157,6 +162,11 @@ struct sport_device {
 	size_t sharc_rx_buf_pos;
 	struct mutex sharc_tx_buf_pos_lock;
 	struct mutex sharc_rx_buf_pos_lock;
+
+	u32 tx_alsa_icap_buf_id;
+	u32 tx_dma_icap_buf_id;
+	u32 rx_alsa_icap_buf_id;
+	u32 rx_dma_icap_buf_id;
 
 	struct completion sharc_msg_ack_complete[SHARC_CORES_NUM];
 #endif

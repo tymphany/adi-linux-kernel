@@ -90,6 +90,7 @@ static int sc5xx_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 	struct sport_device *sport = runtime->private_data;
 	int ret = 0;
 
+	snd_pcm_stream_unlock_irq(substream);
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
@@ -109,6 +110,7 @@ static int sc5xx_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 		ret = -EINVAL;
 	}
 
+	snd_pcm_stream_lock_irq(substream);
 	return ret;
 }
 
@@ -207,7 +209,7 @@ static struct platform_driver sc5xx_pcm_driver = {
 
 #if IS_ENABLED(CONFIG_SND_SC5XX_SPORT_SHARC)
 static struct rpmsg_device_id rpmsg_sharc_alsa_id_table[] = {
-	{ .name = "sharc-alsa" },
+	{ .name = "icap-sport" },
 	{ },
 };
 static struct rpmsg_driver rpmsg_sharc_alsa = {

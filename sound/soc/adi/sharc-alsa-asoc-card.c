@@ -25,8 +25,11 @@
 #include <sound/soc-dai.h>
 #include <linux/rpmsg.h>
 
+#include "icap.h"
+
 struct sharc_alsa_card_data {
 	char card_name[64];
+	struct icap_instance icap;
 	struct snd_soc_card card;
 	struct snd_soc_dai_link dai_link;
 
@@ -37,6 +40,18 @@ struct sharc_alsa_card_data {
 	struct platform_device *asoc_cpu_dev;
 	struct platform_device *asoc_codec_dev;
 	struct platform_device *asoc_platform_dev;
+
+	struct snd_pcm_substream *tx_substream;
+	struct snd_pcm_substream *rx_substream;
+
+	struct snd_dma_buffer tx_dma_buf;
+	struct snd_dma_buffer rx_dma_buf;
+	size_t tx_fragsize;
+	size_t rx_fragsize;
+	size_t tx_buf_pos;
+	size_t rx_buf_pos;
+	struct mutex tx_buf_pos_lock;
+	struct mutex rx_buf_pos_lock;
 };
 
 struct sharc_alsa_component_data {
@@ -63,6 +78,7 @@ static int sharc_alsa_rpmsg_cb(struct rpmsg_device *rpdev, void *data, int len, 
 	struct sharc_alsa_card_data *sharc_alsa = (struct sharc_alsa_card_data *)priv;
 
 	dev_err(&rpdev->dev, "Got message: size %d \n", len);
+	icap_parse_msg(&sharc_alsa->icap, data, len);
 
 	return 0;
 }
@@ -84,12 +100,35 @@ static int sharc_alsa_pcm_hw_free(struct snd_pcm_substream *substream)
 	return 0;
 }
 
-//FIXME implement actuall number
-snd_pcm_uframes_t __frames = 0;
+
 static snd_pcm_uframes_t sharc_alsa_pcm_pointer(struct snd_pcm_substream *substream)
 {
-	__frames++;
-	return __frames;
+	struct snd_pcm_runtime *runtime = substream->runtime;
+	struct sharc_alsa_card_data *sharc_alsa = runtime->private_data;
+	unsigned int pos;
+	snd_pcm_uframes_t frames;
+
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK){
+		mutex_lock(&sharc_alsa->tx_buf_pos_lock);
+		pos = sharc_alsa->tx_buf_pos;
+		mutex_unlock(&sharc_alsa->tx_buf_pos_lock);
+	}else{
+		mutex_lock(&sharc_alsa->rx_buf_pos_lock);
+		pos = sharc_alsa->rx_buf_pos;
+		mutex_unlock(&sharc_alsa->rx_buf_pos_lock);
+	}
+
+	/*
+	 * TX at least can report one frame beyond the end of the
+	 * buffer if we hit the wraparound case - clamp to within the
+	 * buffer as the ALSA APIs require.
+	 */
+	if (pos == snd_pcm_lib_buffer_bytes(substream))
+		pos = 0;
+
+	frames = bytes_to_frames(substream->runtime, pos);
+
+	return frames;
 }
 
 static const struct snd_pcm_hardware sharc_alsa_pcm_params = {
@@ -114,20 +153,83 @@ static int sharc_alsa_pcm_open(struct snd_pcm_substream *substream)
 	return 0;
 }
 
+static int sharc_alsa_pcm_prepare(struct snd_pcm_substream *substream)
+{
+	struct snd_pcm_runtime *runtime = substream->runtime;
+	struct sharc_alsa_card_data *sharc_alsa = runtime->private_data;
+	struct icap_instance *icap = &sharc_alsa->icap;
+	int period_bytes = frames_to_bytes(runtime, runtime->period_size);
+	struct icap_buf icap_buf;
+	int ret = 0;
+
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		sharc_alsa->tx_substream = substream;
+
+		sprintf(icap_buf.name, "test%d", 1);
+		icap_buf.buf = (uint64_t)runtime->dma_addr;
+		icap_buf.buf_size = runtime->periods * period_bytes;
+		icap_buf.type = ICAP_BUF_CIRCURAL;
+		icap_buf.frag_size = period_bytes;
+		icap_buf.frag_count = runtime->periods;
+		icap_buf.frames_per_frag = bytes_to_frames(substream->runtime, period_bytes);
+		icap_buf.device_id = -1;
+		/* Set audio data format */
+		icap_buf.format.channels = runtime->channels;
+		icap_buf.format.pcm_format = runtime->format;
+		icap_buf.format.frame_size = icap_buf.format.channels * (snd_pcm_format_physical_width(icap_buf.format.pcm_format)/8);
+		icap_buf.format.pcm_rate = runtime->rate;
+
+		icap_send_playback_add_src(icap, &icap_buf);
+
+	} else {
+	}
+
+	return ret;
+}
+
+static int sharc_alsa_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
+{
+	struct snd_pcm_runtime *runtime = substream->runtime;
+	struct sharc_alsa_card_data *sharc_alsa = runtime->private_data;
+	struct icap_instance *icap = &sharc_alsa->icap;
+	int ret = 0;
+
+	switch (cmd) {
+	case SNDRV_PCM_TRIGGER_START:
+		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+			ret = icap_send_playback_start(icap);
+		else
+			ret = icap_send_record_start(icap);
+		break;
+	case SNDRV_PCM_TRIGGER_STOP:
+	case SNDRV_PCM_TRIGGER_SUSPEND:
+	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
+		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+			ret = icap_send_playback_stop(icap);
+		else
+			ret = icap_send_record_stop(icap);
+		break;
+	default:
+		ret = -EINVAL;
+	}
+
+	return ret;
+}
+
 static const struct snd_pcm_ops sharc_alsa_pcm_ops = {
 	.open		= sharc_alsa_pcm_open,
 	.ioctl		= snd_pcm_lib_ioctl,
 	.hw_params	= sharc_alsa_pcm_hw_params,
 	.hw_free	= sharc_alsa_pcm_hw_free,
-	//.prepare	= ,
-	//.trigger	= ,
+	.prepare	= sharc_alsa_pcm_prepare,
+	.trigger	= sharc_alsa_pcm_trigger,
 	.pointer	= sharc_alsa_pcm_pointer,
 };
 
 static int sharc_alsa_pcm_new(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_card *card = rtd->card->snd_card;
-	size_t size = 0x20000; // 128KiB
+	size_t size = 0x20000; /* 128KiB */
 	int ret = 0;
 
 	ret = dma_coerce_mask_and_coherent(card->dev, DMA_BIT_MASK(32));
@@ -139,11 +241,30 @@ static int sharc_alsa_pcm_new(struct snd_soc_pcm_runtime *rtd)
 	return 0;
 }
 
+static int sharc_alsa_playback_frag_ready_cb(struct icap_instance *icap, uint32_t frags)
+{
+	struct sharc_alsa_card_data *sharc_alsa = (struct sharc_alsa_card_data *)icap->priv;
+
+	mutex_lock(&sharc_alsa->tx_buf_pos_lock);
+	sharc_alsa->tx_buf_pos += frags * sharc_alsa->tx_fragsize;
+	if(sharc_alsa->tx_buf_pos >= sharc_alsa->tx_dma_buf.bytes){
+		sharc_alsa->tx_buf_pos = sharc_alsa->tx_buf_pos - sharc_alsa->tx_dma_buf.bytes;
+	}
+	mutex_unlock(&sharc_alsa->tx_buf_pos_lock);
+
+	snd_pcm_period_elapsed(sharc_alsa->tx_substream);
+}
+
+struct icap_callbacks sharc_alsa_icap_callbacks = {
+	.playback_start_ack = sharc_alsa_playback_frag_ready_cb,
+	.playback_frag_ready = sharc_alsa_playback_frag_ready_cb,
+};
+
 static int sharc_alsa_probe(struct rpmsg_device *rpdev)
 {
 	struct device *dev = &rpdev->dev;
 	struct sharc_alsa_card_data *sharc_alsa;
-	const u32 card_id = rpdev->dst;
+	const u8 card_id = rpdev->dst;
 	struct sharc_alsa_component_data sharc_alsa_component;
 	struct sharc_alsa_component_data *sharc_alsa_component_priv;
 	int ret = 0;
@@ -153,6 +274,15 @@ static int sharc_alsa_probe(struct rpmsg_device *rpdev)
 		return -ENOMEM;
 	}
 	rpdev->ept->priv = sharc_alsa;
+
+	/* init Inter Core Audio protocol */
+	sharc_alsa->icap.priv = sharc_alsa;
+	sharc_alsa->icap.ept = rpdev->ept;
+	sharc_alsa->icap.cb = &sharc_alsa_icap_callbacks;
+	icap_init(&sharc_alsa->icap);
+
+	mutex_init(&sharc_alsa->tx_buf_pos_lock);
+	mutex_init(&sharc_alsa->rx_buf_pos_lock);
 
 	/* Initilize ASoC cpu component and dai drivers */
 	memset(&sharc_alsa_component, 0, sizeof(sharc_alsa_component));
