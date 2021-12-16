@@ -24,9 +24,9 @@
 #include <linux/kobject.h>
 #include <linux/atomic.h>
 
-#include <mach/cpu.h>
-#include <mach/dma.h>
-#include <mach/portmux.h>
+#include <linux/soc/adi/cpu.h>
+#include <linux/soc/adi/dma.h>
+#include <linux/soc/adi/portmux.h>
 #include <sound/sc5xx-sru.h>
 #include <sound/sc5xx-dai.h>
 #include <sound/pcm.h>
@@ -212,7 +212,7 @@ void parse_sharc_messages(struct sport_device *sport, int core, struct sharc_msg
 		case SHARC_MSG_PLAYBACK_START_ACK:
 			//enable DMA, after SHARC ACKs START
 			set_dma_next_desc_addr(sport->tx_dma_chan,
-					(void *)sport->tx_desc_phy);
+					sport->tx_desc_phy);
 			set_dma_config(sport->tx_dma_chan, DMAFLOW_LIST | DI_EN
 					| compute_wdsize(sport->wdsize) | NDSIZE_6);
 			enable_dma(sport->tx_dma_chan);
@@ -335,7 +335,7 @@ EXPORT_SYMBOL(sport_tx_start);
 int sport_rx_start(struct sport_device *sport)
 {
 	set_dma_next_desc_addr(sport->rx_dma_chan,
-			(void *)sport->rx_desc_phy);
+			sport->rx_desc_phy);
 	set_dma_config(sport->rx_dma_chan, DMAFLOW_LIST | DI_EN | WNR
 			| compute_wdsize(sport->wdsize) | NDSIZE_6);
 	enable_dma(sport->rx_dma_chan);
@@ -688,7 +688,7 @@ int rpmsg_sharc_alsa_cb(struct rpmsg_device *rpdev, void *data, int len, void *p
 
 	//Sanity check
 	if(len != sizeof(struct sharc_msg)){
-		dev_err(&rpdev->dev, "Wrong message size %d expected %d\n", len, sizeof(struct sharc_msg));
+		dev_err(&rpdev->dev, "Wrong message size %d expected %ld\n", len, sizeof(struct sharc_msg));
 	}
 
 	for(core = 0; core < SHARC_CORES_NUM; core++){
@@ -770,7 +770,7 @@ struct sport_device *sport_create(struct platform_device *pdev)
 	sport = kzalloc(sizeof(*sport), GFP_KERNEL);
 	if (!sport) {
 		dev_err(dev, "Unable to allocate memory for sport device\n");
-		return NULL;
+		return ERR_PTR(-ENOMEM);
 	}
 	sport->pdev = pdev;
 
@@ -797,7 +797,7 @@ struct sport_device *sport_create(struct platform_device *pdev)
 
 err_free_data:
 	kfree(sport);
-	return NULL;
+	return ERR_PTR(ret);
 }
 EXPORT_SYMBOL(sport_create);
 

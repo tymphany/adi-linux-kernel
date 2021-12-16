@@ -20,8 +20,8 @@
 #include <sound/soc.h>
 #include <sound/pcm_params.h>
 
-#include <mach/dma.h>
-#include <mach/portmux.h>
+#include <linux/soc/adi/dma.h>
+#include <linux/soc/adi/portmux.h>
 
 #include "../codecs/adau1962.h"
 #include "../codecs/adau1977.h"

@@ -217,8 +217,8 @@ static int sc5xx_dai_probe(struct platform_device *pdev)
 	int ret;
 
 	sport = sport_create(pdev);
-	if (!sport)
-		return -ENODEV;
+	if (IS_ERR(sport))
+		return PTR_ERR(sport);
 
 	/* register with the ASoC layers */
 	ret = devm_snd_soc_register_component(dev, &sc5xx_dai_component,

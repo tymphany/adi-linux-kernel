@@ -20,9 +20,10 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 
-#include <mach/cpu.h>
-#include <mach/dma.h>
-#include <mach/portmux.h>
+#include <linux/soc/adi/cpu.h>
+#include <linux/soc/adi/dma.h>
+#include <linux/soc/adi/portmux.h>
+#include <linux/soc/adi/hardware.h>
 #include <sound/sc5xx-sru.h>
 #include <sound/sc5xx-dai.h>
 
@@ -69,7 +70,7 @@ static int compute_wdsize(size_t wdsize)
 int sport_tx_start(struct sport_device *sport)
 {
 	set_dma_next_desc_addr(sport->tx_dma_chan,
-			(void *)sport->tx_desc_phy);
+			sport->tx_desc_phy);
 	set_dma_config(sport->tx_dma_chan, DMAFLOW_LIST | DI_EN
 			| compute_wdsize(sport->wdsize) | NDSIZE_6);
 	enable_dma(sport->tx_dma_chan);
@@ -82,7 +83,7 @@ EXPORT_SYMBOL(sport_tx_start);
 int sport_rx_start(struct sport_device *sport)
 {
 	set_dma_next_desc_addr(sport->rx_dma_chan,
-			(void *)sport->rx_desc_phy);
+			sport->rx_desc_phy);
 	set_dma_config(sport->rx_dma_chan, DMAFLOW_LIST | DI_EN | WNR
 			| compute_wdsize(sport->wdsize) | NDSIZE_6);
 	enable_dma(sport->rx_dma_chan);
@@ -400,7 +401,6 @@ static void sport_free_resource(struct sport_device *sport)
 	free_dma(sport->rx_dma_chan);
 	free_dma(sport->tx_dma_chan);
 }
-
 struct sport_device *sport_create(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -413,7 +413,7 @@ struct sport_device *sport_create(struct platform_device *pdev)
 	sport = kzalloc(sizeof(*sport), GFP_KERNEL);
 	if (!sport) {
 		dev_err(dev, "Unable to allocate memory for sport device\n");
-		return NULL;
+		return ERR_PTR(-ENOMEM);
 	}
 	sport->pdev = pdev;
 
@@ -430,7 +430,7 @@ struct sport_device *sport_create(struct platform_device *pdev)
 
 err_free_data:
 	kfree(sport);
-	return NULL;
+	return ERR_PTR(ret);
 }
 EXPORT_SYMBOL(sport_create);
 
