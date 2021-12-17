@@ -159,7 +159,7 @@
 	flash: w25q32@0 {
 		#address-cells = <1>;
 		#size-cells = <1>;
-		compatible = "winbond,w25q32";
+		compatible = "winbond,w25q32", "jedec,spi-nor";
 		en-pins = <&ssw0 12 GPIO_ACTIVE_LOW>,	/* SP2IFLASH_CS_EN */
 		          <&ssw0 13 GPIO_ACTIVE_LOW>;	/* SPI2D2_D3_EN */
 		spi-max-frequency = <5000000>;
