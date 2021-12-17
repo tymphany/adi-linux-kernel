@@ -100,6 +100,7 @@
 			pinctrl-0 = <&ppi0_8b>;
 			pinctrl-1 = <&ppi0_16b>;
 			pinctrl-2 = <&ppi0_24b>;
+			status = "disabled";
 		};
 	};
 };
@@ -242,7 +243,7 @@
 	phy-name = "tja1055";
 	phy-gpios = <&gpb 8 0>,		/* en PB8 */
 		    <&gpb 2 0x1>;	/* stb PB2, GPIO_ACTIVE_LOW */
-	status = "okay";
+	status = "disabled";
 };
 
 &can1 {
@@ -253,7 +254,7 @@
 	phy-spibus = /bits/ 16 <0>;
 	phy-spiclk = <1000000>;
 	phy-spics = /bits/ 16 <44>;	/* GPIO_PC12 */
-	status = "okay";
+	status = "disabled";
 };
 
 &emac0 {
