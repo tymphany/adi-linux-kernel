@@ -308,7 +308,8 @@
 };
 
 &mmc0 {
-	wp-en-pin = <&ssw0 11 GPIO_ACTIVE_LOW>;	/* SD_WP_EN */
+	/* Do not use wp-en-pin, as this causes a conflict between PC15+ETH0_MD_INT+SD_WP */
+	/* wp-en-pin = <&ssw0 11 GPIO_ACTIVE_LOW>;	 SD_WP_EN */
 	bus-width = <4>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&mmc0_8bgrp>;
