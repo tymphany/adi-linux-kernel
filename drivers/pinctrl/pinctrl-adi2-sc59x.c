@@ -305,7 +305,6 @@ static const unsigned mmc0_8b_pins[] = {
 /* EMSI0_RST */  GPIO_PC4,
 /* EMSI0_WP */   GPIO_PC6,
 /* EMSI0_CD */   GPIO_PB15,
-/* EMSI0_CLK */  GPIO_PE9,
 /* EMSI0_CMD */  GPIO_PG1,
 };
 #else
@@ -479,7 +478,7 @@ static const unsigned short ppi0_24b_mux[] = {
 #ifdef CONFIG_ARCH_SC59X_64
 static const unsigned short mmc0_8b_mux[] = {
 	P_EMSI0_D0, P_EMSI0_D1,  P_EMSI0_D2,  P_EMSI0_D3,  P_EMSI0_D4, P_EMSI0_D5, P_EMSI0_D6,
-	P_EMSI0_D7, P_EMSI0_CLK, P_EMSI0_LED, P_EMSI0_RST, P_EMSI0_WP, P_EMSI0_CD, P_EMSI0_CLK, P_EMSI0_CMD,
+	P_EMSI0_D7, P_EMSI0_CLK, P_EMSI0_LED, P_EMSI0_RST, P_EMSI0_WP, P_EMSI0_CD, P_EMSI0_CMD,
 	0,
 };
 #else
