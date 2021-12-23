@@ -29,7 +29,7 @@
 
 #define DRIVER_NAME "icc"
 
-#ifdef CONFIG_ARCH_SC59X
+#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC58X)
 void __iomem *core0_mcapi_sram_addr = NULL;
 #endif
 
@@ -148,7 +148,7 @@ int sm_send_session_packet_ack(struct sm_session *session, uint32_t remote_ep,
 static int fill_user_buffer_from_message(struct sm_session *session,
 	struct sm_message *message, void *user_buf, uint32_t *buf_len)
 {
-#ifdef CONFIG_ARCH_SC59X
+#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC58X)
 	void __iomem *remap_addr = NULL;
 #endif
 
@@ -160,7 +160,7 @@ static int fill_user_buffer_from_message(struct sm_session *session,
 	if (message->msg.length < *buf_len)
 		*buf_len = message->msg.length;
 	if (message->msg.length && user_buf) {
-		#ifdef CONFIG_ARCH_SC59X
+		#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC58X)
 			remap_addr = ioremap_nocache(message->msg.payload, *buf_len);
 			if (copy_to_user(user_buf, (void *)remap_addr, *buf_len))
 				return -EFAULT;
@@ -704,7 +704,7 @@ sm_send_packet(uint32_t session_idx, uint32_t dst_ep, uint32_t dst_cpu,
 
 	if (m->msg.length) {
 
-		#ifdef CONFIG_ARCH_SC59X
+		#if defined(CONFIG_ARCH_SC59X)
 			//On the SC59x
 			//dma_alloc_coherent appears to be allocating RAM
 			//which is cached on the SHARC cores
@@ -714,6 +714,10 @@ sm_send_packet(uint32_t session_idx, uint32_t dst_ep, uint32_t dst_cpu,
 			core0_mcapi_sram_addr = ioremap_nocache(0x20001000, 0x1000);
 			payload_buf = core0_mcapi_sram_addr;
 			m->msg.payload = 0x20001000;
+		#elif defined(CONFIG_ARCH_SC58X)
+			core0_mcapi_sram_addr = ioremap_nocache(0x20081000, 0x1000);
+			payload_buf = core0_mcapi_sram_addr;
+			m->msg.payload = 0x20081000;
 		#else
 			payload_buf = dma_alloc_coherent(NULL, m->msg.length,
 				&dma_handle, GFP_KERNEL);
@@ -772,8 +776,10 @@ sm_send_packet(uint32_t session_idx, uint32_t dst_ep, uint32_t dst_cpu,
 		}
 		if (nonblock) {
 			ret = -EAGAIN;
-			#ifdef CONFIG_ARCH_SC59X
+			#if defined(CONFIG_ARCH_SC59X)
 				*payload = 0x20001000;
+			#elif defined(CONFIG_ARCH_SC58X)
+				*payload = 0x20081000;
 			#else
 				*payload = dma_handle;
 			#endif
@@ -801,7 +807,7 @@ fail3:
 fail2:
 	if (dma_handle)
 		dma_free_coherent(NULL, m->msg.length, payload_buf, dma_handle);
-#ifdef CONFIG_ARCH_SC59X
+#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC58X)
 	if (core0_mcapi_sram_addr){
 		iounmap(core0_mcapi_sram_addr);
 		core0_mcapi_sram_addr = NULL;
@@ -1011,7 +1017,7 @@ sm_wait_request_finish(uint32_t session_idx, void *user_buf, uint32_t dst_cpu,
 				mutex_lock(&adi_icc->sessions_table->lock);
 				list_del(&message->next);
 				if (payload)
-					#ifdef CONFIG_ARCH_SC59X
+					#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC58X)
 						if(core0_mcapi_sram_addr){
 							iounmap(core0_mcapi_sram_addr);
 							core0_mcapi_sram_addr = NULL;
@@ -1080,7 +1086,7 @@ sm_wait_request_finish(uint32_t session_idx, void *user_buf, uint32_t dst_cpu,
 			mutex_lock(&adi_icc->sessions_table->lock);
 			list_del(&message->next);
 			if (payload)
-				#ifdef CONFIG_ARCH_SC59X
+				#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC58X)
 					if(core0_mcapi_sram_addr){
 						iounmap(core0_mcapi_sram_addr);
 						core0_mcapi_sram_addr = NULL;
