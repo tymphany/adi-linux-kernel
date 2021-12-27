@@ -15,6 +15,81 @@
 #ifndef __SC5XX_DAI_H_
 #define __SC5XX_DAI_H_
 
+#ifdef CONFIG_ARCH_SC59X_64
+#define DAI0_BASE_ADDRESS (0x310C9000)
+#define DAI1_BASE_ADDRESS (0x310CA000)
+#endif
+
+#define REG_DAI_EXTD_CLK0                   0x000            /*  DAI0 Extended Clock Routing Control Register 0 */
+#define REG_DAI_EXTD_CLK1                   0x004            /*  DAI0 Extended Clock Routing Control Register 1 */
+#define REG_DAI_EXTD_CLK2                   0x008            /*  DAI0 Extended Clock Routing Control Register 2 */
+#define REG_DAI_EXTD_CLK3                   0x00C            /*  DAI0 Extended Clock Routing Control Register 3 */
+#define REG_DAI_EXTD_CLK4                   0x010            /*  DAI0 Extended Clock Routing Control Register 4 */
+#define REG_DAI_EXTD_CLK5                   0x014            /*  DAI0 Extended Clock Routing Control Register 5 */
+#define REG_DAI_EXTD_DAT0                   0x018            /*  DAI0 Extended Serial Data Routing Control Register 0 */
+#define REG_DAI_EXTD_DAT1                   0x01C            /*  DAI0 Extended Serial Data Routing Control Register 1 */
+#define REG_DAI_EXTD_DAT2                   0x020            /*  DAI0 Extended Serial Data Routing Control Register 2 */
+#define REG_DAI_EXTD_DAT3                   0x024            /*  DAI0 Extended Serial Data Routing Control Register 3 */
+#define REG_DAI_EXTD_DAT4                   0x028            /*  DAI0 Extended Serial Data Routing Control Register 4 */
+#define REG_DAI_EXTD_DAT5                   0x02C            /*  DAI0 Extended Serial Data Routing Control Register 5 */
+#define REG_DAI_EXTD_DAT6                   0x030            /*  DAI0 Extended Serial Data Routing Control Register 6 */
+#define REG_DAI_EXTD_FS0                    0x034            /*  DAI0 Extended Frame Sync Routing Control Register 0 */
+#define REG_DAI_EXTD_FS1                    0x038            /*  DAI0 Extended Frame Sync Routing Control Register 1 */
+#define REG_DAI_EXTD_FS2                    0x03C            /*  DAI0 Extended Frame Sync Routing Control Register 2 */
+#define REG_DAI_EXTD_FS4                    0x044            /*  DAI0 Extended Frame Sync Routing Control Register 4 */
+#define REG_DAI_EXTD_PIN0                   0x048            /*  DAI0 Extended Pin Buffer Assignment Register 0 */
+#define REG_DAI_EXTD_PIN1                   0x04C            /*  DAI0 Extended Pin Buffer Assignment Register 1 */
+#define REG_DAI_EXTD_PIN2                   0x050            /*  DAI0 Extended Pin Buffer Assignment Register 2 */
+#define REG_DAI_EXTD_PIN3                   0x054            /*  DAI0 Extended Pin Buffer Assignment Register 3 */
+#define REG_DAI_EXTD_PIN4                   0x058            /*  DAI0 Extended Pin Buffer Assignment Register 4 */
+#define REG_DAI_EXTD_MISC0                  0x05C            /*  DAI0 Extended Miscellaneous Control Register 0 */
+#define REG_DAI_EXTD_MISC1                  0x060            /*  DAI0 Extended Miscellaneous Control Register 1 */
+#define REG_DAI_EXTD_MISC2                  0x064            /*  DAI0 Extended Miscellaneous Control Register 2 */
+#define REG_DAI_EXTD_PBEN0                  0x068            /*  DAI0 Extended Pin Buffer Enable Register 0 */
+#define REG_DAI_EXTD_PBEN1                  0x06C            /*  DAI0 Extended Pin Buffer Enable Register 1 */
+#define REG_DAI_EXTD_PBEN2                  0x070            /*  DAI0 Extended Pin Buffer Enable Register 2 */
+#define REG_DAI_EXTD_PBEN3                  0x074            /*  DAI0 Extended Pin Buffer Enable Register 3 */
+#define REG_DAI_CLK0                        0x0C0            /*  DAI0 Clock Routing Control Register 0 */
+#define REG_DAI_CLK1                        0x0C4            /*  DAI0 Clock Routing Control Register 1 */
+#define REG_DAI_CLK2                        0x0C8            /*  DAI0 Clock Routing Control Register 2 */
+#define REG_DAI_CLK3                        0x0CC            /*  DAI0 Clock Routing Control Register 3 */
+#define REG_DAI_CLK4                        0x0D0            /*  DAI0 Clock Routing Control Register 4 */
+#define REG_DAI_CLK5                        0x0D4            /*  DAI0 Clock Routing Control Register 5 */
+#define REG_DAI_DAT0                        0x100            /*  DAI0 Serial Data Routing Control Register 0 */
+#define REG_DAI_DAT1                        0x104            /*  DAI0 Serial Data Routing Control Register 1 */
+#define REG_DAI_DAT2                        0x108            /*  DAI0 Serial Data Routing Control Register 2 */
+#define REG_DAI_DAT3                        0x10C            /*  DAI0 Serial Data Routing Control Register 3 */
+#define REG_DAI_DAT4                        0x110            /*  DAI0 Serial Data Routing Control Register 4 */
+#define REG_DAI_DAT5                        0x114            /*  DAI0 Serial Data Routing Control Register 5 */
+#define REG_DAI_DAT6                        0x118            /*  DAI0 Serial Data Routing Control Register 6 */
+#define REG_DAI_FS0                         0x140            /*  DAI0 Frame Sync Routing Control Register 0 */
+#define REG_DAI_FS1                         0x144            /*  DAI0 Frame Sync Routing Control Register 1 */
+#define REG_DAI_FS2                         0x148            /*  DAI0 Frame Sync Routing Control Register 2 */
+#define REG_DAI_FS4                         0x150            /*  DAI0 Frame Sync Routing Control Register 4 */
+#define REG_DAI_PIN0                        0x180            /*  DAI0 Pin Buffer Assignment Register 0 */
+#define REG_DAI_PIN1                        0x184            /*  DAI0 Pin Buffer Assignment Register 1 */
+#define REG_DAI_PIN2                        0x188            /*  DAI0 Pin Buffer Assignment Register 2 */
+#define REG_DAI_PIN3                        0x18C            /*  DAI0 Pin Buffer Assignment Register 3 */
+#define REG_DAI_PIN4                        0x190            /*  DAI0 Pin Buffer Assignment Register 4 */
+#define REG_DAI_MISC0                       0x1C0            /*  DAI0 Miscellaneous Control Register 0 */
+#define REG_DAI_MISC1                       0x1C4            /*  DAI0 Miscellaneous Control Register 1 */
+#define REG_DAI_MISC2                       0x1C8            /*  DAI0 Miscellaneous Control Register 1 */
+#define REG_DAI_PBEN0                       0x1E0            /*  DAI0 Pin Buffer Enable Register 0 */
+#define REG_DAI_PBEN1                       0x1E4            /*  DAI0 Pin Buffer Enable Register 1 */
+#define REG_DAI_PBEN2                       0x1E8            /*  DAI0 Pin Buffer Enable Register 2 */
+#define REG_DAI_PBEN3                       0x1EC            /*  DAI0 Pin Buffer Enable Register 3 */
+#define REG_DAI_IMSK_FE                     0x200            /*  DAI0 Falling-Edge Interrupt Mask Register */
+#define REG_DAI_IMSK_RE                     0x204            /*  DAI0 Rising-Edge Interrupt Mask Register */
+#define REG_DAI_IMSK_PRI                    0x210            /*  DAI0 Core Interrupt Priority Assignment Register */
+#define REG_DAI_IRPTL_H                     0x220            /*  DAI0 High Priority Interrupt Latch Register */
+#define REG_DAI_IRPTL_L                     0x224            /*  DAI0 Low Priority Interrupt Latch Register */
+#define REG_DAI_IRPTL_HS                    0x230            /*  DAI0 Shadow High Priority Interrupt Latch Register */
+#define REG_DAI_IRPTL_LS                    0x234            /*  DAI0 Shadow Low Priority Interrupt Latch Register */
+#define REG_DAI_PIN_STAT                    0x2E4            /*  DAI0 Pin Status Register */
+#define REG_DAI_GBL_SP_EN                   0x2E8            /*  DAI0 Global SPORT Enable Register */
+#define REG_DAI_GBL_INT_EN                  0x2EC            /*  DAI0 Global SPORT Interrupt Grouping Register */
+#define REG_DAI_GBL_PCG_EN                  0x2F0            /*  DAI0 Global PCG Enable Control Register */
+
 /*	DAI0	*/
 #define REG_DAI0_CLK0		0x310C90C0
 #define REG_DAI0_CLK1		0x310C90C4

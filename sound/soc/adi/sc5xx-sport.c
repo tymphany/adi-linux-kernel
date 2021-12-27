@@ -24,8 +24,6 @@
 #include <linux/soc/adi/dma.h>
 #include <linux/soc/adi/portmux.h>
 #include <linux/soc/adi/hardware.h>
-#include <sound/sc5xx-sru.h>
-#include <sound/sc5xx-dai.h>
 
 #include "sc5xx-sport.h"
 
@@ -406,9 +404,6 @@ struct sport_device *sport_create(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct sport_device *sport;
 	int ret;
-
-	pads_init();
-	sru_init();
 
 	sport = kzalloc(sizeof(*sport), GFP_KERNEL);
 	if (!sport) {
