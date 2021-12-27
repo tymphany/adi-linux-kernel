@@ -32,6 +32,8 @@
 
 #include "adau1962.h"
 
+#define __DEBUG 0
+
 #define ADAU1962_REG_PLL_CLK_CTRL0		0x00
 #define ADAU1962_REG_PLL_CLK_CTRL1		0x01
 #define ADAU1962_REG_PDN_THRMSENS_CTRL1		0x02
@@ -811,7 +813,9 @@ int adau1962_probe(struct device *dev, struct regmap *regmap,
 	if (ret)
 		return ret;
 
+#if __DEBUG
 	adau1962_print(adau1962);
+#endif
 
 	return snd_soc_register_component(dev, &adau1962_component_driver,
 			&adau1962_dai, 1);
