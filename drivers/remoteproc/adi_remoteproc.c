@@ -107,6 +107,12 @@ static struct adi_sharc_resource_table resources_sharc1 = {
 	},
 };
 
+enum adi_rproc_rpmsg_state {
+	ADI_RP_RPMSG_SYNCED=0,
+	ADI_RP_RPMSG_WAITING=1,
+	ADI_RP_RPMSG_TIMED_OUT=2,
+};
+
 struct adi_rproc_data {
 	struct device *dev;
 	struct rproc *rproc;
@@ -115,6 +121,8 @@ struct adi_rproc_data {
 	const char *firmware_name;
 	int core_id;
 	int core_irq;
+	int icc_irq;
+	int icc_irq_flags;
 	void *mem_virt;
 	dma_addr_t mem_handle;
 	size_t fw_size;
@@ -124,8 +132,7 @@ struct adi_rproc_data {
 	void __iomem *L2_shared_base;
 	struct completion sharc_platform_init_complete;
 	struct workqueue_struct *core_workqueue;
-	int wait_platform_init;
-	struct delayed_work core_kick_work;
+	enum adi_rproc_rpmsg_state rpmsg_state;
 	u64 l1_da_range[2];
 	u64 l2_da_range[2];
 	u32 rsc_offset;
@@ -180,8 +187,17 @@ static irqreturn_t sharc_virtio_irq_threaded_handler(int irq, void *p);
 
 static int adi_core_start(struct adi_rproc_data *rproc_data)
 {
-	rproc_data->wait_platform_init = 1;
+	int ret;
+	rproc_data->rpmsg_state = ADI_RP_RPMSG_WAITING;
 	reinit_completion(&rproc_data->sharc_platform_init_complete);
+	ret = devm_request_threaded_irq(rproc_data->dev, rproc_data->icc_irq, NULL,
+		sharc_virtio_irq_threaded_handler, rproc_data->icc_irq_flags,
+		"ICC virtio IRQ", rproc_data);
+	if (ret) {
+		dev_err(rproc_data->dev, "Fail to request ICC IRQ\n");
+		return -ENOENT;
+	}
+
 	return adi_rcu_start_core(rproc_data->rcu, rproc_data->core_id);
 }
 
@@ -192,7 +208,10 @@ static int adi_core_reset(struct adi_rproc_data *rproc_data)
 
 static int adi_core_stop(struct adi_rproc_data *rproc_data)
 {
-	cancel_delayed_work_sync(&rproc_data->core_kick_work);
+	/* After time out the irq is already released */
+	if(rproc_data->rpmsg_state != ADI_RP_RPMSG_TIMED_OUT) {
+		devm_free_irq(rproc_data->dev, rproc_data->icc_irq, rproc_data);
+	}
 	return adi_rcu_stop_core(rproc_data->rcu,
 		rproc_data->core_id, rproc_data->core_irq);
 }
@@ -289,7 +308,7 @@ static int adi_valid_firmware(struct rproc *rproc, const struct firmware *fw)
 		return -ENOTSUPP;
 	}
 
-	dev_err(&rproc->dev, "## No valid image at address 0x%08x\n", (unsigned int)fw->data);
+	dev_err(&rproc->dev, "## No valid image at address %p\n", fw->data);
 	return -EINVAL;
 }
 
@@ -414,6 +433,7 @@ static int adi_rproc_stop(struct rproc *rproc)
 	}
 
 	rproc_data->ldr_load_addr = SHARC_IDLE_ADDR;
+	rproc_data->loaded_rsc_table = NULL;
 	return ret;
 }
 
@@ -445,10 +465,9 @@ static int adi_rproc_map_carveout(struct rproc *rproc, struct rproc_mem_entry *m
 	struct device *dev = rproc->dev.parent;
 	void *va;
 
-	// TODO test performance ioremap_nocache vs ioremap_wc
-	va = ioremap_nocache(mem->dma, mem->len);
+	va = ioremap_wc(mem->dma, mem->len);
 	if (!va) {
-		dev_err(dev, "Unable to map memory carveout %pa+%zx\n", &mem->dma, mem->len);
+		dev_err(dev, "Unable to map memory carveout %pa+%x\n", &mem->dma, mem->len);
 		return -ENOMEM;
 	}
 	mem->va = va;
@@ -615,7 +634,10 @@ static irqreturn_t sharc_virtio_irq_threaded_handler(int irq, void *p){
 	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)p;
 	struct adi_sharc_resource_table *table = rproc_data->loaded_rsc_table;
 
-	if (rproc_data->wait_platform_init)
+	/* Firmwares witout resource table shouldn't enable the virtio irq */
+	BUG_ON(!table);
+
+	if (rproc_data->rpmsg_state == ADI_RP_RPMSG_WAITING)
 		complete(&rproc_data->sharc_platform_init_complete);
 
 	rproc_vq_interrupt(rproc_data->rproc, table->vring[0].notifyid);
@@ -630,28 +652,25 @@ static void adi_rproc_kick(struct rproc *rproc, int vqid)
 	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)rproc->priv;
 	int ret;
 
-	while(rproc_data->wait_platform_init){
+	while(rproc_data->rpmsg_state == ADI_RP_RPMSG_WAITING){
 		ret = wait_for_completion_interruptible_timeout(&rproc_data->sharc_platform_init_complete, CORE_INIT_TIMEOUT);
 		if(ret > 0){
-			rproc_data->wait_platform_init = 0;
+			rproc_data->rpmsg_state = ADI_RP_RPMSG_SYNCED;
 		}else if(ret < 0){
 			if (ret != -ERESTARTSYS){
-				dev_info(rproc_data->dev, "Core%d init error %d\n", rproc_data->core_id, ret);
+				dev_err(rproc_data->dev, "Core%d init error %d\n", rproc_data->core_id, ret);
+				return;
 			}
 		}else{
+			rproc_data->rpmsg_state = ADI_RP_RPMSG_TIMED_OUT;
+			devm_free_irq(rproc_data->dev, rproc_data->icc_irq, rproc_data);
 			dev_info(rproc_data->dev, "Core%d rpmsg init timeout, probably not supported.\n", rproc_data->core_id);
 			return;
 		}
 	}
 
-	adi_tru_trigger_device(rproc_data->tru, rproc_data->dev);
-}
-
-static void adi_rproc_kick_work(struct work_struct *work){
-	struct delayed_work *dw = to_delayed_work(work);
-	struct adi_rproc_data *rproc_data = container_of(dw, struct adi_rproc_data, core_kick_work);
-
-	adi_rproc_kick(rproc_data->rproc, 0);
+	if(rproc_data->rpmsg_state == ADI_RP_RPMSG_SYNCED)
+		adi_tru_trigger_device(rproc_data->tru, rproc_data->dev);
 }
 
 static int adi_rproc_sanity_check(struct rproc *rproc, const struct firmware *fw)
@@ -726,7 +745,6 @@ static int adi_remoteproc_probe(struct platform_device *pdev)
 	struct rproc *rproc;
 	struct resource *res;
 	u32 addr[2];
-	int irq, irq_flags;
 	int ret;
 	const char *name;
 
@@ -791,7 +809,6 @@ static int adi_remoteproc_probe(struct platform_device *pdev)
 	}
 
 	init_completion(&rproc_data->sharc_platform_init_complete);
-	INIT_DELAYED_WORK(&rproc_data->core_kick_work, adi_rproc_kick_work);
 
 	ret = of_property_read_u32(np, "core-id", &rproc_data->core_id);
 	if (ret) {
@@ -805,22 +822,14 @@ static int adi_remoteproc_probe(struct platform_device *pdev)
 		goto free_workqueue;
 	}
 
-	irq = platform_get_irq(pdev, 0);
-	if (irq <= 0) {
+	rproc_data->icc_irq = platform_get_irq(pdev, 0);
+	if (rproc_data->icc_irq <= 0) {
 		dev_err(dev, "No ICC IRQ specified\n");
 		ret = -ENOENT;
 		goto free_workqueue;
 	}
 	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
-	irq_flags = (res->flags & IORESOURCE_BITS) | IRQF_PERCPU | IRQF_SHARED;
-
-	ret = devm_request_threaded_irq(dev, irq, NULL,
-		sharc_virtio_irq_threaded_handler, irq_flags | IRQF_ONESHOT,
-		"ICC virtio IRQ", rproc_data);
-	if (ret) {
-		dev_err(rproc_data->dev, "Fail to request ICC receive IRQ\n");
-		return -ENOENT;
-	}
+	rproc_data->icc_irq_flags = (res->flags & IORESOURCE_BITS) | IRQF_PERCPU | IRQF_SHARED | IRQF_ONESHOT;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
@@ -864,7 +873,7 @@ static int adi_remoteproc_probe(struct platform_device *pdev)
 	rproc_data->mem_virt = NULL;
 	rproc_data->fw_size = 0;
 	rproc_data->ldr_load_addr = SHARC_IDLE_ADDR;
-	rproc_data->wait_platform_init = 0;
+	rproc_data->rpmsg_state = ADI_RP_RPMSG_TIMED_OUT;
 
 	ret = rproc_add(rproc);
 	if (ret) {
