@@ -8,7 +8,6 @@
 
 #include <linux/delay.h>
 #include <linux/device.h>
-#include <linux/gpio.h>
 #include <linux/gpio/consumer.h>
 #include <linux/i2c.h>
 #include <linux/init.h>
@@ -17,7 +16,6 @@
 #include <linux/regmap.h>
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
-#include <linux/of_gpio.h>
 
 #include <sound/core.h>
 #include <sound/initval.h>
@@ -26,7 +24,6 @@
 #include <sound/soc.h>
 #include <sound/tlv.h>
 
-#include <mach/gpio.h>
 #include "adau1977.h"
 
 #define ADAU1977_REG_POWER		0x00
@@ -115,12 +112,9 @@ struct adau1977 {
 	bool right_j;
 	unsigned int sysclk;
 	enum adau1977_sysclk_src sysclk_src;
-	unsigned int enable_pin;
-	unsigned int enable_pin_active_low;
 
-	#ifndef CONFIG_ARCH_SC59X	
-		int reset_gpio;
-	#endif
+	struct gpio_desc *enable_gpio;
+	struct gpio_desc *reset_gpio;
 
 	enum adau1977_type type;
 
@@ -949,51 +943,32 @@ int adau1977_probe(struct device *dev, struct regmap *regmap,
 		adau1977->dvdd_reg = NULL;
 	}
 
-	if (dev->of_node) {
-		if (likely(of_count_phandle_with_args(dev->of_node,
-							"enable-pin", NULL) > 0)) {
-			if (softconfig_of_set_active_pin_output(dev,
-							dev->of_node, "enable-pin", 0,
-							&adau1977->enable_pin,
-							&adau1977->enable_pin_active_low,
-							true))
-				return -EINVAL;
+	adau1977->reset_gpio = devm_gpiod_get(dev, "reset", GPIOD_OUT_HIGH);
+	if (IS_ERR(adau1977->reset_gpio)) {
+		if(PTR_ERR(adau1977->reset_gpio) == -EPROBE_DEFER) {
+			return -EPROBE_DEFER;
 		}
+		dev_info(dev, "invalid or missing reset-gpios: %ld\n", PTR_ERR(adau1977->reset_gpio));
+	}
 
-		#ifndef CONFIG_ARCH_SC59X
-			adau1977->reset_gpio =
-					of_get_named_gpio(dev->of_node, "reset-gpio", 0);
-			if (!gpio_is_valid(adau1977->reset_gpio)) {
-				dev_err(dev, "invalid reset-gpio: %d\n", adau1977->reset_gpio);
-				return -EINVAL;
-			}
-		#endif
+	adau1977->enable_gpio = devm_gpiod_get(dev, "enable", GPIOD_OUT_HIGH);
+	if (IS_ERR(adau1977->enable_gpio)) {
+		if(PTR_ERR(adau1977->enable_gpio) == -EPROBE_DEFER) {
+			return -EPROBE_DEFER;
+		}
+		dev_info(dev, "invalid or missing enable-gpios: %ld\n", PTR_ERR(adau1977->enable_gpio));
 	}
 
 	dev_set_drvdata(dev, adau1977);
 
-	#ifndef CONFIG_ARCH_SC59X
-		if (adau1977->reset_gpio) {
-			ret = devm_gpio_request_one(dev, adau1977->reset_gpio,
-							GPIOF_OUT_INIT_HIGH, "adau1977");
-			/* Return -EBUSY will not be failed to avoid hardware
-			 * pin conflict for sc589-ezkit */
-			if (ret == -EBUSY)
-				dev_warn(dev, "busy to request reset-gpio: %d \n",
-							adau1977->reset_gpio);
-			else if (ret) {
-				dev_err(dev, "can't request reset-gpio: %d, err: %d\n",
-							adau1977->reset_gpio, ret);
-				return ret;
-			}
-			/* Hardware power-on reset */
-			udelay(200);    /* Tc time */
-			gpio_set_value(adau1977->reset_gpio, 0);
-			msleep(38);     /* Td time */
-			gpio_set_value(adau1977->reset_gpio, 1);
-			udelay(200);
-		}
-	#endif
+	if (!IS_ERR(adau1977->reset_gpio)) {
+		/* Hardware power-on reset */
+		udelay(200);    /* Tc time */
+		gpiod_set_value_cansleep(adau1977->reset_gpio, 1);
+		msleep(38);     /* Td time */
+		gpiod_set_value_cansleep(adau1977->reset_gpio, 0);
+		udelay(200);
+	}
 
 	ret = adau1977_power_enable(adau1977);
 	if (ret)
@@ -1031,11 +1006,6 @@ EXPORT_SYMBOL_GPL(adau1977_probe);
 
 void adau1977_remove(struct device *dev)
 {
-	struct adau1977 *adau1977 = dev_get_drvdata(dev);
-
-	if (adau1977->enable_pin && gpio_is_valid(adau1977->enable_pin))
-		gpio_direction_output(adau1977->enable_pin,
-					adau1977->enable_pin_active_low ? 1 : 0);
 }
 EXPORT_SYMBOL_GPL(adau1977_remove);
 

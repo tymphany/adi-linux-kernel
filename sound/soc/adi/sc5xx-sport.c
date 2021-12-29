@@ -20,11 +20,10 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 
-#include <mach/cpu.h>
-#include <mach/dma.h>
-#include <mach/portmux.h>
-#include <sound/sc5xx-sru.h>
-#include <sound/sc5xx-dai.h>
+#include <linux/soc/adi/cpu.h>
+#include <linux/soc/adi/dma.h>
+#include <linux/soc/adi/portmux.h>
+#include <linux/soc/adi/hardware.h>
 
 #include "sc5xx-sport.h"
 
@@ -69,7 +68,7 @@ static int compute_wdsize(size_t wdsize)
 int sport_tx_start(struct sport_device *sport)
 {
 	set_dma_next_desc_addr(sport->tx_dma_chan,
-			(void *)sport->tx_desc_phy);
+			sport->tx_desc_phy);
 	set_dma_config(sport->tx_dma_chan, DMAFLOW_LIST | DI_EN
 			| compute_wdsize(sport->wdsize) | NDSIZE_6);
 	enable_dma(sport->tx_dma_chan);
@@ -82,7 +81,7 @@ EXPORT_SYMBOL(sport_tx_start);
 int sport_rx_start(struct sport_device *sport)
 {
 	set_dma_next_desc_addr(sport->rx_dma_chan,
-			(void *)sport->rx_desc_phy);
+			sport->rx_desc_phy);
 	set_dma_config(sport->rx_dma_chan, DMAFLOW_LIST | DI_EN | WNR
 			| compute_wdsize(sport->wdsize) | NDSIZE_6);
 	enable_dma(sport->rx_dma_chan);
@@ -130,24 +129,23 @@ static void setup_desc(struct sport_device *sport, int fragcount,
 		size_t fragsize, unsigned int cfg, int tx)
 {
 	struct dmasg *desc;
-	unsigned long desc_phy;
-	void *buf;
+	u32 desc_phy;
+	u32 buf;
 	int i;
 
 	if (tx) {
 		desc = sport->tx_desc;
-		desc_phy = (unsigned long)sport->tx_desc_phy;
-		buf = (void *)sport->tx_buf;
+		desc_phy = lower_32_bits(sport->tx_desc_phy);
+		buf = lower_32_bits(sport->tx_buf);
 	} else {
 		desc = sport->rx_desc;
-		desc_phy = (unsigned long)sport->rx_desc_phy;
-		buf = (void *)sport->rx_buf;
+		desc_phy = lower_32_bits(sport->rx_desc_phy);
+		buf = lower_32_bits(sport->rx_buf);
 	}
 
 	for (i = 0; i < fragcount; ++i) {
-		desc[i].next_desc_addr  = (void *)(desc_phy
-				+ (i + 1) * sizeof(struct dmasg));
-		desc[i].start_addr = (unsigned long)buf + i * fragsize;
+		desc[i].next_desc_addr  = (desc_phy	+ (i + 1) * sizeof(struct dmasg));
+		desc[i].start_addr = buf + i * fragsize;
 		desc[i].cfg = cfg;
 		desc[i].x_count = fragsize / sport->wdsize;
 		desc[i].x_modify = sport->wdsize;
@@ -156,7 +154,7 @@ static void setup_desc(struct sport_device *sport, int fragcount,
 	}
 
 	/* make circular */
-	desc[fragcount-1].next_desc_addr = (void *)desc_phy;
+	desc[fragcount-1].next_desc_addr = desc_phy;
 }
 
 int sport_config_tx_dma(struct sport_device *sport, void *buf,
@@ -310,6 +308,13 @@ static int sport_get_resource(struct sport_device *sport)
 		return PTR_ERR(sport->rx_regs);
 	}
 
+	ret = of_property_read_u32(dev->of_node,
+			"sport-channel", &sport->sport_channel);
+	if (ret) {
+		dev_err(dev, "No sport-channel resource\n");
+		return -ENODEV;
+	}
+
 	ret = of_property_read_u32_index(dev->of_node,
 			"dma-channel", 0, &sport->tx_dma_chan);
 	if (ret) {
@@ -393,20 +398,16 @@ static void sport_free_resource(struct sport_device *sport)
 	free_dma(sport->rx_dma_chan);
 	free_dma(sport->tx_dma_chan);
 }
-
 struct sport_device *sport_create(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct sport_device *sport;
 	int ret;
 
-	pads_init();
-	sru_init();
-
 	sport = kzalloc(sizeof(*sport), GFP_KERNEL);
 	if (!sport) {
 		dev_err(dev, "Unable to allocate memory for sport device\n");
-		return NULL;
+		return ERR_PTR(-ENOMEM);
 	}
 	sport->pdev = pdev;
 
@@ -423,7 +424,7 @@ struct sport_device *sport_create(struct platform_device *pdev)
 
 err_free_data:
 	kfree(sport);
-	return NULL;
+	return ERR_PTR(ret);
 }
 EXPORT_SYMBOL(sport_create);
 

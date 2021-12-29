@@ -41,7 +41,7 @@
 		i2c1 = &i2c1;
 		i2c2 = &i2c2;
 		rtc0 = &rtc0;
-		i2s0 = &i2s0;
+		i2s4 = &i2s4;
 		mmc0 = &mmc0;
 	};
 
@@ -76,20 +76,31 @@
 		cache-level = <2>;
 	};
 
-	sram0: sram-icc@20000000 { /* ICC SRAM 4KB */
+	sram0: sram-icc@20000000 { /* ICC SRAM 8KB */
 		compatible = "mmio-sram";
 		#address-cells = <1>;
 		#size-cells = <1>;
-		reg = <0x20000000 0x1000>;
-		ranges = <0 0x20000000 0x1000>;
+		reg = <0x20000000 0x2000>;
+		ranges = <0 0x20000000 0x2000>;
+
+		/* 1KB - Shared between SHARC cores*/
+		reserved@0{
+			reg = <0x0 0x400>;
+			label = "SHARC_common";
+		};
+		/* 1KB - Reserved resource_tables for SHARC cores*/
+		resource_table@1000{
+			reg = <0x1000 0x400>;
+			label = "SHARC_resource_tables";
+		};
 	};
 
-	sram1: sram-reserved@20004000 {
+	sram1: sram-reserved@20100000 {
 		compatible = "mmio-sram";
+		reg = <0x20100000 0x100000>;
 		#address-cells = <1>;
 		#size-cells = <1>;
-		reg = <0x20004000 0x3B000>;
-		ranges = <0 0x20004000 0x3B000>;
+		ranges = <0 0x20100000 0x100000>;
 	};
 
 	scb {
@@ -102,8 +113,7 @@
 			compatible = "adi,sram-controller";
 			#address-cells = <1>;
 			#size-cells = <1>;
-			adi,sram = <&sram0>,
-					<&sram1>;
+			adi,sram = <&sram0>, <&sram1>;
 
 			sram-ecc-err@31080000 {
 				compatible = "adi,sram-ecc-err";
@@ -265,9 +275,15 @@
 			status = "disabled";
 		};
 
-		i2s0: i2s@0 {
+		i2s4: i2s@4 {
 			compatible = "sc5xx,i2s-dai";
 			status = "disabled";
+			reg = <0x31002400 0x80>, <0x31002480 0x80>;
+			sport-channel = <4>;
+			interrupt-names = "tx_staus", "rx_staus";
+			interrupts = <GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI 100 IRQ_TYPE_LEVEL_HIGH>;
+			dma-channel = <10>, <11>;
+			iram = <&sram1>;
 		};
 
 		watchdog@0x31008000 {

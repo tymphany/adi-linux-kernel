@@ -17,10 +17,14 @@
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
+#include <linux/io.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 #include <sound/soc-dai.h>
+
+#include <sound/sc5xx-sru.h>
+#include <sound/sc5xx-dai.h>
 
 #include "sc5xx-sport.h"
 
@@ -210,15 +214,83 @@ static const struct of_device_id sc5xx_audio_of_match[] = {
 MODULE_DEVICE_TABLE(of, sc5xx_audio_of_match);
 #endif
 
+/*TODO Pinconfig specific to ezkit*/
+#ifdef CONFIG_ARCH_SC59X_64 /*TODO replace with proper DAI/SRU pinctrl driver*/
+#include <linux/soc/adi/sc59x.h>
+
+#ifdef SRU
+#undef SRU
+#endif
+
+/*
+**   Macro: SRU
+**   Gnereal SRU routing setting macro
+**   n: use 0 for DAI0, 1 for DAI1.
+*/
+#define SRU(base, reg, n, out, in)                        \
+	do {                                    \
+		writel( \
+		  sru##n##_field(out, in) | (readl((base) + (reg)) & sru##n##_mask(out, in)) \
+		  ,(base) + (reg) \
+		); \
+	} while (0)
+
+void pads_init(void){
+	void __iomem		*pads_addr;
+	pads_addr = ioremap(REG_PADS0_BASE, 0x78);
+	writel(0xffffffff, pads_addr + (REG_PADS0_DAI0_IE - REG_PADS0_BASE));
+	writel(0xffffffff, pads_addr + (REG_PADS0_DAI1_IE - REG_PADS0_BASE));
+	iounmap(pads_addr);
+};
+
+void sru_init(void){
+	void __iomem		*dai1_addr;
+	dai1_addr = ioremap(0x310CA000, 0x2F0);
+
+	/* set DAI1_PIN05 to input */
+	SRU(dai1_addr, REG_DAI_PBEN0, 1, LOW, DAI1_PBEN05_I);
+	/* route DAI1_PIN05 to SPT4_ACLK */
+	SRU(dai1_addr, REG_DAI_CLK0, 1, DAI1_PB05_O, SPT4_ACLK_I);
+	SRU(dai1_addr, REG_DAI_CLK0, 1, DAI1_PB05_O, SPT4_BCLK_I);
+	/*set DAI1_PIN04 to input */
+	SRU(dai1_addr, REG_DAI_PBEN0, 1, LOW, DAI1_PBEN04_I);
+	/* route DAI1_PIN04 to SPT4_AFS */
+	SRU(dai1_addr, REG_DAI_FS0, 1, DAI1_PB04_O, SPT4_AFS_I);
+	SRU(dai1_addr, REG_DAI_FS0, 1, DAI1_PB04_O, SPT4_BFS_I);
+	/* set DAI1_PIN01 to output */
+	SRU(dai1_addr, REG_DAI_PBEN0, 1, HIGH, DAI1_PBEN01_I);
+	/* route SPT4_AD0 to DAI1_PIN01 */
+	SRU(dai1_addr, REG_DAI_PIN0, 1, SPT4_AD0_O, DAI1_PB01_I);
+
+	/* set DAI1_PIN12 to input */
+	SRU(dai1_addr, REG_DAI_PBEN2, 1, LOW, DAI1_PBEN12_I);
+	/* route DAI1_PIN12 to SPT4_BCLK */
+	SRU(dai1_addr, REG_DAI_CLK0, 1, DAI1_PB12_O, SPT4_BCLK_I);
+	/*set DAI1_PIN20 to input */
+	SRU(dai1_addr, REG_DAI_PBEN3, 1, LOW, DAI1_PBEN20_I);
+	/* route DAI1_PIN20 to SPT4_BFS */
+	SRU(dai1_addr, REG_DAI_FS0, 1, DAI1_PB20_O, SPT4_BFS_I);
+	/* set DAI1_PIN06 to input */
+	SRU(dai1_addr, REG_DAI_PBEN1, 1, LOW, DAI1_PBEN06_I);
+	/* route DAI1_PIN06 to SPT4_BD0 */
+	SRU(dai1_addr, REG_DAI_DAT0, 1, DAI1_PB06_O, SPT4_BD0_I);
+
+	iounmap(dai1_addr);
+}
+#endif
+
 static int sc5xx_dai_probe(struct platform_device *pdev)
 {
 	struct sport_device *sport;
 	struct device *dev = &pdev->dev;
 	int ret;
 
+	pads_init();
+	sru_init();
+
 	sport = sport_create(pdev);
-	if (!sport)
-		return -ENODEV;
+	if (IS_ERR(sport))
+		return PTR_ERR(sport);
 
 	/* register with the ASoC layers */
 	ret = devm_snd_soc_register_component(dev, &sc5xx_dai_component,

@@ -37,7 +37,9 @@ static int adau1977_i2c_remove(struct i2c_client *client)
 
 #ifdef CONFIG_OF
 static const struct of_device_id adau1977_dt_ids[] = {
-	{ .compatible = "adi,adau1977", },
+	{ .compatible = "adi,adau1977", .data=ADAU1977 },
+	{ .compatible = "adi,adau1978", .data=ADAU1978 },
+	{ .compatible = "adi,adau1979", .data=ADAU1979 },
 	{ }
 };
 MODULE_DEVICE_TABLE(of, adau1977_dt_ids);
@@ -46,7 +48,7 @@ MODULE_DEVICE_TABLE(of, adau1977_dt_ids);
 static const struct i2c_device_id adau1977_i2c_ids[] = {
 	{ "adau1977", ADAU1977 },
 	{ "adau1978", ADAU1978 },
-	{ "adau1979", ADAU1978 },
+	{ "adau1979", ADAU1979 },
 	{ }
 };
 MODULE_DEVICE_TABLE(i2c, adau1977_i2c_ids);

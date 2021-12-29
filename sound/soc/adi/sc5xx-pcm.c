@@ -182,8 +182,9 @@ static int sc5xx_pcm_new(struct snd_soc_pcm_runtime *rtd)
 	if (ret)
 		return ret;
 
+	/* Prefers iram pool, if not available it fallbacks to CMA */
 	snd_pcm_lib_preallocate_pages_for_all(rtd->pcm,
-				SNDRV_DMA_TYPE_DEV, card->dev, size, size);
+				SNDRV_DMA_TYPE_DEV_IRAM, card->dev, size, size);
 	return 0;
 }
 
@@ -219,6 +220,8 @@ static struct rpmsg_driver rpmsg_sharc_alsa = {
 };
 #endif
 
+static struct platform_device *sc5xx_pcm_dev;
+
 static int sc5xx_pcm_driver_init(void)
 {
 	int ret;
@@ -228,10 +231,19 @@ static int sc5xx_pcm_driver_init(void)
 		pr_err("sc5xx_pcm_driver: failed to register pcm driver\n");
 		return ret;
 	}
+
+	sc5xx_pcm_dev =	platform_device_register_simple("sc5xx-pcm-audio", -1, NULL, 0);
+	if (IS_ERR(sc5xx_pcm_dev)){
+		pr_err("sc5xx_pcm_driver: failed to register pcm device\n");
+		platform_driver_unregister(&sc5xx_pcm_driver);
+		return PTR_ERR(sc5xx_pcm_dev);
+	}
+
 #if IS_ENABLED(CONFIG_SND_SC5XX_SPORT_SHARC)
 	ret = register_rpmsg_driver(&rpmsg_sharc_alsa);
 	if (ret < 0) {
 		pr_err("sc5xx_pcm_driver: failed to register rpmsg driver\n");
+		platform_device_unregister(sc5xx_pcm_dev);
 		platform_driver_unregister(&sc5xx_pcm_driver);
 		return ret;
 	}
@@ -243,6 +255,7 @@ module_init(sc5xx_pcm_driver_init);
 
 static void sc5xx_pcm_driver_exit(void)
 {
+	platform_device_unregister(sc5xx_pcm_dev);
 	platform_driver_unregister(&sc5xx_pcm_driver);
 #if IS_ENABLED(CONFIG_SND_SC5XX_SPORT_SHARC)
 	unregister_rpmsg_driver(&rpmsg_sharc_alsa);

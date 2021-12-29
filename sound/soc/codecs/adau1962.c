@@ -15,7 +15,6 @@
 
 #include <linux/delay.h>
 #include <linux/device.h>
-#include <linux/gpio.h>
 #include <linux/gpio/consumer.h>
 #include <linux/i2c.h>
 #include <linux/init.h>
@@ -23,7 +22,6 @@
 #include <linux/regmap.h>
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
-#include <linux/of_gpio.h>
 
 #include <sound/core.h>
 #include <sound/initval.h>
@@ -32,8 +30,9 @@
 #include <sound/soc.h>
 #include <sound/tlv.h>
 
-#include <mach/gpio.h>
 #include "adau1962.h"
+
+#define __DEBUG 0
 
 #define ADAU1962_REG_PLL_CLK_CTRL0		0x00
 #define ADAU1962_REG_PLL_CLK_CTRL1		0x01
@@ -99,12 +98,9 @@ struct adau1962 {
 	bool right_j;
 	unsigned int sysclk;
 	enum adau1962_sysclk_src sysclk_src;
-	unsigned int enable_pin;
-	unsigned int enable_pin_active_low;
 
-	#ifndef CONFIG_ARCH_SC59X
-		int reset_gpio;
-	#endif
+	struct gpio_desc *enable_gpio;
+	struct gpio_desc *reset_gpio;
 
 	struct snd_pcm_hw_constraint_list constraints;
 
@@ -784,55 +780,42 @@ int adau1962_probe(struct device *dev, struct regmap *regmap,
 	adau1962->constraints.list = adau1962_rates;
 	adau1962->constraints.count = ARRAY_SIZE(adau1962_rates);
 
-	if (dev->of_node) {
-		if (likely(of_count_phandle_with_args(dev->of_node,
-							"enable-pin", NULL) > 0)) {
-			if (softconfig_of_set_active_pin_output(dev,
-							dev->of_node, "enable-pin", 0,
-							&adau1962->enable_pin,
-							&adau1962->enable_pin_active_low,
-							true))
-				return -EINVAL;
+	adau1962->reset_gpio = devm_gpiod_get(dev, "reset", GPIOD_OUT_HIGH);
+	if (IS_ERR(adau1962->reset_gpio)) {
+		if(PTR_ERR(adau1962->reset_gpio) == -EPROBE_DEFER) {
+			return -EPROBE_DEFER;
 		}
+		dev_info(dev, "invalid or missing reset-gpios: %ld\n", PTR_ERR(adau1962->reset_gpio));
+	}
 
-		#ifndef CONFIG_ARCH_SC59X
-			adau1962->reset_gpio =
-					of_get_named_gpio(dev->of_node, "reset-gpio", 0);
-			if (!gpio_is_valid(adau1962->reset_gpio)) {
-				dev_err(dev, "invalid reset-gpio: %d\n", adau1962->reset_gpio);
-				return -EINVAL;
-			}
-		#endif
+	adau1962->enable_gpio = devm_gpiod_get(dev, "enable", GPIOD_OUT_HIGH);
+	if (IS_ERR(adau1962->enable_gpio)) {
+		if(PTR_ERR(adau1962->enable_gpio) == -EPROBE_DEFER) {
+			return -EPROBE_DEFER;
+		}
+		dev_info(dev, "invalid or missing enable-gpios: %ld\n", PTR_ERR(adau1962->enable_gpio));
 	}
 
 	dev_set_drvdata(dev, adau1962);
 
-	#ifndef CONFIG_ARCH_SC59X
-		if (adau1962->reset_gpio) {
-			ret = devm_gpio_request_one(dev, adau1962->reset_gpio,
-							GPIOF_OUT_INIT_HIGH, "adau1962");
-			/* Return -EBUSY will not be failed to avoid hardware
-			 * pin conflict for sc589-ezkit */
-			if (ret == -EBUSY)
-				dev_warn(dev, "busy to request reset-gpio %d \n",
-							adau1962->reset_gpio);
-			else if (ret) {
-				dev_err(dev, "can't request reset-gpio %d, err: %d\n",
-							adau1962->reset_gpio, ret);
-				return ret;
-			}
-			/* Hardware power-on reset */
-			gpio_set_value(adau1962->reset_gpio, 0);
-			gpio_set_value(adau1962->reset_gpio, 1);
-			/* After asserting the PU/RST pin high, ADAU1962
-			 * requires 300ms to stabilize */
-			msleep(300);
-		}
-	#endif
+	if (!IS_ERR(adau1962->reset_gpio)) {
+		/* Hardware power-on reset */
+		gpiod_set_value_cansleep(adau1962->reset_gpio, 1);
+		msleep(1);
+		gpiod_set_value_cansleep(adau1962->reset_gpio, 0);
+		/* After asserting the PU/RST pin high, ADAU1962
+			* requires 300ms to stabilize */
+		msleep(300);
+	}
 
-	regmap_update_bits(adau1962->regmap, ADAU1962_REG_PLL_CLK_CTRL0,
+	ret = regmap_update_bits(adau1962->regmap, ADAU1962_REG_PLL_CLK_CTRL0,
 				ADAU1962_PLL_CLK_PUP, ADAU1962_PLL_CLK_PUP);
+	if (ret)
+		return ret;
+
+#if __DEBUG
 	adau1962_print(adau1962);
+#endif
 
 	return snd_soc_register_component(dev, &adau1962_component_driver,
 			&adau1962_dai, 1);
@@ -841,11 +824,6 @@ EXPORT_SYMBOL_GPL(adau1962_probe);
 
 void adau1962_remove(struct device *dev)
 {
-	struct adau1962 *adau1962 = dev_get_drvdata(dev);
-
-	if (adau1962->enable_pin && gpio_is_valid(adau1962->enable_pin))
-		gpio_direction_output(adau1962->enable_pin,
-					adau1962->enable_pin_active_low ? 1 : 0);
 }
 EXPORT_SYMBOL_GPL(adau1962_remove);
 
