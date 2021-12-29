@@ -305,6 +305,7 @@ static struct snd_soc_dai_link_component adau1979_codec_component[] = {
 	},
 };
 
+#if IS_ENABLED(CONFIG_SND_SC5XX_ADAU1761)
 static struct snd_soc_dai_link_component adau1961_codec_component[] = {
 	{
 		.name = NULL,
@@ -312,6 +313,7 @@ static struct snd_soc_dai_link_component adau1961_codec_component[] = {
 		.dai_name = "adau-hifi",
 	},
 };
+#endif
 
 static struct snd_soc_dai_link_component sc5xx_platform_component[] = {
 	{
@@ -392,8 +394,8 @@ static struct snd_soc_card sc5xx_asoc_card = {
 
 static int sc5xx_asoc_probe(struct platform_device *pdev)
 {
-	sc5xx_asoc_card.dev = &pdev->dev;
 	int id = 0;
+	sc5xx_asoc_card.dev = &pdev->dev;
 
 	sc5xx_cpu_component->of_node = of_parse_phandle(pdev->dev.of_node, "adi,cpu-dai", 0);
 #if IS_ENABLED(CONFIG_SND_SC5XX_ADAU1962)

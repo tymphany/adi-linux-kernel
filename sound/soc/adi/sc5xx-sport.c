@@ -129,24 +129,23 @@ static void setup_desc(struct sport_device *sport, int fragcount,
 		size_t fragsize, unsigned int cfg, int tx)
 {
 	struct dmasg *desc;
-	unsigned long desc_phy;
-	void *buf;
+	u32 desc_phy;
+	u32 buf;
 	int i;
 
 	if (tx) {
 		desc = sport->tx_desc;
-		desc_phy = (unsigned long)sport->tx_desc_phy;
-		buf = (void *)sport->tx_buf;
+		desc_phy = lower_32_bits(sport->tx_desc_phy);
+		buf = lower_32_bits(sport->tx_buf);
 	} else {
 		desc = sport->rx_desc;
-		desc_phy = (unsigned long)sport->rx_desc_phy;
-		buf = (void *)sport->rx_buf;
+		desc_phy = lower_32_bits(sport->rx_desc_phy);
+		buf = lower_32_bits(sport->rx_buf);
 	}
 
 	for (i = 0; i < fragcount; ++i) {
-		desc[i].next_desc_addr  = (void *)(desc_phy
-				+ (i + 1) * sizeof(struct dmasg));
-		desc[i].start_addr = (unsigned long)buf + i * fragsize;
+		desc[i].next_desc_addr  = (desc_phy	+ (i + 1) * sizeof(struct dmasg));
+		desc[i].start_addr = buf + i * fragsize;
 		desc[i].cfg = cfg;
 		desc[i].x_count = fragsize / sport->wdsize;
 		desc[i].x_modify = sport->wdsize;
@@ -155,7 +154,7 @@ static void setup_desc(struct sport_device *sport, int fragcount,
 	}
 
 	/* make circular */
-	desc[fragcount-1].next_desc_addr = (void *)desc_phy;
+	desc[fragcount-1].next_desc_addr = desc_phy;
 }
 
 int sport_config_tx_dma(struct sport_device *sport, void *buf,

@@ -139,13 +139,13 @@ struct dma_desc_array {
 } __packed;
 
 struct dmasg {
-	void *next_desc_addr;
-	unsigned long start_addr;
-	unsigned long cfg;
-	unsigned long x_count;
-	long x_modify;
-	unsigned long y_count;
-	long y_modify;
+	u32 next_desc_addr;
+	u32 start_addr;
+	u32 cfg;
+	u32 x_count;
+	s32 x_modify;
+	u32 y_count;
+	s32 y_modify;
 } __packed;
 
 #define ADI_DMA_NEXT_DESC		0x00

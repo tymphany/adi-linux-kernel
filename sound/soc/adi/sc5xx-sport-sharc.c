@@ -93,28 +93,28 @@ struct sharc_audio_buf_format {
 	u32 channels;
 	u32 pcm_format;
 	u32 pcm_rate;
-};
+}__packed;
 
 struct sharc_audio_buf {
-	void *buf;
+	u32 buf;
 	u32 offset;
 	u32 buf_size;
 	u32 frag_size;
 	u32 fragcount;
 	u32 frames_per_frag;
 	struct sharc_audio_buf_format format;
-};
+}__packed;
 
 union sharc_msg_payload{
 		uint8_t bytes[32];
 		uint32_t ui;
 		struct sharc_audio_buf audio_buf[2];
-};
+}__packed;
 
 struct sharc_msg {
 	u32 id;
 	union sharc_msg_payload payload;
-};
+}__packed;
 
 int sport_tx_stop(struct sport_device *sport);
 int send_sharc_msg(struct sport_device *sport, int core, enum sharc_msg_id id, union sharc_msg_payload *payload);
@@ -383,24 +383,23 @@ static void setup_desc(struct sport_device *sport, int fragcount,
 		size_t fragsize, unsigned int cfg, int tx)
 {
 	struct dmasg *desc;
-	unsigned long desc_phy;
-	dma_addr_t buf;
+	u32 desc_phy;
+	u32 buf;
 	int i;
 
 	if (tx) {
 		desc = sport->tx_desc;
-		desc_phy = (unsigned long)sport->tx_desc_phy;
-		buf = sport->tx_buf;
+		desc_phy = lower_32_bits(sport->tx_desc_phy);
+		buf = lower_32_bits(sport->tx_buf);
 	} else {
 		desc = sport->rx_desc;
-		desc_phy = (unsigned long)sport->rx_desc_phy;
-		buf = sport->rx_buf;
+		desc_phy = lower_32_bits(sport->rx_desc_phy);
+		buf = lower_32_bits(sport->rx_buf);
 	}
 
 	for (i = 0; i < fragcount; ++i) {
-		desc[i].next_desc_addr  = (void *)(desc_phy
-				+ (i + 1) * sizeof(struct dmasg));
-		desc[i].start_addr = (unsigned long)buf + i * fragsize;
+		desc[i].next_desc_addr  = (desc_phy + (i + 1) * sizeof(struct dmasg));
+		desc[i].start_addr = buf + i * fragsize;
 		desc[i].cfg = cfg;
 		desc[i].x_count = fragsize / sport->wdsize;
 		desc[i].x_modify = sport->wdsize;
@@ -409,7 +408,7 @@ static void setup_desc(struct sport_device *sport, int fragcount,
 	}
 
 	/* make circular */
-	desc[fragcount-1].next_desc_addr = (void *)desc_phy;
+	desc[fragcount-1].next_desc_addr = desc_phy;
 }
 
 int sport_config_tx_dma(struct sport_device *sport, void *buf,
@@ -448,7 +447,7 @@ int sport_config_tx_dma(struct sport_device *sport, void *buf,
 	sport->tx_substream = substream;
 
 	// Set ALSA buffer size and pointer
-	payload.audio_buf[0].buf = buf;
+	payload.audio_buf[0].buf = lower_32_bits((dma_addr_t)buf);
 	payload.audio_buf[0].offset = 0;
 	payload.audio_buf[0].buf_size = fragsize * fragcount;
 	payload.audio_buf[0].frag_size = fragsize;
@@ -461,7 +460,7 @@ int sport_config_tx_dma(struct sport_device *sport, void *buf,
 	payload.audio_buf[0].format.pcm_rate = params_rate(&sport->tx_hw_params);
 
 	// Set DMA buffer size and pointer
-	payload.audio_buf[1].buf = (void*)sport->sharc_tx_dma_buf.addr;
+	payload.audio_buf[1].buf = lower_32_bits(sport->sharc_tx_dma_buf.addr);
 	payload.audio_buf[1].offset = 0;
 	payload.audio_buf[1].buf_size = fragsize * fragcount;
 	payload.audio_buf[1].frag_size = fragsize;
@@ -471,8 +470,8 @@ int sport_config_tx_dma(struct sport_device *sport, void *buf,
 	payload.audio_buf[1].format = payload.audio_buf[0].format;
 
 #if _DEBUG
-	dev_info(&sport->pdev->dev, "ALSA  playback buf PA:0x%08x size:%d fragsize:%d fragcount:%d\n", (u32)payload.audio_buf[0].buf, payload.audio_buf[0].buf_size, payload.audio_buf[0].frag_size, payload.audio_buf[0].fragcount);
-	dev_info(&sport->pdev->dev, "SHARC playback buf PA:0x%08x size:%d fragsize:%d fragcount:%d\n", (u32)payload.audio_buf[1].buf, payload.audio_buf[1].buf_size, payload.audio_buf[1].frag_size, payload.audio_buf[1].fragcount);
+	dev_info(&sport->pdev->dev, "ALSA  playback buf PA:0x%08x size:%d fragsize:%d fragcount:%d\n", lower_32_bits(payload.audio_buf[0].buf), payload.audio_buf[0].buf_size, payload.audio_buf[0].frag_size, payload.audio_buf[0].fragcount);
+	dev_info(&sport->pdev->dev, "SHARC playback buf PA:0x%08x size:%d fragsize:%d fragcount:%d\n", lower_32_bits(payload.audio_buf[1].buf), payload.audio_buf[1].buf_size, payload.audio_buf[1].frag_size, payload.audio_buf[1].fragcount);
 #endif
 
 	return send_sharc_msg(sport, 0, SHARC_MSG_PLAYBACK_INIT, &payload); //TODO select core
@@ -515,7 +514,7 @@ int sport_config_rx_dma(struct sport_device *sport, void *buf,
 	sport->rx_substream = substream;
 
 	// Set ALSA buffer size and pointer
-	payload.audio_buf[1].buf = buf;
+	payload.audio_buf[1].buf = lower_32_bits((dma_addr_t)buf);
 	payload.audio_buf[1].offset = 0;
 	payload.audio_buf[1].buf_size = fragsize * fragcount;
 	payload.audio_buf[1].frag_size = fragsize;
@@ -528,7 +527,7 @@ int sport_config_rx_dma(struct sport_device *sport, void *buf,
 	payload.audio_buf[1].format.pcm_rate = params_rate(&sport->rx_hw_params);
 
 	// Set DMA buffer size and pointer
-	payload.audio_buf[0].buf = (void*)sport->sharc_rx_dma_buf.addr;
+	payload.audio_buf[0].buf = lower_32_bits(sport->sharc_rx_dma_buf.addr);
 	payload.audio_buf[0].offset = 0;
 	payload.audio_buf[0].buf_size = fragsize * fragcount;
 	payload.audio_buf[0].frag_size = fragsize;
@@ -538,8 +537,8 @@ int sport_config_rx_dma(struct sport_device *sport, void *buf,
 	payload.audio_buf[0].format = payload.audio_buf[1].format;
 
 #if _DEBUG
-	dev_info(&sport->pdev->dev, "ALSA  record buf PA:0x%08x size:%d fragsize:%d fragcount:%d\n", (u32)payload.audio_buf[1].buf, payload.audio_buf[1].buf_size, payload.audio_buf[1].frag_size, payload.audio_buf[1].fragcount);
-	dev_info(&sport->pdev->dev, "SHARC record buf PA:0x%08x size:%d fragsize:%d fragcount:%d\n", (u32)payload.audio_buf[0].buf, payload.audio_buf[0].buf_size, payload.audio_buf[0].frag_size, payload.audio_buf[0].fragcount);
+	dev_info(&sport->pdev->dev, "ALSA  record buf PA:0x%08x size:%d fragsize:%d fragcount:%d\n", lower_32_bits(payload.audio_buf[1].buf), payload.audio_buf[1].buf_size, payload.audio_buf[1].frag_size, payload.audio_buf[1].fragcount);
+	dev_info(&sport->pdev->dev, "SHARC record buf PA:0x%08x size:%d fragsize:%d fragcount:%d\n", lower_32_bits(payload.audio_buf[0].buf), payload.audio_buf[0].buf_size, payload.audio_buf[0].frag_size, payload.audio_buf[0].fragcount);
 #endif
 
 	return send_sharc_msg(sport, 0, SHARC_MSG_RECORD_INIT, &payload); //TODO select core
@@ -763,9 +762,6 @@ struct sport_device *sport_create(struct platform_device *pdev)
 	struct sport_device *sport;
 	int ret;
 	int i;
-
-	pads_init();
-	sru_init();
 
 	sport = kzalloc(sizeof(*sport), GFP_KERNEL);
 	if (!sport) {
