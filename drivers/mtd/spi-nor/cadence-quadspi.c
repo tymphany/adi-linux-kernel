@@ -31,9 +31,6 @@
 
 #if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC59X_64)
 	#include "adi-sc594-quadspi.h"
-	#include <linux/dma-mapping.h>
-	#include <linux/dma-direct.h>
-	#include <linux/soc/adi/dma.h>
 #endif
 
 #define CQSPI_NAME			"cadence-qspi"

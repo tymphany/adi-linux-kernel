@@ -69,23 +69,6 @@
 #define DMA_ERR			0x2	/* DMA Error Interrupt Status */
 #define DMA_PIRQ		0x4	/* DMA Peripheral Error Interrupt Status */
 
-struct dma_desc_array {
-	unsigned long start_addr;
-	unsigned long cfg;
-	unsigned long x_count;
-	long x_modify;
-} __packed;
-
-struct dmasg {
-	u32 next_desc_addr;
-	u32 start_addr;
-	u32 cfg;
-	u32 x_count;
-	s32 x_modify;
-	u32 y_count;
-	s32 y_modify;
-} __packed;
-
 #define ADI_DMA_NEXT_DESC		0x00
 #define ADI_DMA_ADDRSTART		0x04
 #define ADI_DMA_CFG				0x08
@@ -142,80 +125,6 @@ static inline void set_dma_config(void __iomem *ioaddr, unsigned long config)
 static inline void set_dma_curr_addr(void __iomem *ioaddr, dma_addr_t addr)
 {
 	writel(lower_32_bits(addr), ioaddr + ADI_DMA_ADDR_CUR);
-}
-
-/* set_dma_config parameter valid values */
-/* direction */
-#define DIR_READ		0
-#define DIR_WRITE		1
-
-/* flow_mode */
-#define DMA_FLOW_STOP		0
-#define DMA_FLOW_AUTO		1
-#define DMA_FLOW_LIST		4
-#define DMA_FLOW_ARRAY		5
-#define DMA_FLOW_LIST_DEMAND	6
-#define DMA_FLOW_ARRAY_DEMAND	7
-
-/* intr_mode */
-#define INTR_DISABLE		0
-#define INTR_ON_PERI		1
-#define INTR_ON_BUF		2
-#define INTR_ON_ROW		3
-
-/* char dma_mode */
-#define DIMENSION_LINEAR	0
-#define DIMENSION_2D		1
-
-/* mem_width */
-#define DATA_SIZE_8		0
-#define DATA_SIZE_16		1
-#define DATA_SIZE_32		2
-#define DATA_SIZE_64		3
-#define DATA_SIZE_128		4
-#define DATA_SIZE_256		5
-
-/* syncmode */
-#define DMA_NOSYNC_KEEP_DMA_BUF	0
-#define DMA_SYNC_RESTART	1
-
-/* peri_width */
-#define PDATA_SIZE_8		0
-#define PDATA_SIZE_16		1
-#define PDATA_SIZE_32		2
-#define PDATA_SIZE_64		3
-
-static inline unsigned long
-gen_dma_config2(char direction, char flow_mode, char intr_mode,
-		     char dma_mode, char mem_width, char syncmode, char peri_width)
-{
-	unsigned long config = 0;
-
-	switch (intr_mode) {
-	case INTR_ON_BUF:
-		if (dma_mode == DIMENSION_2D)
-			config = DI_EN_Y;
-		else
-			config = DI_EN_X;
-		break;
-	case INTR_ON_ROW:
-		config = DI_EN_X;
-		break;
-	case INTR_ON_PERI:
-		config = DI_EN_P;
-		break;
-	};
-
-	return config | (direction << 1) | (mem_width << 8) | (dma_mode << 26) |
-		(flow_mode << 12) | (syncmode << 2) | (peri_width << 4);
-}
-
-static inline unsigned long
-gen_dma_config(char direction, char flow_mode,
-		    char intr_mode, char dma_mode, char mem_width, char syncmode)
-{
-	return gen_dma_config2(direction, flow_mode, intr_mode, dma_mode,
-		mem_width, syncmode, mem_width);
 }
 
 static inline unsigned long get_dma_curr_irqstat(void __iomem *ioaddr)

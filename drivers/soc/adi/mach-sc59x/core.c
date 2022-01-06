@@ -8,7 +8,6 @@
 
 #include <linux/init.h>
 #include <linux/device.h>
-#include <linux/dma-mapping.h>
 #include <linux/delay.h>
 #include <linux/interrupt.h>
 #include <linux/irqdomain.h>
@@ -30,7 +29,6 @@
 #include <linux/soc/adi/hardware.h>
 #include <linux/soc/adi/sc59x.h>
 #include <linux/soc/adi/cpu.h>
-#include <linux/soc/adi/dma.h>
 #include <linux/soc/adi/clkdev.h>
 #include <linux/soc/adi/sec.h>
 

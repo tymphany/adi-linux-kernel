@@ -19,8 +19,8 @@
 #include <linux/spinlock.h>
 #include <linux/types.h>
 
-#include <linux/soc/adi/dma.h>
 #include "dmaengine.h"
+#include "adi-dma.h"
 
 #define ADI_MEMSET_SIZE 4*sizeof(uint64_t)
 
