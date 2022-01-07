@@ -1164,16 +1164,15 @@ static int adi_uart4_serial_probe(struct platform_device *pdev)
 		struct pinctrl *pctrl;
 		struct pinctrl_state *pstate;
 
-		pctrl = NULL;//devm_pinctrl_get(&pdev->dev);
-		if (pctrl) {
-			pstate = pinctrl_lookup_state(pctrl, PINCTRL_STATE_DEFAULT);
-			if (IS_ERR(pstate))
-				return ret;
+		pctrl = devm_pinctrl_get(&pdev->dev);
+		pstate = pinctrl_lookup_state(pctrl, PINCTRL_STATE_DEFAULT);
+		if (IS_ERR(pstate))
+			return ret;
 
-			ret = pinctrl_select_state(pctrl, pstate);
-			if (ret)
-				return ret;
-		}
+		ret = pinctrl_select_state(pctrl, pstate);
+		if (ret)
+			return ret;
+
 		uart = kzalloc(sizeof(*uart), GFP_KERNEL);
 		if (!uart) {
 			dev_err(&pdev->dev,
@@ -1224,7 +1223,7 @@ static int adi_uart4_serial_probe(struct platform_device *pdev)
 		else
 			uart->hwflow_mode = ADI_UART_NO_HWFLOW;
 
-		if (pctrl && uart->hwflow_mode == ADI_UART_HWFLOW_PERI) {
+		if (uart->hwflow_mode == ADI_UART_HWFLOW_PERI) {
 			pstate = pinctrl_lookup_state(pctrl, "hwflow");
 			ret = pinctrl_select_state(pctrl, pstate);
 			if (ret)
