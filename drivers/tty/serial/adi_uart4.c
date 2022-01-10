@@ -1218,7 +1218,9 @@ static int adi_uart4_serial_probe(struct platform_device *pdev)
 		uart->tx_count	    = 0;
 
 		if (of_get_property(pdev->dev.of_node,
-				"adi,uart-has-rtscts", NULL))
+				"uart-has-rtscts", NULL) ||
+			of_get_property(pdev->dev.of_node,
+				"adi,uart-has-rtscts", NULL) /* deprecated */)
 			uart->hwflow_mode = ADI_UART_HWFLOW_PERI;
 		else
 			uart->hwflow_mode = ADI_UART_NO_HWFLOW;
