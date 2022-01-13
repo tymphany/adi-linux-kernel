@@ -151,6 +151,15 @@
 			status = "disabled";
 		};
 
+		hadc: hadc@0x31016000 {
+			compatible = "adi,hadc";
+			reg = <0x31016000 0x100>;
+			interrupt-parent = <&gic>;
+			interrupts = <GIC_SPI 186 IRQ_TYPE_EDGE_RISING>;
+			#iio-cells = <1>;
+			status = "okay";
+		};
+
 		rtc0: rtc@0x310C8000 {
 			compatible = "adi,rtc2";
 			reg = <0x310C8000 0x100>;
