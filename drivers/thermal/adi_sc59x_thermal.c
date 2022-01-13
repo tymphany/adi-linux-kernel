@@ -202,7 +202,7 @@ static int sc59x_thermal_probe(struct platform_device *pdev) {
 	struct device *dev = &pdev->dev;
 	int irq;
 	int ret;
-	u32 gain, offset, fault, alert;
+	u32 gain, offset, fault, alert, blanking;
 
 	data = devm_kzalloc(dev, sizeof(*data), GFP_KERNEL);
 	if (!data) {
@@ -285,8 +285,13 @@ static int sc59x_thermal_probe(struct platform_device *pdev) {
 	/* Unmask interrupts */
 	writel(SC59X_TMU_IMSK_FLTHI | SC59X_TMU_IMSK_ALRTHI, data->ioaddr + SC59X_TMU_IMSK);
 
-	/* Enable TMU in continuous operation */
-	writel(SC59X_TMU_CTL_TMEN_FORCE | SC59X_TMU_CTL_TMPU, data->ioaddr + SC59X_TMU_CTL);
+	/* Enable TMU in periodic operation */
+	writel(SC59X_TMU_CTL_TMEN | SC59X_TMU_CTL_TMPU, data->ioaddr + SC59X_TMU_CTL);
+
+	/* Read blanking interval from device tree or use minimum as default */
+	blanking = 0;
+	of_property_read_u32(dev->of_node, "adi,blanking-period", &blanking);
+	writel(blanking, data->ioaddr + SC59X_TMU_CNV_BLANK);
 
 	data->mode = THERMAL_DEVICE_ENABLED;
 	dev_info(dev, "Fault limit: %d C, Alert limit: %d C\n", fault, alert);
