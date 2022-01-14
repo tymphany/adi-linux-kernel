@@ -58,6 +58,13 @@
 			adi,tru-master-id = <136>; /* trigger master SOFT5 */
 			status = "okay";
 		};
+
+		sound {
+			compatible = "sc5xx,asoc-card";
+			adi,cpu-dai = <&i2s4>;
+			adi,codec = <&adau1962>, <&adau1979>;
+		};
+
 	};
 
 };
@@ -405,7 +412,7 @@
 		audio-jack {
 			gpio-hog;
 			gpios = <11 0x0>;
-			output-low;
+			output-high;
 			line-name = "audio-jack-sel";
 		};
 
