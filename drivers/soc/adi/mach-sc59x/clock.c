@@ -17,7 +17,6 @@
 #include <linux/mutex.h>
 #include <linux/soc/adi/clkdev.h>
 #include <linux/soc/adi/cpu.h>
-#include <linux/soc/adi/hardware.h>
 #include <linux/soc/adi/sc59x.h>
 
 #define NEEDS_INITIALIZATION     BIT(2)

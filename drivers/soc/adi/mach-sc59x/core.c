@@ -26,7 +26,6 @@
 
 #include <asm/irq.h>
 
-#include <linux/soc/adi/hardware.h>
 #include <linux/soc/adi/sc59x.h>
 #include <linux/soc/adi/cpu.h>
 #include <linux/soc/adi/clkdev.h>

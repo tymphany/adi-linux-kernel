@@ -26,7 +26,6 @@
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
 
-#include <linux/soc/adi/hardware.h>
 #include <linux/soc/adi/sec.h>
 #include <linux/soc/adi/icc.h>
 #include <linux/soc/adi/rcu.h>

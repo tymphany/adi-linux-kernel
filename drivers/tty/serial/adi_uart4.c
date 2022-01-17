@@ -28,7 +28,6 @@
 #include <asm/io.h>
 #include <linux/compiler.h>
 
-#include <linux/soc/adi/hardware.h>
 #include <linux/soc/adi/portmux.h>
 #include <linux/soc/adi/gpio.h>
 
