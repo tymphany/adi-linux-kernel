@@ -15,11 +15,12 @@
 
 	chosen {
 		stdout-path = &uart1;
+		bootargs = "root=/dev/mtdblock4 rw rootfstype=jffs2 clkin_hz=25000000 earlycon=adi_uart,0x31003000 console=ttySC0,57600 mem=496M";
 	};
 
-	memory@C3000000 {
+	memory@82000000 {
 		device_type = "memory";
-		reg = <0xC3000000 0xF000000>;
+		reg = <0x82000000 0x1E000000>;
 	};
 
 	scb {
