@@ -237,22 +237,11 @@ static const struct iio_info adi_hadc_iio_info = {
 static irqreturn_t adi_hadc_handler(int irq, void *id) {
 	struct iio_dev *idev = id;
 	struct adi_hadc *hadc = iio_priv(idev);
-
-	// Clear sequence complete status only, channel status is used for
-	hadc_writel(hadc, STAT_SEQ, ADI_HADC_STAT);
-
-	return IRQ_WAKE_THREAD;
-}
-
-static irqreturn_t adi_hadc_thread_handler(int irq, void *id) {
-	struct iio_dev *idev = id;
-	struct adi_hadc *hadc = iio_priv(idev);
-	unsigned long flags;
 	int bit;
 	size_t i;
 	u32 stat;
 
-	spin_lock_irqsave(&hadc->lock, flags);
+	spin_lock(&hadc->lock);
 
 	i = 0;
 	for_each_set_bit(bit, idev->active_scan_mask, idev->masklength) {
@@ -261,17 +250,9 @@ static irqreturn_t adi_hadc_thread_handler(int irq, void *id) {
 		}
 	}
 
-	// Check if any additional conversions have been finished since the last ones
-	// we were supposed to read
-	stat = hadc_readl(hadc, ADI_HADC_STAT);
-	if (stat & STAT_SEQ) {
-		dev_err(hadc->dev,
-			"HADC readout not finished before next conversion finished, some data was skipped");
-	}
-
 	iio_push_to_buffers(idev, hadc->data);
 
-	spin_unlock_irqrestore(&hadc->lock, flags);
+	spin_unlock(&hadc->lock);
 	return IRQ_HANDLED;
 }
 
@@ -312,7 +293,7 @@ static int adi_hadc_probe(struct platform_device *pdev) {
 	}
 
 	ret = devm_request_threaded_irq(dev, irq, adi_hadc_handler,
-		adi_hadc_thread_handler, 0, "adi-hadc", indio_dev);
+		NULL, 0, "adi-hadc", indio_dev);
 	if (ret) {
 		dev_err(dev, "Could not create IRQ handler\n");
 		return ret;
