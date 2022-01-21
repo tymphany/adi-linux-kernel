@@ -37,7 +37,7 @@
 /* Register bit definitions */
 #define SC59X_TMU_CTL_TMEN_FORCE	BIT(13)
 #define SC59X_TMU_CTL_SCLKDIV		GENMASK(11, 4)
-#define SC59X_TMU_CTL_TMEN			BIT(1)
+#define SC59X_TMU_CTL_TMEN			BIT(3)
 #define SC59X_TMU_CTL_TMPU			BIT(0)
 
 #define SC59X_TMU_AVG_ENABLE		BIT(0)
