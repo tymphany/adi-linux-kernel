@@ -17,7 +17,7 @@
 #ifndef _ICAP_CONFIG_H_
 #define _ICAP_CONFIG_H_
 
-#define ICAP_MSG_TIMEOUT_US (600*1000)
+#define ICAP_MSG_TIMEOUT_US (2000*1000)
 
 /* Choose one of the transport layers */
 #define ICAP_LINUX_KERNEL_RPMSG /* For use in linux kernel */

@@ -88,7 +88,6 @@ static int sport_playback_frag_ready_cb(struct icap_instance *icap, struct icap_
 		sport->sharc_tx_buf_pos = sport->sharc_tx_buf_pos - sport->sharc_tx_dma_buf.bytes;
 	}
 	mutex_unlock(&sport->sharc_tx_buf_pos_lock);
-
 	sport->tx_callback(sport->tx_data);
 	return 0;
 }
@@ -116,7 +115,6 @@ struct icap_application_callbacks sport_icap_callbacks = {
 int sport_set_tx_params(struct sport_device *sport,
 			struct sport_params *params)
 {
-	struct icap_device_features features;
 	int ret;
 
 	if (ioread32(&sport->tx_regs->spctl) & SPORT_CTL_SPENPRI){
@@ -128,7 +126,7 @@ int sport_set_tx_params(struct sport_device *sport,
 		}
 	}
 
-	ret = icap_get_device_features(&sport->icap[0], &features);
+	ret = icap_get_device_features(&sport->icap[0], &sport->icap_sport_features);
 	if (ret) {
 		return ret;
 	}
@@ -154,12 +152,22 @@ int sport_set_rx_params(struct sport_device *sport,
 }
 EXPORT_SYMBOL(sport_set_rx_params);
 
+void sport_tx_start_work_func(struct work_struct *work)
+{
+	struct sport_device *sport = container_of(work, struct sport_device, send_tx_start_work);
+	int ret;
+	ret = icap_playback_start(&sport->icap[0]); //TODO select core;
+	if (ret) {
+		dev_err(&sport->pdev->dev, "tx_start error: %d", ret);
+	}
+}
+
 int sport_tx_start(struct sport_device *sport)
 {
 	int32_t ret;
-	ret = icap_playback_start(&sport->icap[0]); //TODO select core
-	if (ret) {
-		return ret;
+	ret = queue_work(system_highpri_wq, &sport->send_tx_start_work);
+	if (ret == 0) {
+		return -EIO;
 	}
 
 	//enable DMA, after SHARC ACKs START
@@ -172,8 +180,19 @@ int sport_tx_start(struct sport_device *sport)
 }
 EXPORT_SYMBOL(sport_tx_start);
 
+void sport_rx_start_work_func(struct work_struct *work)
+{
+	struct sport_device *sport = container_of(work, struct sport_device, send_rx_start_work);
+	int ret;
+	ret = icap_record_start(&sport->icap[0]); //TODO select core;
+	if (ret) {
+		dev_err(&sport->pdev->dev, "rx_start error: %d", ret);
+	}
+}
+
 int sport_rx_start(struct sport_device *sport)
 {
+	int ret;
 	set_dma_next_desc_addr(sport->rx_dma_chan,
 			sport->rx_desc_phy);
 	set_dma_config(sport->rx_dma_chan, DMAFLOW_LIST | DI_EN | WNR
@@ -182,31 +201,71 @@ int sport_rx_start(struct sport_device *sport)
 	iowrite32(ioread32(&sport->rx_regs->spctl) | SPORT_CTL_SPENPRI,
 			&sport->rx_regs->spctl);
 	
-	return icap_record_start(&sport->icap[0]); //TODO select core;
+	ret = queue_work(system_highpri_wq, &sport->send_rx_start_work);
+	return !ret;
 }
 EXPORT_SYMBOL(sport_rx_start);
 
+void sport_tx_stop_work_func(struct work_struct *work)
+{
+	struct sport_device *sport = container_of(work, struct sport_device, send_tx_stop_work);
+	int ret;
+	ret = icap_playback_stop(&sport->icap[0]); //TODO select core;
+	if (ret) {
+		dev_err(&sport->pdev->dev, "tx_stop error: %d", ret);
+	}
+	sport->pending_tx_stop = 0;
+	wake_up_interruptible_all(&sport->pending_tx_stop_event);
+}
+
 int sport_tx_stop(struct sport_device *sport)
 {
+	int ret;
 	iowrite32(ioread32(&sport->tx_regs->spctl) & ~SPORT_CTL_SPENPRI,
 			&sport->tx_regs->spctl);
 	disable_dma(sport->tx_dma_chan);
 
-	icap_playback_stop(&sport->icap[0]); //TODO select core;
-	icap_remove_playback_dst(&sport->icap[0], sport->tx_dma_icap_buf_id);
-	return icap_remove_playback_src(&sport->icap[0], sport->tx_alsa_icap_buf_id);
+	/*
+	 * Can't send icap message and wait for response here as we can be in interrupt context.
+	 * FRAG_READY callbacks are processed in the rpmsg interrupt context.
+	 * The FRAG_READY cb calls snd_pcm_period_elapsed() which can call stop trigger on xrun event.
+	 * Waiting here blocks entire rpmsg communication on the rpdev.
+	 */
+	sport->pending_tx_stop = 1;
+	ret = queue_work(system_highpri_wq, &sport->send_tx_stop_work);
+	return !ret;
 }
 EXPORT_SYMBOL(sport_tx_stop);
 
+
+void sport_rx_stop_work_func(struct work_struct *work)
+{
+	struct sport_device *sport = container_of(work, struct sport_device, send_rx_stop_work);
+	int ret;
+	ret = icap_record_stop(&sport->icap[0]); //TODO select core;
+	if (ret) {
+		dev_err(&sport->pdev->dev, "rx_stop error: %d", ret);
+	}
+	sport->pending_rx_stop = 0;
+	wake_up_interruptible_all(&sport->pending_rx_stop_event);
+}
+
 int sport_rx_stop(struct sport_device *sport)
 {
+	int ret;
 	iowrite32(ioread32(&sport->rx_regs->spctl) & ~SPORT_CTL_SPENPRI,
 			&sport->rx_regs->spctl);
 	disable_dma(sport->rx_dma_chan);
 
-	icap_record_stop(&sport->icap[0]); //TODO select core;
-	icap_remove_record_dst(&sport->icap[0], sport->rx_alsa_icap_buf_id);
-	return icap_remove_record_src(&sport->icap[0], sport->rx_dma_icap_buf_id);
+	/*
+	 * Can't send icap message and wait for response here as we can be in interrupt context.
+	 * FRAG_READY callbacks are processed in the rpmsg interrupt context.
+	 * The FRAG_READY cb calls snd_pcm_period_elapsed() which can call stop trigger on xrun event.
+	 * Waiting here blocks entire rpmsg communication on the rpdev.
+	 */
+	sport->pending_rx_stop = 1;
+	ret = queue_work(system_highpri_wq, &sport->send_rx_stop_work);
+	return !ret;
 }
 EXPORT_SYMBOL(sport_rx_stop);
 
@@ -265,6 +324,11 @@ int sport_config_tx_dma(struct sport_device *sport, void *buf,
 	struct icap_buf_descriptor audio_buf;
 	int ret;
 
+	ret = wait_event_interruptible(sport->pending_tx_stop_event, !sport->pending_tx_stop);
+	if (ret) {
+		return ret;
+	}
+
 	if (sport->tx_desc)
 		dma_free_coherent(&sport->pdev->dev, sport->tx_desc_size,
 				sport->tx_desc, sport->tx_desc_phy);
@@ -293,8 +357,30 @@ int sport_config_tx_dma(struct sport_device *sport, void *buf,
 
 	sport->tx_substream = substream;
 
-	/* Potiential error here ignored as the device could be already initialized by record */
+	/*
+	 * Potiential error here ignored as the device could be already initialized by record
+	 * return -ERESTARTSYS and -ETIMEDOUT only
+	 */
 	ret = icap_request_device_init(&sport->icap[0], sport->sport_channel);
+	if (ret == -ERESTARTSYS || ret == -ETIMEDOUT ){
+		return ret;
+	}
+
+	if (sport->tx_dma_icap_buf_id != -1) {
+		ret = icap_remove_playback_dst(&sport->icap[0], sport->tx_dma_icap_buf_id);
+		if (ret) {
+			dev_err(&sport->pdev->dev, "tx_stop dst remove error: %d", ret);
+		}
+		sport->tx_dma_icap_buf_id = -1;
+	}
+
+	if (sport->tx_alsa_icap_buf_id != -1) {
+		ret = icap_remove_playback_src(&sport->icap[0], sport->tx_alsa_icap_buf_id);
+		if (ret) {
+			dev_err(&sport->pdev->dev, "tx_stop src remove error: %d", ret);
+		}
+		sport->tx_alsa_icap_buf_id = -1;
+	}
 
 	// Set ALSA buffer size and pointer
 	snprintf(audio_buf.name, ICAP_BUF_NAME_LEN, "%s-alsa-playback", sport->pdev->name);
@@ -354,6 +440,11 @@ int sport_config_rx_dma(struct sport_device *sport, void *buf,
 	struct icap_buf_descriptor audio_buf;
 	int ret;
 
+	ret = wait_event_interruptible(sport->pending_rx_stop_event, !sport->pending_rx_stop);
+	if (ret) {
+		return ret;
+	}
+
 	if (sport->rx_desc)
 		dma_free_coherent(&sport->pdev->dev, sport->rx_desc_size,
 				sport->rx_desc, sport->rx_desc_phy);
@@ -382,8 +473,30 @@ int sport_config_rx_dma(struct sport_device *sport, void *buf,
 
 	sport->rx_substream = substream;
 
-	/* Potiential error here ignored as the device could be already initialized by playback */
+	/*
+	 * Potiential error here ignored as the device could be already initialized by playback
+	 * return -ERESTARTSYS and -ETIMEDOUT only
+	 */
 	ret = icap_request_device_init(&sport->icap[0], sport->sport_channel);
+	if (ret == -ERESTARTSYS || ret == -ETIMEDOUT ){
+		return ret;
+	}
+
+	if (sport->rx_alsa_icap_buf_id != -1) {
+		ret = icap_remove_record_dst(&sport->icap[0], sport->rx_alsa_icap_buf_id);
+		if (ret) {
+			dev_err(&sport->pdev->dev, "tx_stop dst remove error: %d", ret);
+		}
+		sport->rx_alsa_icap_buf_id = -1;
+	}
+
+	if (sport->rx_dma_icap_buf_id != -1) {
+		ret = icap_remove_record_src(&sport->icap[0], sport->rx_dma_icap_buf_id);
+		if (ret) {
+			dev_err(&sport->pdev->dev, "tx_stop src remove error: %d", ret);
+		}
+		sport->rx_dma_icap_buf_id = -1;
+	}
 
 	// Set ALSA buffer size and pointer
 	snprintf(audio_buf.name, ICAP_BUF_NAME_LEN, "%s-alsa-record", sport->pdev->name);
@@ -565,10 +678,11 @@ static void sport_free_resource(struct sport_device *sport)
 	free_dma(sport->tx_dma_chan);
 }
 
-int rpmsg_sharc_alsa_cb(struct rpmsg_device *rpdev, void *data, int len, void *priv, u32 src)
+int rpmsg_icap_sport_cb(struct rpmsg_device *rpdev, void *data, int len, void *priv, u32 src)
 {
 	struct sport_device *sport;
 	union icap_remote_addr src_addr;
+	int ret;
 
 	sport = sport_devices[0]; // TODO add support for multiple sport devices
 
@@ -576,11 +690,19 @@ int rpmsg_sharc_alsa_cb(struct rpmsg_device *rpdev, void *data, int len, void *p
 		return -ENODEV;
 
 	src_addr.rpmsg_addr = src;
-	return icap_parse_msg(&sport->icap[0], &src_addr, data, len); //TODO select core
+	ret = icap_parse_msg(&sport->icap[0], &src_addr, data, len); //TODO select core
+	if (ret) {
+		if (ret == -ICAP_ERROR_TIMEOUT) {
+			dev_notice_ratelimited(&rpdev->dev, "ICAP timedout expired for the response\n");
+		} else {
+			dev_err_ratelimited(&rpdev->dev, "ICAP parse msg error: %d\n", ret);
+		}
+	}
+	return ret;
 }
-EXPORT_SYMBOL(rpmsg_sharc_alsa_cb);
+EXPORT_SYMBOL(rpmsg_icap_sport_cb);
 
-int rpmsg_sharc_alsa_probe(struct rpmsg_device *rpdev)
+int rpmsg_icap_sport_probe(struct rpmsg_device *rpdev)
 {
 	struct sport_device *sport;
 	int sharc_core = 0;
@@ -604,6 +726,8 @@ int rpmsg_sharc_alsa_probe(struct rpmsg_device *rpdev)
 	}
 	*/
 
+	dev_set_drvdata(&rpdev->dev, sport);
+
 	ret = icap_application_init(&sport->icap[sharc_core], &sport_icap_callbacks, (void*)rpdev->ept, (void*)sport);
 	if (ret) {
 		goto error_out;
@@ -616,28 +740,27 @@ error_out:
 	dev_err(&sport->pdev->dev, "sharc-alsa client device error, addr: 0x%03x, err: %d\n", rpdev->dst, ret);
 	return ret;
 }
-EXPORT_SYMBOL(rpmsg_sharc_alsa_probe);
+EXPORT_SYMBOL(rpmsg_icap_sport_probe);
 
-void rpmsg_sharc_alsa_remove(struct rpmsg_device *rpdev)
+void rpmsg_icap_sport_remove(struct rpmsg_device *rpdev)
 {
-	struct sport_device *sport;
-
-	sport = sport_devices[0]; // TODO add support for multiple sport devices
+	struct sport_device *sport = (struct sport_device *)dev_get_drvdata(&rpdev->dev);
 
 	if(sport == NULL)
 		return;
 
+	icap_application_deinit(&sport->icap[0]); //todo select core
+
 	//TODO stop active streams
-	dev_info(&sport->pdev->dev, "sharc-alsa client device is removed, addr: 0x%03x\n", rpdev->dst);
+	dev_info(&rpdev->dev, "sharc-alsa client device is removed, addr: 0x%03x\n", rpdev->dst);
 }
-EXPORT_SYMBOL(rpmsg_sharc_alsa_remove);
+EXPORT_SYMBOL(rpmsg_icap_sport_remove);
 
 struct sport_device *sport_create(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct sport_device *sport;
 	int ret;
-	int i;
 
 	sport = kzalloc(sizeof(*sport), GFP_KERNEL);
 	if (!sport) {
@@ -654,13 +777,20 @@ struct sport_device *sport_create(struct platform_device *pdev)
 	if (ret)
 	  goto err_free_data;
 
-	mutex_init(&sport->rpmsg_lock);
 	mutex_init(&sport->sharc_tx_buf_pos_lock);
 	mutex_init(&sport->sharc_rx_buf_pos_lock);
+	INIT_WORK(&sport->send_tx_start_work, sport_tx_start_work_func);
+	INIT_WORK(&sport->send_rx_start_work, sport_rx_start_work_func);
+	INIT_WORK(&sport->send_tx_stop_work, sport_tx_stop_work_func);
+	INIT_WORK(&sport->send_rx_stop_work, sport_rx_stop_work_func);
 
-	for (i = 0; i < SHARC_CORES_NUM; i++){
-		init_completion(&sport->sharc_msg_ack_complete[i]);
-	}
+	init_waitqueue_head(&sport->pending_tx_stop_event);
+	init_waitqueue_head(&sport->pending_rx_stop_event);
+
+	sport->tx_alsa_icap_buf_id = -1;
+	sport->tx_dma_icap_buf_id = -1;
+	sport->rx_alsa_icap_buf_id = -1;
+	sport->rx_dma_icap_buf_id = -1;
 
 	sport_devices[0] = sport; // TODO add multiple sport devices support
 
@@ -675,14 +805,7 @@ EXPORT_SYMBOL(sport_create);
 
 void sport_delete(struct sport_device *sport)
 {
-	int i;
-
 	sport_devices[0] = NULL; // TODO add multiple sport devices support
-
-	//wakeup all the workers before destroying workqueue so we don't wait for timeouts
-	for(i = 0; i < SHARC_CORES_NUM; i++){
-		complete_all(&sport->sharc_msg_ack_complete[i]);
-	}
 
 	snd_dma_free_pages(&sport->sharc_tx_dma_buf);
 	snd_dma_free_pages(&sport->sharc_rx_dma_buf);

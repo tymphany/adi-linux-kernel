@@ -17,11 +17,11 @@
 #define _SC5XX_SPORT_H_
 
 #include <linux/platform_device.h>
-#include <linux/workqueue.h>
 #include <linux/completion.h>
 #include <sound/pcm_params.h>
 
 #if IS_ENABLED(CONFIG_SND_SC5XX_SPORT_SHARC)
+#include <linux/workqueue.h>
 #include <linux/rpmsg.h>
 #include "icap/include/icap_application.h"
 #endif
@@ -152,7 +152,6 @@ struct sport_device {
 
 #if IS_ENABLED(CONFIG_SND_SC5XX_SPORT_SHARC)
 
-	struct mutex rpmsg_lock;
 	struct icap_instance icap[SHARC_CORES_NUM];
 
 	struct snd_dma_buffer sharc_tx_dma_buf;
@@ -168,7 +167,19 @@ struct sport_device {
 	u32 rx_alsa_icap_buf_id;
 	u32 rx_dma_icap_buf_id;
 
-	struct completion sharc_msg_ack_complete[SHARC_CORES_NUM];
+	struct work_struct send_tx_start_work;
+	struct work_struct send_rx_start_work;
+
+	struct work_struct send_tx_stop_work;
+	struct work_struct send_rx_stop_work;
+
+	struct wait_queue_head pending_tx_stop_event;
+	struct wait_queue_head pending_rx_stop_event;
+
+	u32 pending_tx_stop;
+	u32 pending_rx_stop;
+
+	struct icap_device_features icap_sport_features;
 #endif
 };
 
@@ -201,9 +212,9 @@ unsigned long sport_curr_offset_tx(struct sport_device *sport);
 unsigned long sport_curr_offset_rx(struct sport_device *sport);
 
 #if IS_ENABLED(CONFIG_SND_SC5XX_SPORT_SHARC)
-int rpmsg_sharc_alsa_probe(struct rpmsg_device *rpdev);
-int rpmsg_sharc_alsa_cb(struct rpmsg_device *rpdev, void *data, int len, void *priv, u32 src);
-void rpmsg_sharc_alsa_remove(struct rpmsg_device *rpdev);
+int rpmsg_icap_sport_probe(struct rpmsg_device *rpdev);
+int rpmsg_icap_sport_cb(struct rpmsg_device *rpdev, void *data, int len, void *priv, u32 src);
+void rpmsg_icap_sport_remove(struct rpmsg_device *rpdev);
 #endif
 
 #endif
