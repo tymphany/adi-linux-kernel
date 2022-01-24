@@ -82,6 +82,10 @@ static int sport_playback_frag_ready_cb(struct icap_instance *icap, struct icap_
 {
 	struct sport_device *sport = (struct sport_device *)icap->priv;
 
+	if (frags->buf_id != sport->tx_alsa_icap_buf_id) {
+		return 0;
+	}
+
 	mutex_lock(&sport->sharc_tx_buf_pos_lock);
 	sport->sharc_tx_buf_pos += frags->frags * sport->tx_fragsize;
 	if(sport->sharc_tx_buf_pos >= sport->sharc_tx_dma_buf.bytes) {
@@ -728,7 +732,7 @@ int rpmsg_icap_sport_probe(struct rpmsg_device *rpdev)
 
 	dev_set_drvdata(&rpdev->dev, sport);
 
-	ret = icap_application_init(&sport->icap[sharc_core], &sport_icap_callbacks, (void*)rpdev->ept, (void*)sport);
+	ret = icap_application_init(&sport->icap[sharc_core], &sport_icap_callbacks, (void*)rpdev, (void*)sport);
 	if (ret) {
 		goto error_out;
 	}
