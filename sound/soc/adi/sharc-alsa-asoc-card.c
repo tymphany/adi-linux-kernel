@@ -47,8 +47,8 @@ struct sharc_alsa_card_data {
 	struct snd_pcm_substream *tx_substream;
 	struct snd_pcm_substream *rx_substream;
 
-	struct snd_dma_buffer tx_dma_buf;
-	struct snd_dma_buffer rx_dma_buf;
+	size_t tx_dma_buf_frames;
+	size_t rx_dma_buf_frames;
 	size_t tx_fragsize;
 	size_t rx_fragsize;
 	size_t tx_buf_pos;
@@ -59,6 +59,12 @@ struct sharc_alsa_card_data {
 	uint32_t rx_buf_id;
 
 	struct work_struct delayed_probe_work;
+
+	struct work_struct send_tx_start_work;
+	struct work_struct send_rx_start_work;
+
+	struct work_struct send_tx_stop_work;
+	struct work_struct send_rx_stop_work;
 };
 
 struct sharc_alsa_component_data {
@@ -82,13 +88,17 @@ struct sharc_alsa_component_data {
 
 static int sharc_alsa_rpmsg_cb(struct rpmsg_device *rpdev, void *data, int len, void *priv, u32 src)
 {
-	struct sharc_alsa_card_data *sharc_alsa = (struct sharc_alsa_card_data *)priv;
+	struct snd_soc_card *card = dev_get_drvdata(&rpdev->dev);
+	struct sharc_alsa_card_data *sharc_alsa = snd_soc_card_get_drvdata(card);
 	union icap_remote_addr src_addr;
-
-	//dev_err(&rpdev->dev, "Got message: size %d \n", len);
+	int ret;
 
 	src_addr.rpmsg_addr = src;
-	return icap_parse_msg(&sharc_alsa->icap, &src_addr, data, len);
+	ret = icap_parse_msg(&sharc_alsa->icap, &src_addr, data, len);
+	if (ret) {
+		dev_err(&rpdev->dev, "ICAP error: %d\n", ret);
+	}
+	return ret;
 }
 
 static int sharc_alsa_pcm_hw_params(struct snd_pcm_substream *substream,
@@ -96,7 +106,6 @@ static int sharc_alsa_pcm_hw_params(struct snd_pcm_substream *substream,
 {
 	size_t size = params_buffer_bytes(params);
 	snd_pcm_lib_malloc_pages(substream, size);
-
 	return 0;
 }
 
@@ -104,7 +113,6 @@ static int sharc_alsa_pcm_hw_params(struct snd_pcm_substream *substream,
 static int sharc_alsa_pcm_hw_free(struct snd_pcm_substream *substream)
 {
 	snd_pcm_lib_free_pages(substream);
-
 	return 0;
 }
 
@@ -113,29 +121,20 @@ static snd_pcm_uframes_t sharc_alsa_pcm_pointer(struct snd_pcm_substream *substr
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct sharc_alsa_card_data *sharc_alsa = runtime->private_data;
-	unsigned int pos;
+	unsigned int period ;
 	snd_pcm_uframes_t frames;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK){
 		mutex_lock(&sharc_alsa->tx_buf_pos_lock);
-		pos = sharc_alsa->tx_buf_pos;
+		period = sharc_alsa->tx_buf_pos;
 		mutex_unlock(&sharc_alsa->tx_buf_pos_lock);
 	}else{
 		mutex_lock(&sharc_alsa->rx_buf_pos_lock);
-		pos = sharc_alsa->rx_buf_pos;
+		period = sharc_alsa->rx_buf_pos;
 		mutex_unlock(&sharc_alsa->rx_buf_pos_lock);
 	}
 
-	/*
-	 * TX at least can report one frame beyond the end of the
-	 * buffer if we hit the wraparound case - clamp to within the
-	 * buffer as the ALSA APIs require.
-	 */
-	if (pos == snd_pcm_lib_buffer_bytes(substream))
-		pos = 0;
-
-	frames = bytes_to_frames(substream->runtime, pos);
-
+	frames = period * runtime->period_size;
 	return frames;
 }
 
@@ -156,9 +155,7 @@ static int sharc_alsa_pcm_open(struct snd_pcm_substream *substream)
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct sharc_alsa_card_data *sharc_alsa = snd_soc_card_get_drvdata(rtd->card);
 
-	/* BE's dont need dummy params */
-	if (!rtd->dai_link->no_pcm)
-		snd_soc_set_runtime_hwparams(substream, &sharc_alsa_pcm_params);
+	snd_soc_set_runtime_hwparams(substream, &sharc_alsa_pcm_params);
 
 	runtime->private_data = sharc_alsa;
 	return 0;
@@ -187,10 +184,16 @@ static int sharc_alsa_pcm_prepare(struct snd_pcm_substream *substream)
 		icap_buf.format = runtime->format;
 		icap_buf.rate = runtime->rate;
 
-		ret = icap_add_playback_src(icap, &icap_buf, &sharc_alsa->tx_buf_id);
-		if (ret) {
-			return ret;
+		sharc_alsa->tx_dma_buf_frames = runtime->periods;
+
+		if (sharc_alsa->tx_buf_id != -1) {
+			ret = icap_remove_playback_src(icap, sharc_alsa->tx_buf_id);
+			if (ret) {
+				return ret;
+			}
+			sharc_alsa->tx_buf_id = -1;
 		}
+		ret = icap_add_playback_src(icap, &icap_buf, &sharc_alsa->tx_buf_id);
 
 	} else {
 	}
@@ -202,23 +205,22 @@ static int sharc_alsa_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct sharc_alsa_card_data *sharc_alsa = runtime->private_data;
-	struct icap_instance *icap = &sharc_alsa->icap;
 	int ret = 0;
 
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-			ret = icap_playback_start(icap);
+			ret = queue_work(system_highpri_wq, &sharc_alsa->send_tx_start_work);
 		else
-			ret = icap_record_start(icap);
+			ret = queue_work(system_highpri_wq, &sharc_alsa->send_rx_start_work);
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-			ret = icap_playback_stop(icap);
+			ret = queue_work(system_highpri_wq, &sharc_alsa->send_tx_stop_work);
 		else
-			ret = icap_record_stop(icap);
+			ret = queue_work(system_highpri_wq, &sharc_alsa->send_rx_stop_work);
 		break;
 	default:
 		ret = -EINVAL;
@@ -240,7 +242,7 @@ static const struct snd_pcm_ops sharc_alsa_pcm_ops = {
 static int sharc_alsa_pcm_new(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_card *card = rtd->card->snd_card;
-	size_t size = 0x20000; /* 128KiB */
+	size_t size = sharc_alsa_pcm_params.buffer_bytes_max;/* 128KiB */
 	int ret = 0;
 
 	ret = dma_coerce_mask_and_coherent(card->dev, DMA_BIT_MASK(32));
@@ -257,9 +259,9 @@ static int32_t sharc_alsa_playback_frag_ready_cb(struct icap_instance *icap, str
 	struct sharc_alsa_card_data *sharc_alsa = (struct sharc_alsa_card_data *)icap->priv;
 
 	mutex_lock(&sharc_alsa->tx_buf_pos_lock);
-	sharc_alsa->tx_buf_pos += buf_frags->frags * sharc_alsa->tx_fragsize;
-	if(sharc_alsa->tx_buf_pos >= sharc_alsa->tx_dma_buf.bytes){
-		sharc_alsa->tx_buf_pos = sharc_alsa->tx_buf_pos - sharc_alsa->tx_dma_buf.bytes;
+	sharc_alsa->tx_buf_pos += buf_frags->frags;
+	if(sharc_alsa->tx_buf_pos >= sharc_alsa->tx_dma_buf_frames) {
+		sharc_alsa->tx_buf_pos = sharc_alsa->tx_buf_pos - sharc_alsa->tx_dma_buf_frames;
 	}
 	mutex_unlock(&sharc_alsa->tx_buf_pos_lock);
 
@@ -272,7 +274,46 @@ struct icap_application_callbacks icap_application_callbacks = {
 };
 
 
-//TODO add error messages and signal driver to remove the device
+static void sharc_alsa_tx_start_func(struct work_struct *work)
+{
+	struct sharc_alsa_card_data *sharc_alsa = container_of(work, struct sharc_alsa_card_data, send_tx_start_work);
+	int ret;
+	ret = icap_playback_start(&sharc_alsa->icap);
+	if (ret) {
+		dev_err(sharc_alsa->dev, "ICAP start error %d", ret);
+	}
+}
+
+static void sharc_alsa_rx_start_func(struct work_struct *work)
+{
+	struct sharc_alsa_card_data *sharc_alsa = container_of(work, struct sharc_alsa_card_data, send_rx_start_work);
+	int ret;
+	ret = icap_record_start(&sharc_alsa->icap);
+	if (ret) {
+		dev_err(sharc_alsa->dev, "ICAP start record error %d", ret);
+	}
+}
+
+static void sharc_alsa_tx_stop_func(struct work_struct *work)
+{
+	struct sharc_alsa_card_data *sharc_alsa = container_of(work, struct sharc_alsa_card_data, send_tx_stop_work);
+	int ret;
+	ret = icap_playback_stop(&sharc_alsa->icap);
+	if (ret) {
+		dev_err(sharc_alsa->dev, "ICAP stop playback error %d", ret);
+	}
+}
+
+static void sharc_alsa_rx_stop_func(struct work_struct *work)
+{
+	struct sharc_alsa_card_data *sharc_alsa = container_of(work, struct sharc_alsa_card_data, send_tx_stop_work);
+	int ret;
+	ret = icap_playback_stop(&sharc_alsa->icap);
+	if (ret) {
+		dev_err(sharc_alsa->dev, "ICAP stop record error %d", ret);
+	}
+}
+
 static void sharc_alsa_delayed_probe(struct work_struct *work)
 {
 	struct sharc_alsa_card_data *sharc_alsa = container_of(work, struct sharc_alsa_card_data, delayed_probe_work);
@@ -285,41 +326,32 @@ static void sharc_alsa_delayed_probe(struct work_struct *work)
 	int ret = 0;
 
 	/* init Inter Core Audio protocol */
-	ret = icap_application_init(&sharc_alsa->icap, &icap_application_callbacks, (void*)rpdev->ept, (void*)sharc_alsa);
+	ret = icap_application_init(&sharc_alsa->icap, &icap_application_callbacks, (void*)rpdev, (void*)sharc_alsa);
 	if (ret) {
+		dev_err(dev, "Failed to init ICAP: %d\n", ret);
 		return;
 	}
 
-	//ret = icap_get_device_features(&sharc_alsa->icap, &device_features);
-	//if (ret) {
-	//	return;
-	//}
-
-	device_features.type = 0;
-	device_features.src_buf_max = 1;
-	device_features.dst_buf_max = 0;
-	device_features.channels_min = 2;
-	device_features.channels_max = 2;
-	device_features.formats = 0;
-	device_features.rates = 0;
-
-	mutex_init(&sharc_alsa->tx_buf_pos_lock);
-	mutex_init(&sharc_alsa->rx_buf_pos_lock);
+	ret = icap_get_device_features(&sharc_alsa->icap, &device_features);
+	if (ret) {
+		dev_err(dev, "Failed to read ICAP device features: %d\n", ret);
+		return;
+	}
 
 	/* Initilize ASoC cpu component and dai drivers */
 	memset(&sharc_alsa_component, 0, sizeof(sharc_alsa_component));
 	sprintf(sharc_alsa_component.dai_driver_name, "sharc-alsa-cpu-dai_%d", card_id);
 	sharc_alsa_component.dai_driver.name = sharc_alsa_component.dai_driver_name;
 	sharc_alsa_component.dai_driver.playback.stream_name = "Playback";
-	sharc_alsa_component.dai_driver.playback.channels_min = 2;
-	sharc_alsa_component.dai_driver.playback.channels_max = 2;
-	sharc_alsa_component.dai_driver.playback.rates = SHARC_ALSA_RATES;
-	sharc_alsa_component.dai_driver.playback.formats = SHARC_ALSA_FORMATS;
+	sharc_alsa_component.dai_driver.playback.channels_min = device_features.channels_min;
+	sharc_alsa_component.dai_driver.playback.channels_max = device_features.channels_max;
+	sharc_alsa_component.dai_driver.playback.rates = device_features.rates;
+	sharc_alsa_component.dai_driver.playback.formats = device_features.formats;
 	sharc_alsa_component.dai_driver.capture.stream_name = "Capture";
-	sharc_alsa_component.dai_driver.capture.channels_min = 2;
-	sharc_alsa_component.dai_driver.capture.channels_max = 2;
-	sharc_alsa_component.dai_driver.capture.rates = SHARC_ALSA_RATES;
-	sharc_alsa_component.dai_driver.capture.formats = SHARC_ALSA_FORMATS;
+	sharc_alsa_component.dai_driver.capture.channels_min = device_features.channels_min;
+	sharc_alsa_component.dai_driver.capture.channels_max = device_features.channels_max;
+	sharc_alsa_component.dai_driver.capture.rates = device_features.rates;
+	sharc_alsa_component.dai_driver.capture.formats = device_features.formats;
 
 	sprintf(sharc_alsa_component.component_driver_name, "sharc-alsa-cpu_%d", card_id);
 	sharc_alsa_component.component_driver.name = sharc_alsa_component.component_driver_name;
@@ -341,15 +373,15 @@ static void sharc_alsa_delayed_probe(struct work_struct *work)
 	sprintf(sharc_alsa_component.dai_driver_name, "sharc-alsa-codec-dai_%d", card_id);
 	sharc_alsa_component.dai_driver.name = sharc_alsa_component.dai_driver_name;
 	sharc_alsa_component.dai_driver.playback.stream_name = "Playback";
-	sharc_alsa_component.dai_driver.playback.channels_min = 1;
-	sharc_alsa_component.dai_driver.playback.channels_max = 16;
-	sharc_alsa_component.dai_driver.playback.rates = SHARC_ALSA_RATES;
-	sharc_alsa_component.dai_driver.playback.formats = SHARC_ALSA_FORMATS;
+	sharc_alsa_component.dai_driver.playback.channels_min = device_features.channels_min;
+	sharc_alsa_component.dai_driver.playback.channels_max = device_features.channels_max;
+	sharc_alsa_component.dai_driver.playback.rates = device_features.rates;
+	sharc_alsa_component.dai_driver.playback.formats = device_features.formats;
 	sharc_alsa_component.dai_driver.capture.stream_name = "Capture";
-	sharc_alsa_component.dai_driver.capture.channels_min = 1;
-	sharc_alsa_component.dai_driver.capture.channels_max = 16;
-	sharc_alsa_component.dai_driver.capture.rates = SHARC_ALSA_RATES;
-	sharc_alsa_component.dai_driver.capture.formats = SHARC_ALSA_FORMATS;
+	sharc_alsa_component.dai_driver.capture.channels_min = device_features.channels_min;
+	sharc_alsa_component.dai_driver.capture.channels_max = device_features.channels_max;
+	sharc_alsa_component.dai_driver.capture.rates = device_features.rates;
+	sharc_alsa_component.dai_driver.capture.formats = device_features.formats;
 
 	sprintf(sharc_alsa_component.component_driver_name, "sharc-alsa-codec_%d", card_id);
 	sharc_alsa_component.component_driver.name = sharc_alsa_component.component_driver_name;
@@ -420,12 +452,6 @@ static void sharc_alsa_delayed_probe(struct work_struct *work)
 	if (ret < 0)
 		goto fail_card;
 
-	/*
-	 * The snd_soc_register_card sets the driver_data in `struct device` for its own use
-	 * Use drvdata of the `struct snd_soc_card` to keep the sharc_alsa pointer, which is needed in remove.
-	 */
-	snd_soc_card_set_drvdata(&sharc_alsa->card, sharc_alsa);
-
 	dev_info(dev, "sharc-alsa card probed for rpmsg endpoint addr: 0x%03x\n", rpdev->dst);
 
 	return;
@@ -456,6 +482,24 @@ static int sharc_alsa_probe(struct rpmsg_device *rpdev)
 	sharc_alsa->rpdev = rpdev;
 	sharc_alsa->dev = dev;
 	INIT_WORK(&sharc_alsa->delayed_probe_work, sharc_alsa_delayed_probe);
+	INIT_WORK(&sharc_alsa->send_tx_start_work, sharc_alsa_tx_start_func);
+	INIT_WORK(&sharc_alsa->send_rx_start_work, sharc_alsa_rx_start_func);
+	INIT_WORK(&sharc_alsa->send_tx_stop_work, sharc_alsa_tx_stop_func);
+	INIT_WORK(&sharc_alsa->send_rx_stop_work, sharc_alsa_rx_stop_func);
+
+	mutex_init(&sharc_alsa->tx_buf_pos_lock);
+	mutex_init(&sharc_alsa->rx_buf_pos_lock);
+
+	sharc_alsa->tx_buf_id = -1;
+	sharc_alsa->rx_buf_id = -1;
+
+	/*
+	 * The snd_soc_register_card sets the driver_data in `struct device` for its own use
+	 * Use drvdata of the `struct snd_soc_card` to keep the sharc_alsa pointer, which is needed in remove.
+	 */
+	sharc_alsa->card.dev = dev;
+	dev_set_drvdata(dev, &sharc_alsa->card);
+	snd_soc_card_set_drvdata(&sharc_alsa->card, sharc_alsa);
 
 	/*
 	 * This probe function is in interrupt context (rpmsg handling)
@@ -471,11 +515,21 @@ static void sharc_alsa_remove(struct rpmsg_device *rpdev)
 	struct snd_soc_card *card = dev_get_drvdata(&rpdev->dev);
 	struct sharc_alsa_card_data *sharc_alsa = snd_soc_card_get_drvdata(card);
 
-	icap_application_deinit(&sharc_alsa->icap);
+	/* Cancel probe work */
+	cancel_work_sync(&sharc_alsa->delayed_probe_work);
+
 	snd_soc_unregister_card(&sharc_alsa->card);
 	platform_device_unregister(sharc_alsa->asoc_cpu_dev);
 	platform_device_unregister(sharc_alsa->asoc_codec_dev);
 	platform_device_unregister(sharc_alsa->asoc_platform_dev);
+
+	/* Cancel all other works */
+	cancel_work_sync(&sharc_alsa->send_tx_start_work);
+	cancel_work_sync(&sharc_alsa->send_rx_start_work);
+	cancel_work_sync(&sharc_alsa->send_tx_stop_work);
+	cancel_work_sync(&sharc_alsa->send_rx_stop_work);
+
+	icap_application_deinit(&sharc_alsa->icap);
 
 	dev_err(&rpdev->dev, "sharc-alsa card removed for rpmsg endpoint addr: 0x%03x\n", rpdev->dst);
 }
