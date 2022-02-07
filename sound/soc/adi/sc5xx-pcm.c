@@ -207,7 +207,22 @@ static struct platform_driver sc5xx_pcm_driver = {
 
 #if IS_ENABLED(CONFIG_SND_SC5XX_SPORT_SHARC)
 static struct rpmsg_device_id rpmsg_icap_sport_id_table[] = {
-	{ .name = "icap-sport" },
+	{ .name = "icap-sport0-core1" },
+	{ .name = "icap-sport1-core1" },
+	{ .name = "icap-sport2-core1" },
+	{ .name = "icap-sport3-core1" },
+	{ .name = "icap-sport4-core1" },
+	{ .name = "icap-sport5-core1" },
+	{ .name = "icap-sport6-core1" },
+	{ .name = "icap-sport7-core1" },
+	{ .name = "icap-sport0-core2" },
+	{ .name = "icap-sport1-core2" },
+	{ .name = "icap-sport2-core2" },
+	{ .name = "icap-sport3-core2" },
+	{ .name = "icap-sport4-core2" },
+	{ .name = "icap-sport5-core2" },
+	{ .name = "icap-sport6-core2" },
+	{ .name = "icap-sport7-core2" },
 	{ },
 };
 static struct rpmsg_driver rpmsg_icap_sport = {

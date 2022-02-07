@@ -153,6 +153,16 @@ struct sport_device {
 #if IS_ENABLED(CONFIG_SND_SC5XX_SPORT_SHARC)
 
 	struct icap_instance icap[SHARC_CORES_NUM];
+	spinlock_t icap_spinlock;
+
+	u32 sharc_tx_core;
+	u32 sharc_rx_core;
+
+	u32 icap_tx_dev_id;
+	u32 icap_rx_dev_id;
+
+	struct work_struct get_sharc1_feature_work;
+	struct work_struct get_sharc2_feature_work;
 
 	struct snd_dma_buffer sharc_tx_dma_buf;
 	struct snd_dma_buffer sharc_rx_dma_buf;
