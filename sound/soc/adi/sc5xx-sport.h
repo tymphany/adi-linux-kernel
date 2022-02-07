@@ -188,8 +188,6 @@ struct sport_device {
 
 	u32 pending_tx_stop;
 	u32 pending_rx_stop;
-
-	struct icap_device_features icap_sport_features;
 #endif
 };
 

@@ -141,11 +141,11 @@ EXPORT_SYMBOL(sport_set_rx_params);
 
 void get_sharc_features(struct sport_device *sport, int sharc_core) {
 	struct icap_instance *icap = &sport->icap[sharc_core];
-	struct icap_device_features features;
+	struct icap_subdevice_features features;
 	uint32_t dev_num, i;
 	int32_t ret;
 
-	ret = icap_get_device_num(icap);
+	ret = icap_get_subdevices(icap);
 	if (ret < 0) {
 		dev_err(&sport->pdev->dev, "Get sharc%d devices error: %d", sharc_core, ret);
 		return;
@@ -153,7 +153,7 @@ void get_sharc_features(struct sport_device *sport, int sharc_core) {
 	dev_num = (uint32_t)ret;
 
 	for (i = 0; i < dev_num; i++) {
-		ret = icap_get_device_features(icap, i, &features);
+		ret = icap_get_subdevice_features(icap, i, &features);
 		if (ret) {
 			dev_err(&sport->pdev->dev, "Get sharc%d dev%d features error: %d", sharc_core, i, ret);
 			return;
@@ -395,7 +395,7 @@ int sport_config_tx_dma(struct sport_device *sport, void *buf,
 {
 	unsigned int cfg;
 	struct icap_buf_descriptor audio_buf;
-	struct icap_device_params params;
+	struct icap_subdevice_params params;
 	unsigned long flags;
 	uint32_t sharc_core, dev_id;
 	int ret;
@@ -443,8 +443,8 @@ int sport_config_tx_dma(struct sport_device *sport, void *buf,
 	sport->tx_substream = substream;
 
 	memset(&params, 0, sizeof(params));
-	params.dev_id = dev_id; /* Rest of the params don't care as sharc doesn't set the hardware params */
-	ret = icap_request_device_init(&sport->icap[sharc_core], &params);
+	params.subdev_id = dev_id; /* Rest of the params don't care as sharc doesn't set the hardware params */
+	ret = icap_subdevice_init(&sport->icap[sharc_core], &params);
 	if (ret == -ERESTARTSYS || ret == -ETIMEDOUT ){
 		return ret;
 	}
@@ -467,7 +467,7 @@ int sport_config_tx_dma(struct sport_device *sport, void *buf,
 
 	// Set ALSA buffer size and pointer
 	snprintf(audio_buf.name, ICAP_BUF_NAME_LEN, "%s-alsa-playback", sport->pdev->name);
-	audio_buf.dev_id = dev_id;
+	audio_buf.subdev_id = dev_id;
 	audio_buf.buf = (uint64_t)buf;
 	audio_buf.buf_size = fragsize * fragcount;
 	audio_buf.type = ICAP_BUF_CIRCURAL;
@@ -492,7 +492,7 @@ int sport_config_tx_dma(struct sport_device *sport, void *buf,
 
 	// Set DMA buffer size and pointer
 	snprintf(audio_buf.name, ICAP_BUF_NAME_LEN, "%s-dma-playback", sport->pdev->name);
-	audio_buf.dev_id = dev_id;
+	audio_buf.subdev_id = dev_id;
 	audio_buf.buf = (uint64_t)sport->sharc_tx_dma_buf.addr;
 	audio_buf.buf_size = fragsize * fragcount;
 	audio_buf.type = ICAP_BUF_CIRCURAL;
@@ -525,7 +525,7 @@ int sport_config_rx_dma(struct sport_device *sport, void *buf,
 {
 	unsigned int cfg;
 	struct icap_buf_descriptor audio_buf;
-	struct icap_device_params params;
+	struct icap_subdevice_params params;
 	unsigned long flags;
 	uint32_t sharc_core, dev_id;
 	int ret;
@@ -573,8 +573,8 @@ int sport_config_rx_dma(struct sport_device *sport, void *buf,
 	sport->rx_substream = substream;
 
 	memset(&params, 0, sizeof(params));
-	params.dev_id = dev_id; /* Rest of the params don't care as sharc doesn't set the hardware params */
-	ret = icap_request_device_init(&sport->icap[sharc_core], &params);
+	params.subdev_id = dev_id; /* Rest of the params don't care as sharc doesn't set the hardware params */
+	ret = icap_subdevice_init(&sport->icap[sharc_core], &params);
 	if (ret == -ERESTARTSYS || ret == -ETIMEDOUT ){
 		return ret;
 	}
@@ -597,7 +597,7 @@ int sport_config_rx_dma(struct sport_device *sport, void *buf,
 
 	// Set ALSA buffer size and pointer
 	snprintf(audio_buf.name, ICAP_BUF_NAME_LEN, "%s-alsa-record", sport->pdev->name);
-	audio_buf.dev_id = dev_id;
+	audio_buf.subdev_id = dev_id;
 	audio_buf.buf = (uint64_t)buf;
 	audio_buf.buf_size = fragsize * fragcount;
 	audio_buf.type = ICAP_BUF_CIRCURAL;
@@ -622,7 +622,7 @@ int sport_config_rx_dma(struct sport_device *sport, void *buf,
 
 	// Set DMA buffer size and pointer
 	snprintf(audio_buf.name, ICAP_BUF_NAME_LEN, "%s-dma-record", sport->pdev->name);
-	audio_buf.dev_id = dev_id;
+	audio_buf.subdev_id = dev_id;
 	audio_buf.buf = (uint64_t)sport->sharc_rx_dma_buf.addr;
 	audio_buf.buf_size = fragsize * fragcount;
 	audio_buf.type = ICAP_BUF_CIRCURAL;
