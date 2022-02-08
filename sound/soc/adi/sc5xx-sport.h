@@ -169,8 +169,8 @@ struct sport_device {
 
 	size_t sharc_tx_buf_pos;
 	size_t sharc_rx_buf_pos;
-	struct mutex sharc_tx_buf_pos_lock;
-	struct mutex sharc_rx_buf_pos_lock;
+	spinlock_t sharc_tx_buf_pos_lock;
+	spinlock_t sharc_rx_buf_pos_lock;
 
 	u32 tx_alsa_icap_buf_id;
 	u32 tx_dma_icap_buf_id;

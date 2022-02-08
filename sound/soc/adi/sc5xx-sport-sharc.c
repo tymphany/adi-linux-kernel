@@ -78,24 +78,25 @@ static int compute_wdsize(size_t wdsize)
 static int sport_frag_ready_cb(struct icap_instance *icap, struct icap_buf_frags *frags)
 {
 	struct sport_device *sport = (struct sport_device *)icap->priv;
+	unsigned long flags;
 
 	if (frags->buf_id == sport->tx_alsa_icap_buf_id) {
-		mutex_lock(&sport->sharc_tx_buf_pos_lock);
+		spin_lock_irqsave(&sport->sharc_tx_buf_pos_lock, flags);
 		sport->sharc_tx_buf_pos += frags->frags * sport->tx_fragsize;
 		if(sport->sharc_tx_buf_pos >= sport->sharc_tx_dma_buf.bytes) {
 			sport->sharc_tx_buf_pos = sport->sharc_tx_buf_pos - sport->sharc_tx_dma_buf.bytes;
 		}
-		mutex_unlock(&sport->sharc_tx_buf_pos_lock);
+		spin_unlock_irqrestore(&sport->sharc_tx_buf_pos_lock, flags);
 		sport->tx_callback(sport->tx_data);
 	}
 
 	if (frags->buf_id == sport->rx_alsa_icap_buf_id) {
-		mutex_lock(&sport->sharc_rx_buf_pos_lock);
+		spin_lock_irqsave(&sport->sharc_rx_buf_pos_lock, flags);
 		sport->sharc_rx_buf_pos += frags->frags * sport->rx_fragsize;
 		if(sport->sharc_rx_buf_pos >= sport->sharc_rx_dma_buf.bytes) {
 			sport->sharc_rx_buf_pos = sport->sharc_rx_buf_pos - sport->sharc_rx_dma_buf.bytes;
 		}
-		mutex_unlock(&sport->sharc_rx_buf_pos_lock);
+		spin_unlock_irqrestore(&sport->sharc_rx_buf_pos_lock, flags);
 		sport->rx_callback(sport->rx_data);
 	}
 
@@ -653,10 +654,11 @@ EXPORT_SYMBOL(sport_config_rx_dma);
 unsigned long sport_curr_offset_tx(struct sport_device *sport)
 {
 	unsigned long off;
+	unsigned long flags;
 
-	mutex_lock(&sport->sharc_tx_buf_pos_lock);
+	spin_lock_irqsave(&sport->sharc_tx_buf_pos_lock, flags);
 	off = sport->sharc_tx_buf_pos;
-	mutex_unlock(&sport->sharc_tx_buf_pos_lock);
+	spin_unlock_irqrestore(&sport->sharc_tx_buf_pos_lock, flags);
 
 	return off;
 }
@@ -665,10 +667,11 @@ EXPORT_SYMBOL(sport_curr_offset_tx);
 unsigned long sport_curr_offset_rx(struct sport_device *sport)
 {
 	unsigned long off;
+	unsigned long flags;
 
-	mutex_lock(&sport->sharc_rx_buf_pos_lock);
+	spin_lock_irqsave(&sport->sharc_rx_buf_pos_lock, flags);
 	off = sport->sharc_rx_buf_pos;
-	mutex_unlock(&sport->sharc_rx_buf_pos_lock);
+	spin_unlock_irqrestore(&sport->sharc_rx_buf_pos_lock, flags);
 
 	return off;
 }
@@ -802,14 +805,14 @@ int rpmsg_icap_sport_cb(struct rpmsg_device *rpdev, void *data, int len, void *p
 
 	src_addr.rpmsg_addr = src;
 	ret = icap_parse_msg(&sport->icap[sharc_core], &src_addr, data, len);
-	if (ret) {
+	if (ret && (ret != -ICAP_ERROR_INIT)) {
 		if (ret == -ICAP_ERROR_TIMEOUT) {
-			dev_notice_ratelimited(&rpdev->dev, "ICAP timedout expired for the response\n");
+			dev_notice_ratelimited(&rpdev->dev, "ICAP late response\n");
 		} else {
 			dev_err_ratelimited(&rpdev->dev, "ICAP parse msg error: %d\n", ret);
 		}
 	}
-	return ret;
+	return 0;
 }
 EXPORT_SYMBOL(rpmsg_icap_sport_cb);
 
@@ -938,8 +941,8 @@ struct sport_device *sport_create(struct platform_device *pdev)
 	  goto err_free_data;
 
 	spin_lock_init(&sport->icap_spinlock);
-	mutex_init(&sport->sharc_tx_buf_pos_lock);
-	mutex_init(&sport->sharc_rx_buf_pos_lock);
+	spin_lock_init(&sport->sharc_tx_buf_pos_lock);
+	spin_lock_init(&sport->sharc_rx_buf_pos_lock);
 	INIT_WORK(&sport->send_tx_start_work, sport_tx_start_work_func);
 	INIT_WORK(&sport->send_rx_start_work, sport_rx_start_work_func);
 	INIT_WORK(&sport->send_tx_stop_work, sport_tx_stop_work_func);
