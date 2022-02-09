@@ -5,6 +5,7 @@
 
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/clock/adi-sc59x-clock.h>
 
 / {
 	model = "ADI 64-bit SC59X";
@@ -56,6 +57,7 @@
 			reg = <0x0 0x0>;
 			enable-method = "spin-table";
 			cpu-release-addr = <0x0 0xdeadbeef>;
+			clocks = <&clk ADSP_SC59X_CLK_ARM>, <&clk ADSP_SC59X_CLK_DDR>;
 		};
 	};
 
@@ -443,6 +445,7 @@
 			snps,force_sf_dma_mode;
 			snps,perfect-filter-entries = <32>;
 			snps,tso = <1>;
+			clock = <&clk 65>;
 			clock-names = "stmmaceth";
 			status = "disabled";
 		};
@@ -457,6 +460,7 @@
 			snps,burst_len = <0x4>;	/* BLEN8 */
 			snps,pbl = <1>;
 			snps,force_thresh_dma_mode;
+			clock = <&clk 65>;
 			clock-names = "stmmaceth";
 			status = "disabled";
 		};
@@ -640,6 +644,32 @@
 				};
 			};
 
+		};
+
+		sys_clkin0: oscillator@1 {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <25000000>;
+			clock-output-names = "sys_clkin0";
+		};
+
+		sys_clkin1: oscillator@2 {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <25000000>;
+			clock-output-names = "sys_clkin1";
+		};
+
+		clk: clocks@0x3108d000 {
+			compatible = "adi,sc59x-clocks";
+			reg = <0x3108d000 0x1000>,
+				<0x3108e000 0x1000>,
+				<0x3108f000 0x1000>,
+				<0x310a9000 0x1000>;
+			#clock-cells = <1>;
+			clocks = <&sys_clkin0>, <&sys_clkin1>;
+			clock-names = "sys_clkin0", "sys_clkin1";
+			status = "okay";
 		};
 
 		clocks {

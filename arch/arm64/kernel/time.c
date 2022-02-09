@@ -50,10 +50,6 @@ unsigned long profile_pc(struct pt_regs *regs)
 }
 EXPORT_SYMBOL(profile_pc);
 
-#ifdef CONFIG_ARCH_SC59X_64
-extern u32 adi_timer_get_rate(void);
-#endif
-
 void __init time_init(void)
 {
 	u32 arch_timer_rate;
@@ -63,11 +59,7 @@ void __init time_init(void)
 
 	tick_setup_hrtimer_broadcast();
 
-#ifdef CONFIG_ARCH_SC59X_64
-	arch_timer_rate = adi_timer_get_rate();
-#else
 	arch_timer_rate = arch_timer_get_rate();
-#endif
 
 	if (!arch_timer_rate)
 		panic("Unable to initialise architected timer.\n");
