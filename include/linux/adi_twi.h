@@ -11,6 +11,7 @@
 
 #include <linux/types.h>
 #include <linux/i2c.h>
+#include <linux/clk.h>
 
 /*
  * ADI twi registers layout
@@ -71,6 +72,7 @@ struct adi_twi_iface {
 	u16			saved_clkdiv;
 	u16			saved_control;
 	struct adi_twi_regs __iomem *regs_base;
+	struct clk *sclk;
 };
 
 /*  ********************  TWO-WIRE INTERFACE (TWI) MASKS  ********************/

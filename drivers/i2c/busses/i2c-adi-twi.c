@@ -26,7 +26,6 @@
 #include <asm/irq.h>
 
 #include <linux/soc/adi/adi_twi.h>
-#include <linux/soc/adi/clkdev.h>
 #include <linux/soc/adi/portmux.h>
 
 /* SMBus mode*/
@@ -712,6 +711,13 @@ static int i2c_adi_twi_probe(struct platform_device *pdev)
 	} else
 		iface->twi_clk = CONFIG_I2C_ADI_TWI_CLK_KHZ;
 
+	iface->sclk = devm_clk_get(&pdev->dev, "sclk0");
+	if (IS_ERR(iface->sclk)) {
+		if (PTR_ERR != -EPROBE_DEFER)
+			dev_err(&pdev->dev, "Missing i2c clock\n");
+		return PTR_ERR(iface->sclk);
+	}
+
 	/* Find and map our resources */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (res == NULL) {
@@ -759,7 +765,13 @@ static int i2c_adi_twi_probe(struct platform_device *pdev)
 	}
 
 	/* Set TWI internal clock as 10MHz */
-	write_CONTROL(iface, ((get_sclk() / 1000 / 1000 + 5) / 10) & 0x7F);
+	clk_prepare_enable(iface->sclk);
+	if (rc) {
+		dev_err(&pdev->dev, "Could not enable sclk\n");
+		goto out_error;
+	}
+
+	write_CONTROL(iface, ((clk_get_rate(iface->sclk) / 1000 / 1000 + 5) / 10) & 0x7F);
 
 	/*
 	 * We will not end up with a CLKDIV=0 because no one will specify
@@ -775,7 +787,7 @@ static int i2c_adi_twi_probe(struct platform_device *pdev)
 
 	rc = i2c_add_numbered_adapter(p_adap);
 	if (rc < 0)
-		goto out_error;
+		goto disable_clk;
 
 	platform_set_drvdata(pdev, iface);
 
@@ -783,6 +795,9 @@ static int i2c_adi_twi_probe(struct platform_device *pdev)
 		"regs_base@%p\n", iface->regs_base);
 
 	return 0;
+
+disable_clk:
+	clk_disable_unprepare(iface->sclk);
 
 out_error:
 	peripheral_free_list(dev_get_platdata(&pdev->dev));
@@ -793,6 +808,7 @@ static int i2c_adi_twi_remove(struct platform_device *pdev)
 {
 	struct adi_twi_iface *iface = platform_get_drvdata(pdev);
 
+	clk_disable_unprepare(iface->sclk);
 	i2c_del_adapter(&(iface->adap));
 	peripheral_free_list(dev_get_platdata(&pdev->dev));
 

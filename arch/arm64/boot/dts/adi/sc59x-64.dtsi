@@ -311,6 +311,8 @@
 			reg = <0x31001400 0xFF>;
 			interrupts = <GIC_SPI 150 IRQ_TYPE_LEVEL_HIGH>;
 			clock-khz = <100>;
+			clocks = <&clk ADSP_SC59X_CLK_CGU0_SCLK0>;
+			clock-names = "sclk0";
 			status = "disabled";
 		};
 
@@ -321,6 +323,8 @@
 			reg = <0x31001500 0xFF>;
 			interrupts = <GIC_SPI 151 IRQ_TYPE_LEVEL_HIGH>;
 			clock-khz = <100>;
+			clocks = <&clk ADSP_SC59X_CLK_CGU0_SCLK0>;
+			clock-names = "sclk0";
 			status = "disabled";
 		};
 
@@ -331,6 +335,8 @@
 			reg = <0x31001600 0xFF>;
 			interrupts = <GIC_SPI 152 IRQ_TYPE_LEVEL_HIGH>;
 			clock-khz = <100>;
+			clocks = <&clk ADSP_SC59X_CLK_CGU0_SCLK0>;
+			clock-names = "sclk0";
 			status = "disabled";
 		};
 
@@ -341,6 +347,8 @@
 			reg = <0x31001000 0xFF>;
 			interrupts = <GIC_SPI 153 IRQ_TYPE_LEVEL_HIGH>;
 			clock-khz = <100>;
+			clocks = <&clk ADSP_SC59X_CLK_CGU0_SCLK0>;
+			clock-names = "sclk0";
 			status = "disabled";
 		};
 
@@ -351,6 +359,8 @@
 			reg = <0x31001100 0xFF>;
 			interrupts = <GIC_SPI 154 IRQ_TYPE_LEVEL_HIGH>;
 			clock-khz = <100>;
+			clocks = <&clk ADSP_SC59X_CLK_CGU0_SCLK0>;
+			clock-names = "sclk0";
 			status = "disabled";
 		};
 
@@ -361,6 +371,8 @@
 			reg = <0x31001200 0xFF>;
 			interrupts = <GIC_SPI 155 IRQ_TYPE_LEVEL_HIGH>;
 			clock-khz = <100>;
+			clocks = <&clk ADSP_SC59X_CLK_CGU0_SCLK0>;
+			clock-names = "sclk0";
 			status = "disabled";
 		};
 

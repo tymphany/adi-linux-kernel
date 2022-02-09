@@ -9,7 +9,6 @@
 
 #include <linux/adi_twi.h>
 #include <linux/io.h>
-#include <linux/soc/adi/clkdev.h>
 #include <linux/soc/adi/anomaly.h>
 #include <linux/types.h>
 
