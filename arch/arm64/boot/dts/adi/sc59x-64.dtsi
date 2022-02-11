@@ -177,6 +177,8 @@
 			reg = <0x31003000 0x40>;
 			dmas = <&dma_cluster2 20>, <&dma_cluster2 21>;
 			dma-names = "tx", "rx";
+			clocks = <&clk ADSP_SC59X_CLK_CGU0_SCLK0>;
+			clock-names = "sclk0";
 			interrupt-parent = <&gic>;
 			interrupts = <GIC_SPI 138 IRQ_TYPE_LEVEL_HIGH>,
 			             <GIC_SPI 139 IRQ_TYPE_LEVEL_HIGH>,
@@ -189,6 +191,8 @@
 			reg = <0x31003400 0x40>;
 			dmas = <&dma_cluster2 34>, <&dma_cluster2 35>;
 			dma-names = "tx", "rx";
+			clocks = <&clk ADSP_SC59X_CLK_CGU0_SCLK0>;
+			clock-names = "sclk0";
 			interrupt-parent = <&gic>;
 			interrupts = <GIC_SPI 141 IRQ_TYPE_LEVEL_HIGH>,
 			             <GIC_SPI 142 IRQ_TYPE_LEVEL_HIGH>,
@@ -201,6 +205,8 @@
 			reg = <0x31003800 0x40>;
 			dmas = <&dma_cluster2 37>, <&dma_cluster2 38>;
 			dma-names = "tx", "rx";
+			clocks = <&clk ADSP_SC59X_CLK_CGU0_SCLK0>;
+			clock-names = "sclk0";
 			interrupt-parent = <&gic>;
 			interrupts = <GIC_SPI 144 IRQ_TYPE_LEVEL_HIGH>,
 			             <GIC_SPI 145 IRQ_TYPE_LEVEL_HIGH>,
@@ -213,6 +219,8 @@
 			reg = <0x31003C00 0x40>;
 			dmas = <&dma_cluster2 53>, <&dma_cluster2 54>;
 			dma-names = "tx", "rx";
+			clocks = <&clk ADSP_SC59X_CLK_CGU0_SCLK0>;
+			clock-names = "sclk0";
 			interrupt-parent = <&gic>;
 			interrupts = <GIC_SPI 147 IRQ_TYPE_LEVEL_HIGH>,
 			             <GIC_SPI 148 IRQ_TYPE_LEVEL_HIGH>,

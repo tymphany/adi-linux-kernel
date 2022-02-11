@@ -96,6 +96,7 @@ struct adi_uart4_serial_port {
 	unsigned int hwflow_en_pin;
 	unsigned int hwflow_en_pin_active_low;
 	bool hwflow_en;
+	struct clk *clk;
 };
 
 
@@ -615,6 +616,10 @@ static int adi_uart4_serial_startup(struct uart_port *port)
 
 	uart->tx_done = 1;
 
+	ret = clk_prepare_enable(uart->clk);
+	if (ret)
+		return ret;
+
 	if (uart->tx_dma_channel) {
 		// RX channel
 		uart->rx_dma_buf.buf = dmam_alloc_coherent(uart->dev, UART_XMIT_SIZE,
@@ -737,6 +742,8 @@ static void adi_uart4_serial_shutdown(struct uart_port *port)
 		gpio_free(uart->rts_pin);
 	} else if (uart->hwflow_mode == ADI_UART_HWFLOW_PERI)
 		free_irq(uart->status_irq, uart);
+
+	clk_disable_unprepare(uart->clk);
 }
 
 static void adi_uart4_serial_set_termios(struct uart_port *port,
@@ -1115,12 +1122,18 @@ static int adi_uart4_serial_suspend(struct platform_device *pdev, pm_message_t s
 {
 	struct adi_uart4_serial_port *uart = platform_get_drvdata(pdev);
 
+	clk_disable(uart->clk);
 	return uart_suspend_port(&adi_uart4_serial_reg, &uart->port);
 }
 
 static int adi_uart4_serial_resume(struct platform_device *pdev)
 {
 	struct adi_uart4_serial_port *uart = platform_get_drvdata(pdev);
+	int ret;
+
+	ret = clk_enable(uart->clk);
+	if (ret)
+		return ret;
 
 	return uart_resume_port(&adi_uart4_serial_reg, &uart->port);
 }
@@ -1129,7 +1142,6 @@ static int adi_uart4_serial_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct resource *res;
-	struct clk* clk;
 	struct adi_uart4_serial_port *uart = NULL;
 	int ret = 0;
 	int uartid;
@@ -1151,11 +1163,6 @@ static int adi_uart4_serial_probe(struct platform_device *pdev)
 				uartid);
 		ret = -ENODEV;
 		return ret;
-	}
-
-	clk = clk_get(&pdev->dev, "adi-uart4");
-	if (IS_ERR(clk)) {
-		return -ENODEV;
 	}
 
 	if (adi_uart4_serial_ports[uartid] == NULL) {
@@ -1182,14 +1189,17 @@ static int adi_uart4_serial_probe(struct platform_device *pdev)
 		adi_uart4_serial_ports[uartid] = uart;
 		uart->dev = &pdev->dev;
 
+		uart->clk = devm_clk_get(dev, "sclk0");
+		if (IS_ERR(uart->clk))
+			return -ENODEV;
+
 		spin_lock_init(&uart->port.lock);
-		uart->port.uartclk   = clk_get_rate(clk);
+		uart->port.uartclk   = clk_get_rate(uart->clk);
 		uart->port.fifosize  = 8;
 		uart->port.ops       = &adi_uart4_serial_pops;
 		uart->port.line      = uartid;
 		uart->port.iotype    = UPIO_MEM;
 		uart->port.flags     = UPF_BOOT_AUTOCONF;
-		clk_put(clk);
 
 		res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 		if (res == NULL) {
