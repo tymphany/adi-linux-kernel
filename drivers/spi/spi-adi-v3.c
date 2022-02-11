@@ -89,7 +89,8 @@ struct adi_spi_master {
 	u32 control;
 	u32 ssel;
 
-	unsigned long sclk;
+	struct clk *sclk;
+	unsigned long sclk_rate;
 	enum adi_spi_state state;
 
 	const struct adi_spi_transfer_ops *ops;
@@ -435,7 +436,7 @@ static int adi_spi_setup_transfer(struct adi_spi_master *drv)
 	iowrite32(cr, &drv->regs->control);
 
 	/* speed setup */
-	iowrite32(hz_to_spi_clock(drv->sclk, t->speed_hz), &drv->regs->clock);
+	iowrite32(hz_to_spi_clock(drv->sclk_rate, t->speed_hz), &drv->regs->clock);
 	return 0;
 }
 
@@ -696,7 +697,7 @@ static int adi_spi_setup(struct spi_device *spi)
 	/* we choose software to controll cs */
 	chip->control &= ~SPI_CTL_ASSEL;
 
-	chip->clock = hz_to_spi_clock(drv_data->sclk, spi->max_speed_hz);
+	chip->clock = hz_to_spi_clock(drv_data->sclk_rate, spi->max_speed_hz);
 
 	adi_spi_cs_deactive(drv_data, chip);
 
@@ -824,7 +825,7 @@ static int adi_spi_probe(struct platform_device *pdev)
 	}
 
 	/* allocate master with space for drv_data */
-	master = spi_alloc_master(dev, sizeof(*drv_data));
+	master = devm_spi_alloc_master(dev, sizeof(*drv_data));
 	if (!master) {
 		dev_err(dev, "can not alloc spi_master\n");
 		return -ENOMEM;
@@ -846,8 +847,36 @@ static int adi_spi_probe(struct platform_device *pdev)
 
 	drv_data = spi_master_get_devdata(master);
 	drv_data->master = master;
-	drv_data->sclk = clk_get_rate(sclk);
+	drv_data->sclk = sclk;
+	drv_data->sclk_rate = clk_get_rate(sclk);
 	drv_data->dev = dev;
+
+	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	drv_data->regs = devm_ioremap_resource(dev, mem);
+	if (IS_ERR(drv_data->regs)) {
+		dev_err(dev, "Could not map spiv3 memory, check device tree\n");
+		return PTR_ERR(drv_data->regs);
+	}
+
+	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
+	if (!res) {
+		dev_err(dev, "can not get spi error irq\n");
+		return -ENXIO;
+	}
+	ret = devm_request_irq(dev, res->start, spi_irq_err,
+			0, "SPI ERROR", drv_data);
+	if (ret) {
+		dev_err(dev, "can not request spi error irq\n");
+		return ret;
+	}
+
+	iowrite32(SPI_CTL_MSTR | SPI_CTL_CPHA, &drv_data->regs->control);
+	iowrite32(0x0000FE00, &drv_data->regs->ssel);
+	iowrite32(0x0, &drv_data->regs->delay);
+	iowrite32(SPI_IMSK_SET_ROM, &drv_data->regs->emaskst);
+
+	tasklet_init(&drv_data->pump_transfers,
+			adi_spi_pump_transfers, (unsigned long)drv_data);
 
 	drv_data->tx_dma = dma_request_chan(dev, "tx");
 	if (!drv_data->tx_dma) {
@@ -858,36 +887,16 @@ static int adi_spi_probe(struct platform_device *pdev)
 	drv_data->rx_dma = dma_request_chan(dev, "rx");
 	if (!drv_data->rx_dma) {
 		dev_err(dev, "Could not get RX DMA channel\n");
-		return -ENOENT;
+		ret = -ENOENT;
+		goto err_free_tx_dma;
 	}
 
-	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	drv_data->regs = devm_ioremap_resource(dev, mem);
-	if (IS_ERR(drv_data->regs)) {
-		ret = PTR_ERR(drv_data->regs);
-		goto err_put_master;
-	}
-
-	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
-	if (!res) {
-		dev_err(dev, "can not get spi error irq\n");
-		ret = -ENXIO;
-		goto err_put_master;
-	}
-	ret = devm_request_irq(dev, res->start, spi_irq_err,
-			0, "SPI ERROR", drv_data);
+	ret = clk_prepare_enable(drv_data->sclk);
 	if (ret) {
-		dev_err(dev, "can not request spi error irq\n");
-		goto err_put_master;
+		dev_err(dev, "Could not enable SPI clock\n");
+		goto err_free_rx_dma;
 	}
 
-	iowrite32(SPI_CTL_MSTR | SPI_CTL_CPHA, &drv_data->regs->control);
-	iowrite32(0x0000FE00, &drv_data->regs->ssel);
-	iowrite32(0x0, &drv_data->regs->delay);
-	iowrite32(SPI_IMSK_SET_ROM, &drv_data->regs->emaskst);
-
-	tasklet_init(&drv_data->pump_transfers,
-			adi_spi_pump_transfers, (unsigned long)drv_data);
 	/* register with the SPI framework */
 	ret = devm_spi_register_master(dev, master);
 	if (ret) {
@@ -900,11 +909,10 @@ static int adi_spi_probe(struct platform_device *pdev)
 	return ret;
 
 err_free_rx_dma:
-	dma_release_channel(drv_data->tx_dma);
 	dma_release_channel(drv_data->rx_dma);
 
-err_put_master:
-	spi_master_put(master);
+err_free_tx_dma:
+	dma_release_channel(drv_data->tx_dma);
 
 	return ret;
 }
@@ -915,6 +923,7 @@ static int adi_spi_remove(struct platform_device *pdev)
 	struct adi_spi_master *drv_data = spi_master_get_devdata(master);
 
 	adi_spi_disable(drv_data);
+	clk_disable_unprepare(drv_data->sclk);
 	dma_release_channel(drv_data->tx_dma);
 	dma_release_channel(drv_data->rx_dma);
 	return 0;
