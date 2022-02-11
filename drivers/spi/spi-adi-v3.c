@@ -108,7 +108,6 @@ struct adi_spi_device {
 	const struct adi_spi_transfer_ops *ops;
 };
 
-static void adi_spi_tx_dma_isr(void *data);
 static void adi_spi_rx_dma_isr(void *data);
 
 static void adi_spi_enable(struct adi_spi_master *drv_data)
@@ -481,8 +480,6 @@ static int adi_spi_dma_xfer(struct adi_spi_master *drv_data)
 		goto cleanup;
 	}
 
-//	tx_desc->callback = adi_spi_tx_dma_isr;
-//	tx_desc->callback_param = drv_data;
 	drv_data->tx_cookie = dmaengine_submit(tx_desc);
 	dma_async_issue_pending(drv_data->tx_dma);
 
@@ -721,31 +718,6 @@ static void adi_spi_cleanup(struct spi_device *spi)
 	gpio_free(chip->cs_gpio);
 	kfree(chip);
 	spi_set_ctldata(spi, NULL);
-}
-
-static void adi_spi_tx_dma_isr(void *data)
-{
-//	struct adi_spi_master *drv_data = data;
-//	struct dma_tx_state state;
-//	enum dma_status status;
-//	u32 tx_ctl;
-//
-//	status = dmaengine_tx_status(drv_data->tx_dma, drv_data->tx_cookie, &state);
-//	if (DMA_ERROR == status) {
-//		dev_err(&drv_data->master->dev, "spi tx dma error\n");
-//		if (drv_data->tx)
-//			drv_data->state = ERROR_STATE;
-//	}
-//	else {
-//		drv_data->tx_num++;
-//	}
-//
-//	tx_ctl = ioread32(&drv_data->regs->tx_control);
-//	tx_ctl &= ~SPI_TXCTL_TDR_NF;
-//	iowrite32(tx_ctl, &drv_data->regs->tx_control);
-//
-//	adi_spi_dma_unmap_tx(drv_data);
-//	tasklet_schedule(&drv_data->pump_transfers);
 }
 
 static void adi_spi_rx_dma_isr(void *data)
