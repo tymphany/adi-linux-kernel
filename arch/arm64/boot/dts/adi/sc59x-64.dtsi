@@ -459,7 +459,7 @@
 			snps,force_sf_dma_mode;
 			snps,perfect-filter-entries = <32>;
 			snps,tso = <1>;
-			clock = <&clk 65>;
+			clocks = <&clk ADSP_SC59X_CLK_GIGE>;
 			clock-names = "stmmaceth";
 			status = "disabled";
 		};
@@ -474,7 +474,7 @@
 			snps,burst_len = <0x4>;	/* BLEN8 */
 			snps,pbl = <1>;
 			snps,force_thresh_dma_mode;
-			clock = <&clk 65>;
+			clocks = <&clk ADSP_SC59X_CLK_GIGE>;
 			clock-names = "stmmaceth";
 			status = "disabled";
 		};
