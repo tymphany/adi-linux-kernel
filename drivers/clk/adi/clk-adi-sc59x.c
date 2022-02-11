@@ -338,10 +338,9 @@ static int sc59x_clock_probe(struct platform_device *pdev) {
 		cdu + CDU_CFG10, CLK_IS_CRITICAL);
 	clks[ADSP_SC59X_CLK_TRACE] = cdu_gate(dev, "trace", "trace_sel", cdu + CDU_CFG12,
 		0);
-	clks[ADSP_SC59X_CLK_EMMC] = cdu_gate(dev, "emmc", "emmc_sel", cdu + CDU_CFG13,
-		CLK_IS_CRITICAL);
+	clks[ADSP_SC59X_CLK_EMMC] = cdu_gate(dev, "emmc", "emmc_sel", cdu + CDU_CFG13, 0);
 	clks[ADSP_SC59X_CLK_EMMC_TIMER_QMC] = cdu_gate(dev, "emmc_timer_qmc",
-		"emmc_timer_qmc_sel", cdu + CDU_CFG14, CLK_IS_CRITICAL);
+		"emmc_timer_qmc_sel", cdu + CDU_CFG14, 0);
 
 	// Dedicated DDR output mux
 	clks[ADSP_SC59X_CLK_DDR] = clk_register_mux(dev, "ddr", ddr_sels, 2,
