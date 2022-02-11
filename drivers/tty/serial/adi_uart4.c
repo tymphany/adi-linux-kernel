@@ -1372,7 +1372,6 @@ module_exit(adi_uart4_serial_exit);
 
 #define STAT_OFFSET	0x08
 #define THR_OFFSET	0x24
-#define THRE		(1 << 5)
 
 static inline u32 adi_uart_read(struct uart_port *port, u32 off)
 {
