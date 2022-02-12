@@ -441,6 +441,7 @@
 			reg = <0x31027000 0x1000>,
 				  <0x60000000 0x10000000>;
 			interrupts = <GIC_SPI 151 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&clk ADSP_SC59X_CLK_OSPI_REFCLK>;
 			cdns,is-decoded-cs;
 			cdns,fifo-depth = <128>;
 			cdns,fifo-width = <4>;

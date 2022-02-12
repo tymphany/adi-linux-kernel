@@ -1363,12 +1363,10 @@ static int cqspi_of_get_flash_pdata(struct platform_device *pdev,
 		return -ENXIO;
 	}
 
-#ifndef CONFIG_ARCH_SC59X
 	if (of_property_read_u32(np, "spi-max-frequency", &f_pdata->clk_rate)) {
 		dev_err(&pdev->dev, "couldn't determine spi-max-frequency\n");
 		return -ENXIO;
 	}
-#endif
 
 	return 0;
 }
@@ -1578,14 +1576,12 @@ static int cqspi_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-#if !(defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC59X_64))
 	/* Obtain QSPI clock. */
 	cqspi->clk = devm_clk_get(dev, NULL);
 	if (IS_ERR(cqspi->clk)) {
 		dev_err(dev, "Cannot claim QSPI clock.\n");
 		return PTR_ERR(cqspi->clk);
 	}
-#endif
 
 	/* Obtain and remap controller address. */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -1621,10 +1617,6 @@ static int cqspi_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC59X_64)
-	#define CONFIG_CQSPI_REF_CLK		500000000
-	cqspi->master_ref_clk_hz = CONFIG_CQSPI_REF_CLK;
-#else
 	ret = clk_prepare_enable(cqspi->clk);
 	if (ret) {
 		dev_err(dev, "Cannot enable QSPI clock.\n");
@@ -1651,7 +1643,6 @@ static int cqspi_probe(struct platform_device *pdev)
 	reset_control_deassert(rstc_ocp);
 
 	cqspi->master_ref_clk_hz = clk_get_rate(cqspi->clk);
-#endif
 	ddata  = of_device_get_match_data(dev);
 	if (ddata && (ddata->quirks & CQSPI_NEEDS_WR_DELAY))
 		cqspi->wr_delay = 5 * DIV_ROUND_UP(NSEC_PER_SEC,
@@ -1895,17 +1886,6 @@ void cadence_qspi_setup_octal(struct cqspi_flash_pdata *f_pdata){
 }
 
 void cadence_configure_opi_mode(struct spi_nor *nor, struct cqspi_flash_pdata *f_pdata){
-	//Setup desired clock rates
-	//On the ezkit, it appears that the kernel needs to run slower than U-boot does...
-	//Probably due to more noise being introduced from peripheral activity
-	if(strcmp(ospi_mode, "dtr") == 0){
-		f_pdata->clk_rate = CONFIG_CQSPI_REF_CLK/12;
-	}else if(strcmp(ospi_mode, "str") == 0){
-		f_pdata->clk_rate = CONFIG_CQSPI_REF_CLK/10;
-	}else{
-		f_pdata->clk_rate = CONFIG_CQSPI_REF_CLK/10;
-	}
-
 	if(strcmp(ospi_mode, "dtr") == 0){
 		f_pdata->use_dtr = 1;
 	}else{
