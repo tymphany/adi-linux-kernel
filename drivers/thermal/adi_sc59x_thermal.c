@@ -203,6 +203,7 @@ static int sc59x_thermal_probe(struct platform_device *pdev) {
 	int irq;
 	int ret;
 	u32 gain, offset, fault, alert, blanking;
+	u32 imask;
 
 	data = devm_kzalloc(dev, sizeof(*data), GFP_KERNEL);
 	if (!data) {
@@ -283,7 +284,9 @@ static int sc59x_thermal_probe(struct platform_device *pdev) {
 	}
 
 	/* Unmask interrupts */
-	writel(SC59X_TMU_IMSK_FLTHI | SC59X_TMU_IMSK_ALRTHI, data->ioaddr + SC59X_TMU_IMSK);
+	imask = readl(data->ioaddr + SC59X_TMU_IMSK);
+	imask &= ~SC59X_TMU_IMSK_FLTHI & ~SC59X_TMU_IMSK_ALRTHI;
+	writel(imask, data->ioaddr + SC59X_TMU_IMSK);
 
 	/* Enable TMU in periodic operation */
 	writel(SC59X_TMU_CTL_TMEN | SC59X_TMU_CTL_TMPU, data->ioaddr + SC59X_TMU_CTL);
