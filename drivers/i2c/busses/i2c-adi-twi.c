@@ -713,7 +713,7 @@ static int i2c_adi_twi_probe(struct platform_device *pdev)
 
 	iface->sclk = devm_clk_get(&pdev->dev, "sclk0");
 	if (IS_ERR(iface->sclk)) {
-		if (PTR_ERR != -EPROBE_DEFER)
+		if (PTR_ERR(iface->sclk) != -EPROBE_DEFER)
 			dev_err(&pdev->dev, "Missing i2c clock\n");
 		return PTR_ERR(iface->sclk);
 	}
