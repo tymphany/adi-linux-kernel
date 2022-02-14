@@ -17,9 +17,14 @@
 #define _SC5XX_SPORT_H_
 
 #include <linux/platform_device.h>
-#include <linux/workqueue.h>
 #include <linux/completion.h>
 #include <sound/pcm_params.h>
+
+#if IS_ENABLED(CONFIG_SND_SC5XX_SPORT_SHARC)
+#include <linux/workqueue.h>
+#include <linux/rpmsg.h>
+#include "icap/include/icap_application.h"
+#endif
 
 #define TDM_MAX_SLOTS 8
 #define SHARC_CORES_NUM 2
@@ -147,18 +152,42 @@ struct sport_device {
 
 #if IS_ENABLED(CONFIG_SND_SC5XX_SPORT_SHARC)
 
-	struct mutex rpmsg_lock;
-	struct rpmsg_device *sharc_rpmsg[SHARC_CORES_NUM];
+	struct icap_instance icap[SHARC_CORES_NUM];
+	spinlock_t icap_spinlock;
+
+	u32 sharc_tx_core;
+	u32 sharc_rx_core;
+
+	u32 icap_tx_dev_id;
+	u32 icap_rx_dev_id;
+
+	struct work_struct get_sharc1_feature_work;
+	struct work_struct get_sharc2_feature_work;
 
 	struct snd_dma_buffer sharc_tx_dma_buf;
 	struct snd_dma_buffer sharc_rx_dma_buf;
 
 	size_t sharc_tx_buf_pos;
 	size_t sharc_rx_buf_pos;
-	struct mutex sharc_tx_buf_pos_lock;
-	struct mutex sharc_rx_buf_pos_lock;
+	spinlock_t sharc_tx_buf_pos_lock;
+	spinlock_t sharc_rx_buf_pos_lock;
 
-	struct completion sharc_msg_ack_complete[SHARC_CORES_NUM];
+	u32 tx_alsa_icap_buf_id;
+	u32 tx_dma_icap_buf_id;
+	u32 rx_alsa_icap_buf_id;
+	u32 rx_dma_icap_buf_id;
+
+	struct work_struct send_tx_start_work;
+	struct work_struct send_rx_start_work;
+
+	struct work_struct send_tx_stop_work;
+	struct work_struct send_rx_stop_work;
+
+	struct wait_queue_head pending_tx_stop_event;
+	struct wait_queue_head pending_rx_stop_event;
+
+	u32 pending_tx_stop;
+	u32 pending_rx_stop;
 #endif
 };
 
@@ -191,9 +220,9 @@ unsigned long sport_curr_offset_tx(struct sport_device *sport);
 unsigned long sport_curr_offset_rx(struct sport_device *sport);
 
 #if IS_ENABLED(CONFIG_SND_SC5XX_SPORT_SHARC)
-int rpmsg_sharc_alsa_probe(struct rpmsg_device *rpdev);
-int rpmsg_sharc_alsa_cb(struct rpmsg_device *rpdev, void *data, int len, void *priv, u32 src);
-void rpmsg_sharc_alsa_remove(struct rpmsg_device *rpdev);
+int rpmsg_icap_sport_probe(struct rpmsg_device *rpdev);
+int rpmsg_icap_sport_cb(struct rpmsg_device *rpdev, void *data, int len, void *priv, u32 src);
+void rpmsg_icap_sport_remove(struct rpmsg_device *rpdev);
 #endif
 
 #endif

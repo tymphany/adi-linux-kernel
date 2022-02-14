@@ -64,7 +64,6 @@
 			compatible = "sc5xx,asoc-card";
 			adi,cpu-dai = <&i2s4>;
 			adi,codec = <&adau1962>, <&adau1979>;
-			iram = <&sram1>;
 		};
 
 	};
@@ -414,7 +413,7 @@
 		audio-jack {
 			gpio-hog;
 			gpios = <11 0x0>;
-			output-low;
+			output-high;
 			line-name = "audio-jack-sel";
 		};
 

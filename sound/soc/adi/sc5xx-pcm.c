@@ -206,17 +206,32 @@ static struct platform_driver sc5xx_pcm_driver = {
 };
 
 #if IS_ENABLED(CONFIG_SND_SC5XX_SPORT_SHARC)
-static struct rpmsg_device_id rpmsg_sharc_alsa_id_table[] = {
-	{ .name = "sharc-alsa" },
+static struct rpmsg_device_id rpmsg_icap_sport_id_table[] = {
+	{ .name = "icap-sport0-core1" },
+	{ .name = "icap-sport1-core1" },
+	{ .name = "icap-sport2-core1" },
+	{ .name = "icap-sport3-core1" },
+	{ .name = "icap-sport4-core1" },
+	{ .name = "icap-sport5-core1" },
+	{ .name = "icap-sport6-core1" },
+	{ .name = "icap-sport7-core1" },
+	{ .name = "icap-sport0-core2" },
+	{ .name = "icap-sport1-core2" },
+	{ .name = "icap-sport2-core2" },
+	{ .name = "icap-sport3-core2" },
+	{ .name = "icap-sport4-core2" },
+	{ .name = "icap-sport5-core2" },
+	{ .name = "icap-sport6-core2" },
+	{ .name = "icap-sport7-core2" },
 	{ },
 };
-static struct rpmsg_driver rpmsg_sharc_alsa = {
+static struct rpmsg_driver rpmsg_icap_sport = {
 	.drv.name  = KBUILD_MODNAME,
 	.drv.owner = THIS_MODULE,
-	.id_table  = rpmsg_sharc_alsa_id_table,
-	.probe     = rpmsg_sharc_alsa_probe,
-	.callback  = rpmsg_sharc_alsa_cb,
-	.remove    = rpmsg_sharc_alsa_remove,
+	.id_table  = rpmsg_icap_sport_id_table,
+	.probe     = rpmsg_icap_sport_probe,
+	.callback  = rpmsg_icap_sport_cb,
+	.remove    = rpmsg_icap_sport_remove,
 };
 #endif
 
@@ -240,7 +255,7 @@ static int sc5xx_pcm_driver_init(void)
 	}
 
 #if IS_ENABLED(CONFIG_SND_SC5XX_SPORT_SHARC)
-	ret = register_rpmsg_driver(&rpmsg_sharc_alsa);
+	ret = register_rpmsg_driver(&rpmsg_icap_sport);
 	if (ret < 0) {
 		pr_err("sc5xx_pcm_driver: failed to register rpmsg driver\n");
 		platform_device_unregister(sc5xx_pcm_dev);
@@ -258,7 +273,7 @@ static void sc5xx_pcm_driver_exit(void)
 	platform_device_unregister(sc5xx_pcm_dev);
 	platform_driver_unregister(&sc5xx_pcm_driver);
 #if IS_ENABLED(CONFIG_SND_SC5XX_SPORT_SHARC)
-	unregister_rpmsg_driver(&rpmsg_sharc_alsa);
+	unregister_rpmsg_driver(&rpmsg_icap_sport);
 #endif
 }
 module_exit(sc5xx_pcm_driver_exit);
