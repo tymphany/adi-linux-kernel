@@ -283,25 +283,39 @@ static int sc5xx_dai_probe(struct platform_device *pdev)
 {
 	struct sport_device *sport;
 	struct device *dev = &pdev->dev;
+	struct clk *clk;
 	int ret;
 
 	pads_init();
 	sru_init();
 
+	clk = devm_clk_get(dev, "sclk");
+	if (IS_ERR(clk)) {
+		dev_err(dev, "Missing clock node `sclk` for i2s\n");
+		return PTR_ERR(clk);
+	}
+
 	sport = sport_create(pdev);
 	if (IS_ERR(sport))
 		return PTR_ERR(sport);
+
+	sport->clk = clk;
+	clk_prepare_enable(clk);
 
 	/* register with the ASoC layers */
 	ret = devm_snd_soc_register_component(dev, &sc5xx_dai_component,
 					 &sc5xx_i2s_dai, 1);
 	if (ret) {
-		sport_delete(sport);
-		return ret;
+		goto cleanup;
 	}
 	platform_set_drvdata(pdev, sport);
 
 	return 0;
+
+cleanup:
+	sport_delete(sport);
+	clk_disable_unprepare(clk);
+	return ret;
 }
 
 static int sc5xx_dai_remove(struct platform_device *pdev)
@@ -309,6 +323,7 @@ static int sc5xx_dai_remove(struct platform_device *pdev)
 	struct sport_device *sport = platform_get_drvdata(pdev);
 
 	sport_delete(sport);
+	clk_disable_unprepare(sport->clk);
 
 	return 0;
 }

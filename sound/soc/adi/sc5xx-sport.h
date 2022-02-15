@@ -16,7 +16,9 @@
 #ifndef _SC5XX_SPORT_H_
 #define _SC5XX_SPORT_H_
 
+#include <linux/dmaengine.h>
 #include <linux/platform_device.h>
+#include <linux/clk.h>
 #include <linux/completion.h>
 #include <sound/pcm_params.h>
 
@@ -109,12 +111,13 @@ struct sport_register {
 
 struct sport_device {
 	struct platform_device *pdev;
+	struct clk *clk;
 	const unsigned short *pin_req;
 	unsigned int sport_channel;
 	struct sport_register *tx_regs;
 	struct sport_register *rx_regs;
-	int tx_dma_chan;
-	int rx_dma_chan;
+	struct dma_chan *tx_dma_chan;
+	struct dma_chan *rx_dma_chan;
 	int tx_err_irq;
 	int rx_err_irq;
 
@@ -124,19 +127,18 @@ struct sport_device {
 	void *rx_data;
 
 	/* cpu address of dma descriptor */
-	struct dmasg *tx_desc;
-	struct dmasg *rx_desc;
-	/* device address of dma descriptor */
-	dma_addr_t tx_desc_phy;
-	dma_addr_t rx_desc_phy;
-	unsigned int tx_desc_size;
-	unsigned int rx_desc_size;
+	struct dma_async_tx_descriptor *tx_desc;
+	struct dma_async_tx_descriptor *rx_desc;
 	dma_addr_t tx_buf;
 	dma_addr_t rx_buf;
 	size_t tx_fragsize;
 	size_t rx_fragsize;
 	unsigned int tx_frags;
 	unsigned int rx_frags;
+	dma_cookie_t tx_cookie;
+	dma_cookie_t rx_cookie;
+	size_t tx_totalsize;
+	size_t rx_totalsize;
 	unsigned int wdsize;
 
 	unsigned int tx_map[TDM_MAX_SLOTS];

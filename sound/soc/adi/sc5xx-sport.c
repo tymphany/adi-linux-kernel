@@ -21,9 +21,7 @@
 #include <linux/slab.h>
 
 #include <linux/soc/adi/cpu.h>
-#include <linux/soc/adi/dma.h>
 #include <linux/soc/adi/portmux.h>
-#include <linux/soc/adi/hardware.h>
 
 #include "sc5xx-sport.h"
 
@@ -53,25 +51,10 @@ int sport_set_rx_params(struct sport_device *sport,
 }
 EXPORT_SYMBOL(sport_set_rx_params);
 
-static int compute_wdsize(size_t wdsize)
-{
-	switch (wdsize) {
-	case 1:
-		return WDSIZE_8 | PSIZE_8;
-	case 2:
-		return WDSIZE_16 | PSIZE_16;
-	default:
-		return WDSIZE_32 | PSIZE_32;
-	}
-}
-
 int sport_tx_start(struct sport_device *sport)
 {
-	set_dma_next_desc_addr(sport->tx_dma_chan,
-			sport->tx_desc_phy);
-	set_dma_config(sport->tx_dma_chan, DMAFLOW_LIST | DI_EN
-			| compute_wdsize(sport->wdsize) | NDSIZE_6);
-	enable_dma(sport->tx_dma_chan);
+	sport->tx_cookie = dmaengine_submit(sport->tx_desc);
+	dma_async_issue_pending(sport->tx_dma_chan);
 	iowrite32(ioread32(&sport->tx_regs->spctl) | SPORT_CTL_SPENPRI,
 			&sport->tx_regs->spctl);
 	return 0;
@@ -80,11 +63,8 @@ EXPORT_SYMBOL(sport_tx_start);
 
 int sport_rx_start(struct sport_device *sport)
 {
-	set_dma_next_desc_addr(sport->rx_dma_chan,
-			sport->rx_desc_phy);
-	set_dma_config(sport->rx_dma_chan, DMAFLOW_LIST | DI_EN | WNR
-			| compute_wdsize(sport->wdsize) | NDSIZE_6);
-	enable_dma(sport->rx_dma_chan);
+	sport->rx_cookie = dmaengine_submit(sport->rx_desc);
+	dma_async_issue_pending(sport->rx_dma_chan);
 	iowrite32(ioread32(&sport->rx_regs->spctl) | SPORT_CTL_SPENPRI,
 			&sport->rx_regs->spctl);
 	return 0;
@@ -95,7 +75,9 @@ int sport_tx_stop(struct sport_device *sport)
 {
 	iowrite32(ioread32(&sport->tx_regs->spctl) & ~SPORT_CTL_SPENPRI,
 			&sport->tx_regs->spctl);
-	disable_dma(sport->tx_dma_chan);
+	dmaengine_terminate_sync(sport->tx_dma_chan);
+	sport->tx_cookie = 0;
+	sport->tx_desc = NULL;
 	return 0;
 }
 EXPORT_SYMBOL(sport_tx_stop);
@@ -104,7 +86,9 @@ int sport_rx_stop(struct sport_device *sport)
 {
 	iowrite32(ioread32(&sport->rx_regs->spctl) & ~SPORT_CTL_SPENPRI,
 			&sport->rx_regs->spctl);
-	disable_dma(sport->rx_dma_chan);
+	dmaengine_terminate_sync(sport->rx_dma_chan);
+	sport->rx_cookie = 0;
+	sport->rx_desc = NULL;
 	return 0;
 }
 EXPORT_SYMBOL(sport_rx_stop);
@@ -125,61 +109,39 @@ void sport_set_rx_callback(struct sport_device *sport,
 }
 EXPORT_SYMBOL(sport_set_rx_callback);
 
-static void setup_desc(struct sport_device *sport, int fragcount,
-		size_t fragsize, unsigned int cfg, int tx)
-{
-	struct dmasg *desc;
-	u32 desc_phy;
-	u32 buf;
-	int i;
-
-	if (tx) {
-		desc = sport->tx_desc;
-		desc_phy = lower_32_bits(sport->tx_desc_phy);
-		buf = lower_32_bits(sport->tx_buf);
-	} else {
-		desc = sport->rx_desc;
-		desc_phy = lower_32_bits(sport->rx_desc_phy);
-		buf = lower_32_bits(sport->rx_buf);
-	}
-
-	for (i = 0; i < fragcount; ++i) {
-		desc[i].next_desc_addr  = (desc_phy	+ (i + 1) * sizeof(struct dmasg));
-		desc[i].start_addr = buf + i * fragsize;
-		desc[i].cfg = cfg;
-		desc[i].x_count = fragsize / sport->wdsize;
-		desc[i].x_modify = sport->wdsize;
-		desc[i].y_count = 0;
-		desc[i].y_modify = 0;
-	}
-
-	/* make circular */
-	desc[fragcount-1].next_desc_addr = desc_phy;
-}
-
 int sport_config_tx_dma(struct sport_device *sport, void *buf,
 		int fragcount, size_t fragsize, struct snd_pcm_substream *substream)
 {
-	unsigned int cfg;
+	struct dma_slave_config dma_config = {0};
+	size_t total = fragsize * fragcount;
+	int ret;
 
-	if (sport->tx_desc)
-		dma_free_coherent(&sport->pdev->dev, sport->tx_desc_size,
-				sport->tx_desc, sport->tx_desc_phy);
+	if (sport->tx_desc) {
+		dmaengine_terminate_sync(sport->tx_dma_chan);
+	}
 
-	sport->tx_desc = dma_alloc_coherent(&sport->pdev->dev,
-			fragcount * sizeof(struct dmasg),
-			&sport->tx_desc_phy, GFP_KERNEL);
-	sport->tx_desc_size = fragcount * sizeof(struct dmasg);
-	if (!sport->tx_desc)
-		return -ENOMEM;
+	dma_config.direction = DMA_MEM_TO_DEV;
+	dma_config.src_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE;
+	dma_config.dst_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE;
+	dma_config.src_maxburst = sport->wdsize;
+	dma_config.dst_maxburst = sport->wdsize;
+	ret = dmaengine_slave_config(sport->tx_dma_chan, &dma_config);
+	if (ret) {
+		dev_err(&sport->pdev->dev, "tx dma slave config failed: %d\n", ret);
+		return ret;
+	}
+
+	sport->tx_desc = dmaengine_prep_dma_cyclic(sport->tx_dma_chan,
+		(dma_addr_t) buf, total, fragsize, DMA_MEM_TO_DEV,
+		DMA_PREP_INTERRUPT);
+
+	sport->tx_desc->callback = sport->tx_callback;
+	sport->tx_desc->callback_param = sport->tx_data;
 
 	sport->tx_buf = (dma_addr_t)buf;
 	sport->tx_fragsize = fragsize;
 	sport->tx_frags = fragcount;
-	cfg = DMAFLOW_LIST | DI_EN | compute_wdsize(sport->wdsize)
-		| NDSIZE_6 | DMAEN;
-
-	setup_desc(sport, fragcount, fragsize, cfg, 1);
+	sport->tx_totalsize = total;
 
 	sport->tx_substream = substream;
 
@@ -190,26 +152,36 @@ EXPORT_SYMBOL(sport_config_tx_dma);
 int sport_config_rx_dma(struct sport_device *sport, void *buf,
 		int fragcount, size_t fragsize, struct snd_pcm_substream *substream)
 {
-	unsigned int cfg;
+	struct dma_slave_config dma_config = {0};
+	size_t total = fragcount * fragsize;
+	int ret;
 
-	if (sport->rx_desc)
-		dma_free_coherent(&sport->pdev->dev, sport->rx_desc_size,
-				sport->rx_desc, sport->rx_desc_phy);
+	if (sport->rx_desc) {
+		dmaengine_terminate_sync(sport->rx_dma_chan);
+	}
 
-	sport->rx_desc = dma_alloc_coherent(&sport->pdev->dev,
-			fragcount * sizeof(struct dmasg),
-			&sport->rx_desc_phy, GFP_KERNEL);
-	sport->rx_desc_size = fragcount * sizeof(struct dmasg);
-	if (!sport->rx_desc)
-		return -ENOMEM;
+	dma_config.direction = DMA_DEV_TO_MEM;
+	dma_config.src_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE;
+	dma_config.dst_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE;
+	dma_config.src_maxburst = sport->wdsize;
+	dma_config.dst_maxburst = sport->wdsize;
+	ret = dmaengine_slave_config(sport->rx_dma_chan, &dma_config);
+	if (ret) {
+		dev_err(&sport->pdev->dev, "rx dma slave config failed: %d\n", ret);
+		return ret;
+	}
+
+	sport->rx_desc = dmaengine_prep_dma_cyclic(sport->rx_dma_chan,
+		(dma_addr_t) buf, total, fragsize, DMA_DEV_TO_MEM,
+		DMA_PREP_INTERRUPT);
+
+	sport->rx_desc->callback = sport->rx_callback;
+	sport->rx_desc->callback_param = sport->rx_data;
 
 	sport->rx_buf = (dma_addr_t)buf;
 	sport->rx_fragsize = fragsize;
 	sport->rx_frags = fragcount;
-	cfg = DMAFLOW_LIST | DI_EN | compute_wdsize(sport->wdsize)
-		| WNR | NDSIZE_6 | DMAEN;
-
-	setup_desc(sport, fragcount, fragsize, cfg, 0);
+	sport->rx_totalsize = total;
 
 	sport->rx_substream = substream;
 
@@ -219,60 +191,19 @@ EXPORT_SYMBOL(sport_config_rx_dma);
 
 unsigned long sport_curr_offset_tx(struct sport_device *sport)
 {
-	unsigned long curr = get_dma_curr_addr(sport->tx_dma_chan);
-
-	return curr - (unsigned long)sport->tx_buf;
+	struct dma_tx_state state;
+	dmaengine_tx_status(sport->tx_dma_chan, sport->tx_cookie, &state);
+	return sport->tx_totalsize - state.residue;
 }
 EXPORT_SYMBOL(sport_curr_offset_tx);
 
 unsigned long sport_curr_offset_rx(struct sport_device *sport)
 {
-	unsigned long curr = get_dma_curr_addr(sport->rx_dma_chan);
-
-	return curr - (unsigned long)sport->rx_buf;
+	struct dma_tx_state state;
+	dmaengine_tx_status(sport->rx_dma_chan, sport->rx_cookie, &state);
+	return sport->rx_totalsize - state.residue;
 }
 EXPORT_SYMBOL(sport_curr_offset_rx);
-
-static irqreturn_t sport_tx_irq(int irq, void *dev_id)
-{
-	struct sport_device *sport = dev_id;
-	static unsigned long status;
-
-	status = get_dma_curr_irqstat(sport->tx_dma_chan);
-	if (status & (DMA_DONE|DMA_ERR))
-		clear_dma_irqstat(sport->tx_dma_chan);
-
-	if (sport->tx_callback)
-		sport->tx_callback(sport->tx_data);
-	return IRQ_HANDLED;
-}
-
-static irqreturn_t sport_rx_irq(int irq, void *dev_id)
-{
-	struct sport_device *sport = dev_id;
-	unsigned long status;
-
-	status = get_dma_curr_irqstat(sport->rx_dma_chan);
-	if (status & (DMA_DONE|DMA_ERR))
-		clear_dma_irqstat(sport->rx_dma_chan);
-
-	if (sport->rx_callback)
-		sport->rx_callback(sport->rx_data);
-	return IRQ_HANDLED;
-}
-
-static irqreturn_t sport_err_irq(int irq, void *dev_id)
-{
-	struct sport_device *sport = dev_id;
-	struct device *dev = &sport->pdev->dev;
-
-	if (ioread32(&sport->tx_regs->spctl) & SPORT_CTL_DERRPRI)
-		dev_err(dev, "sport error: TUVF\n");
-	if (ioread32(&sport->rx_regs->spctl) & SPORT_CTL_DERRPRI)
-		dev_err(dev, "sport error: ROVF\n");
-
-	return IRQ_HANDLED;
-}
 
 static int sport_get_resource(struct sport_device *sport)
 {
@@ -315,35 +246,6 @@ static int sport_get_resource(struct sport_device *sport)
 		return -ENODEV;
 	}
 
-	ret = of_property_read_u32_index(dev->of_node,
-			"dma-channel", 0, &sport->tx_dma_chan);
-	if (ret) {
-		dev_err(dev, "No tx DMA resource\n");
-		return -ENODEV;
-	}
-
-	ret = of_property_read_u32_index(dev->of_node,
-			"dma-channel", 1, &sport->rx_dma_chan);
-
-	if (ret) {
-		dev_err(dev, "No rx DMA resource\n");
-		return -ENODEV;
-	}
-
-	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
-	if (!res) {
-		dev_err(dev, "No tx error irq resource\n");
-		return -ENODEV;
-	}
-	sport->tx_err_irq = res->start;
-
-	res = platform_get_resource(pdev, IORESOURCE_IRQ, 1);
-	if (!res) {
-		dev_err(dev, "No rx error irq resource\n");
-		return -ENODEV;
-	}
-	sport->rx_err_irq = res->start;
-
 	return 0;
 }
 
@@ -353,50 +255,30 @@ static int sport_request_resource(struct sport_device *sport)
 	struct device *dev = &pdev->dev;
 	int ret;
 
-	ret = request_dma(sport->tx_dma_chan, "SPORT TX Data");
-	if (ret) {
-		dev_err(dev, "Unable to allocate DMA channel for sport tx\n");
-		return ret;
+	sport->tx_dma_chan = dma_request_chan(dev, "tx");
+	if (IS_ERR(sport->tx_dma_chan)) {
+		dev_err(dev, "Missing `tx` dma channel: %ld\n", PTR_ERR(sport->tx_dma_chan));
+		return PTR_ERR(sport->tx_dma_chan);
 	}
-	set_dma_callback(sport->tx_dma_chan, sport_tx_irq, sport);
 
-	ret = request_dma(sport->rx_dma_chan, "SPORT RX Data");
-	if (ret) {
-		dev_err(dev, "Unable to allocate DMA channel for sport rx\n");
+	sport->rx_dma_chan = dma_request_chan(dev, "rx");
+	if (IS_ERR(sport->rx_dma_chan)) {
+		dev_err(dev, "Missing `rx` dma channel: %ld\n", PTR_ERR(sport->rx_dma_chan));
+		ret = PTR_ERR(sport->rx_dma_chan);
 		goto err_rx_dma;
-	}
-	set_dma_callback(sport->rx_dma_chan, sport_rx_irq, sport);
-
-	ret = request_irq(sport->tx_err_irq, sport_err_irq,
-			0, "SPORT TX ERROR", sport);
-	if (ret) {
-		dev_err(dev, "Unable to allocate tx error IRQ for sport\n");
-		goto err_tx_irq;
-	}
-
-	ret = request_irq(sport->rx_err_irq, sport_err_irq,
-			0, "SPORT RX ERROR", sport);
-	if (ret) {
-		dev_err(dev, "Unable to allocate rx error IRQ for sport\n");
-		goto err_rx_irq;
 	}
 
 	return 0;
-err_rx_irq:
-	free_irq(sport->tx_err_irq, sport);
-err_tx_irq:
-	free_dma(sport->rx_dma_chan);
+
 err_rx_dma:
-	free_dma(sport->tx_dma_chan);
+	dma_release_channel(sport->tx_dma_chan);
 	return ret;
 }
 
 static void sport_free_resource(struct sport_device *sport)
 {
-	free_irq(sport->rx_err_irq, sport);
-	free_irq(sport->tx_err_irq, sport);
-	free_dma(sport->rx_dma_chan);
-	free_dma(sport->tx_dma_chan);
+	dma_release_channel(sport->tx_dma_chan);
+	dma_release_channel(sport->rx_dma_chan);
 }
 struct sport_device *sport_create(struct platform_device *pdev)
 {
@@ -430,12 +312,8 @@ EXPORT_SYMBOL(sport_create);
 
 void sport_delete(struct sport_device *sport)
 {
-	if (sport->tx_desc)
-		dma_free_coherent(&sport->pdev->dev, sport->tx_desc_size,
-				sport->tx_desc, sport->tx_desc_phy);
-	if (sport->rx_desc)
-		dma_free_coherent(&sport->pdev->dev, sport->rx_desc_size,
-				sport->rx_desc, sport->rx_desc_phy);
+	dmaengine_terminate_sync(sport->tx_dma_chan);
+	dmaengine_terminate_sync(sport->rx_dma_chan);
 	sport_free_resource(sport);
 	kfree(sport);
 }
