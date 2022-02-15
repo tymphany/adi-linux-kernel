@@ -1173,7 +1173,7 @@
 //			spu_securep_id = <115>;
 //		};
 
-		sport_dma_cluster: dma@0x3102300 {
+		sport_dma_cluster: dma@0x31023000 {
 			compatible = "adi,dma-controller";
 			reg = <0x31023000 0x1000>;
 			status = "okay";

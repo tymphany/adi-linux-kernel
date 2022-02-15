@@ -242,7 +242,7 @@ static int init_channel(struct adi_dma *dma, struct device_node *node) {
 				node->full_name);
 			return -ENOENT;
 		}
-		channel->iodest = channel->iosrc + offset;
+		channel->iodest = dma->ioaddr + offset;
 	}
 
 	of_property_read_u32(node, "adi,skip-interrupts", &skip_int);
