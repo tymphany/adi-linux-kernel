@@ -369,7 +369,8 @@ int sport_config_tx_dma(struct sport_device *sport, void *buf,
 	}
 
 	/* Allocate buffer for SHARC output - DMA, prefers iram pool, if not available it fallbacks to CMA */
-	snd_dma_free_pages(&sport->sharc_tx_dma_buf);
+	if (sport->sharc_tx_dma_buf.dev.type)
+		snd_dma_free_pages(&sport->sharc_tx_dma_buf);
 	ret = snd_dma_alloc_pages(SNDRV_DMA_TYPE_DEV_IRAM, &sport->pdev->dev, fragsize * fragcount, &sport->sharc_tx_dma_buf);
 	if (ret){
 		return ret;
@@ -504,7 +505,8 @@ int sport_config_rx_dma(struct sport_device *sport, void *buf,
 	}
 
 	/* Allocate buffer for SHARC input - DMA, prefers iram pool, if not available it fallbacks to CMA */
-	snd_dma_free_pages(&sport->sharc_rx_dma_buf);
+	if (sport->sharc_rx_dma_buf.dev.type)
+		snd_dma_free_pages(&sport->sharc_rx_dma_buf);
 	ret = snd_dma_alloc_pages(SNDRV_DMA_TYPE_DEV_IRAM, &sport->pdev->dev, fragsize * fragcount, &sport->sharc_rx_dma_buf);
 	if (ret){
 		return ret;
