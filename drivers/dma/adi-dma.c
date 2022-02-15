@@ -82,6 +82,7 @@ struct adi_dma_channel {
 	void __iomem *iosrc;
 	void __iomem *iodest;
 	int running;
+	int use_interrupts;
 	int src_irq;
 	int src_err_irq;
 	int dest_irq;
@@ -128,40 +129,11 @@ static irqreturn_t adi_dma_error_handler(int irq, void *id);
 static irqreturn_t adi_dma_thread_handler(int irq, void *id);
 static void __process_descriptor(struct adi_dma_descriptor *desc);
 
-static int init_channel(struct adi_dma *dma, struct device_node *node) {
-	struct adi_dma_channel *channel;
-	int ret;
+static int init_channel_interrupts(struct adi_dma *dma, struct device_node *node,
+	struct adi_dma_channel *channel)
+{
 	int irq;
-	u32 offset;
-
-	channel = devm_kzalloc(dma->dev, sizeof(*channel), GFP_KERNEL);
-	if (!channel)
-		return -ENOMEM;
-
-	if (of_property_read_u32(node, "adi,id", &channel->id)) {
-		dev_err(dma->dev, "Missing adi,id for channel %s\n", node->full_name);
-		return -ENOENT;
-	}
-
-	if (of_property_read_u32(node, "adi,src-offset", &offset)) {
-		dev_err(dma->dev, "Missing adi,src-offset for channel %s\n",
-			node->full_name);
-		return -ENOENT;
-	}
-	channel->iosrc = dma->ioaddr + offset;
-
-	channel->dma = dma;
-	channel->current_desc = NULL;
-	spin_lock_init(&channel->lock);
-	INIT_LIST_HEAD(&channel->pending);
-	INIT_LIST_HEAD(&channel->cb_pending);
-
-	channel->config = (struct dma_slave_config) {
-		.src_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE,
-		.dst_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE,
-		.src_maxburst = 1,
-		.dst_maxburst = 1,
-	};
+	int ret;
 
 	irq = of_irq_get_byname(node, "complete");
 	if (irq <= 0) {
@@ -224,13 +196,62 @@ static int init_channel(struct adi_dma *dma, struct device_node *node) {
 			dev_err(dma->dev, "Failed to request IRQ %d\n", ret);
 			return ret;
 		}
+	}
 
+	return 0;
+}
+
+static int init_channel(struct adi_dma *dma, struct device_node *node) {
+	struct adi_dma_channel *channel;
+	int ret;
+	u32 offset;
+	u32 skip_int = 0;
+
+	channel = devm_kzalloc(dma->dev, sizeof(*channel), GFP_KERNEL);
+	if (!channel)
+		return -ENOMEM;
+
+	if (of_property_read_u32(node, "adi,id", &channel->id)) {
+		dev_err(dma->dev, "Missing adi,id for channel %s\n", node->full_name);
+		return -ENOENT;
+	}
+
+	if (of_property_read_u32(node, "adi,src-offset", &offset)) {
+		dev_err(dma->dev, "Missing adi,src-offset for channel %s\n",
+			node->full_name);
+		return -ENOENT;
+	}
+	channel->iosrc = dma->ioaddr + offset;
+
+	channel->dma = dma;
+	channel->current_desc = NULL;
+	spin_lock_init(&channel->lock);
+	INIT_LIST_HEAD(&channel->pending);
+	INIT_LIST_HEAD(&channel->cb_pending);
+
+	channel->config = (struct dma_slave_config) {
+		.src_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE,
+		.dst_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE,
+		.src_maxburst = 1,
+		.dst_maxburst = 1,
+	};
+
+	if (dma->hw_cfg->has_mdma) {
 		if (of_property_read_u32(node, "adi,dest-offset", &offset)) {
 			dev_err(dma->dev, "Missing adi,dest-offset for channel %s\n",
 				node->full_name);
 			return -ENOENT;
 		}
 		channel->iodest = channel->iosrc + offset;
+	}
+
+	of_property_read_u32(node, "adi,skip-interrupts", &skip_int);
+	channel->use_interrupts = !skip_int;
+
+	if (channel->use_interrupts) {
+		ret = init_channel_interrupts(dma, node, channel);
+		if (ret)
+			return ret;
 	}
 
 	// start with interrupts disabled, enable them when transactions appear
@@ -522,12 +543,14 @@ static void __adi_dma_enable_irqs(struct adi_dma_channel *adi_chan) {
 
 	adi_chan->running = 1;
 
-	enable_irq(adi_chan->src_irq);
-	enable_irq(adi_chan->src_err_irq);
+	if (adi_chan->use_interrupts) {
+		enable_irq(adi_chan->src_irq);
+		enable_irq(adi_chan->src_err_irq);
 
-	if (adi_chan->iodest) {
-		enable_irq(adi_chan->dest_irq);
-		enable_irq(adi_chan->dest_err_irq);
+		if (adi_chan->iodest) {
+			enable_irq(adi_chan->dest_irq);
+			enable_irq(adi_chan->dest_err_irq);
+		}
 	}
 }
 
@@ -537,12 +560,14 @@ static void __adi_dma_disable_irqs(struct adi_dma_channel *adi_chan) {
 
 	adi_chan->running = 0;
 
-	disable_irq_nosync(adi_chan->src_irq);
-	disable_irq_nosync(adi_chan->src_err_irq);
+	if (adi_chan->use_interrupts) {
+		disable_irq_nosync(adi_chan->src_irq);
+		disable_irq_nosync(adi_chan->src_err_irq);
 
-	if (adi_chan->iodest) {
-		disable_irq_nosync(adi_chan->dest_irq);
-		disable_irq_nosync(adi_chan->dest_err_irq);
+		if (adi_chan->iodest) {
+			disable_irq_nosync(adi_chan->dest_irq);
+			disable_irq_nosync(adi_chan->dest_err_irq);
+		}
 	}
 }
 
