@@ -1086,6 +1086,7 @@ static int adi_dma_probe(struct platform_device *pdev) {
 		dev_info(dev, "Creating new peripheral DMA controller instance\n");
 		dma_cap_set(DMA_SLAVE, dma->dma_device.cap_mask);
 		dma_cap_set(DMA_CYCLIC, dma->dma_device.cap_mask);
+		dma_cap_set(DMA_PRIVATE, dma->dma_device.cap_mask);
 
 		dma->dma_device.directions = BIT(DMA_DEV_TO_MEM) | BIT(DMA_MEM_TO_DEV);
 		dma->dma_device.src_addr_widths = buswidths;
