@@ -123,6 +123,7 @@ MODULE_DEVICE_TABLE(of, dma_dt_ids);
 
 static void __adi_dma_enable_irqs(struct adi_dma_channel *);
 static void __adi_dma_disable_irqs(struct adi_dma_channel *);
+static void __clear_and_reset(struct adi_dma_channel *channel);
 
 static irqreturn_t adi_dma_handler(int irq, void *id);
 static irqreturn_t adi_dma_error_handler(int irq, void *id);
@@ -257,6 +258,7 @@ static int init_channel(struct adi_dma *dma, struct device_node *node) {
 	// start with interrupts disabled, enable them when transactions appear
 	channel->running = 1;
 	__adi_dma_disable_irqs(channel);
+	__clear_and_reset(channel);
 
 	dma_cookie_init(&channel->chan);
 	channel->chan.device = &dma->dma_device;
@@ -443,6 +445,7 @@ static void __process_descriptor(struct adi_dma_descriptor *desc) {
 	else
 		set_dma_x_modify(channel->iosrc, desc->xmod);
 
+	clear_dma_irqstat(channel->iosrc);
 	set_dma_config(channel->iosrc, desc->cfg);
 
 	if (desc->direction == DMA_MEM_TO_MEM) {
@@ -462,6 +465,7 @@ static void __process_descriptor(struct adi_dma_descriptor *desc) {
 		set_dma_start_addr(channel->iodest, desc->dest);
 		set_dma_x_count(channel->iodest, desc->xcnt);
 		set_dma_x_modify(channel->iodest, desc->xmod);
+		clear_dma_irqstat(channel->iodest);
 		set_dma_config(channel->iodest, desc->cfg | extra_config);
 	}
 
@@ -671,6 +675,13 @@ static int adi_dma_slave_config(struct dma_chan *chan,
 	return 0;
 }
 
+static void __clear_only(struct adi_dma_channel *channel) {
+	clear_dma_irqstat(channel->iosrc);
+
+	if (channel->iodest)
+		clear_dma_irqstat(channel->iodest);
+}
+
 static void __clear_and_reset(struct adi_dma_channel *channel) {
 	set_dma_config(channel->iosrc, 0);
 	clear_dma_irqstat(channel->iosrc);
@@ -717,8 +728,6 @@ static irqreturn_t __adi_dma_handler(struct adi_dma_channel *channel,
 		goto done;
 	}
 
-	__clear_and_reset(channel);
-
 	if (!channel->current_desc) {
 		dev_err(channel->dma->dev, "channel %d: interrupt with no active desc\n",
 			channel->id);
@@ -728,6 +737,11 @@ static irqreturn_t __adi_dma_handler(struct adi_dma_channel *channel,
 
 	desc = channel->current_desc;
 	dev_dbg(channel->dma->dev, "%s: current descriptor %px\n", __func__, desc);
+
+	if (desc->cyclic)
+		__clear_only(channel);
+	else
+		__clear_and_reset(channel);
 
 	// For scatter-gather, do not finish or mark the descriptor for callback pending
 	// until we have processed every entry in the scatterlist
@@ -799,7 +813,8 @@ static irqreturn_t adi_dma_thread_handler(int irq, void *id) {
 			cb_node);
 		list_del(&desc->cb_node);
 
-		dma_cookie_complete(&desc->tx);
+		if (!desc->cyclic)
+			dma_cookie_complete(&desc->tx);
 		dmaengine_desc_get_callback(&desc->tx, &cb);
 
 		spin_unlock_irqrestore(&channel->lock, flags);
@@ -967,7 +982,7 @@ static struct dma_async_tx_descriptor *adi_prep_cyclic(struct dma_chan *chan,
 	desc->xcnt = period_len >> shift;
 	desc->xmod = 1 << shift;
 	desc->ycnt = len / period_len;
-	desc->ymod = 1;
+	desc->ymod = 0;
 
 	// Interpret prep interrupt to mean interrupt between each period,
 	// without it only interrupt after all periods for bookkeeping
