@@ -376,13 +376,13 @@ static void sharc_alsa_stop_func(struct work_struct *work)
 	for (i = 0; i < sharc_alsa->subdev_num; i++){
 		subdev = &sharc_alsa->subdevs[i];
 		if (subdev->state == SHARC_ALSA_STOPPING) {
-			subdev->state = SHARC_ALSA_STOPPED;
 			spin_unlock_irqrestore(&sharc_alsa->start_stop_spinlock, flags);
 			ret = icap_stop(&sharc_alsa->icap, i);
 			if (ret) {
 				dev_err(sharc_alsa->dev, "ICAP subdev%d stop error %d", i, ret);
 			}
 			spin_lock_irqsave(&sharc_alsa->start_stop_spinlock, flags);
+			subdev->state = SHARC_ALSA_STOPPED;
 			wake_up_interruptible_all(&subdev->pending_stop_event);
 		}
 	}
