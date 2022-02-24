@@ -723,7 +723,7 @@ static void adi_uart4_serial_shutdown(struct uart_port *port)
 	struct adi_uart4_serial_port *uart =
 		container_of(port, struct adi_uart4_serial_port, port);
 
-	dev_info(uart->dev, "in serial_shutdown\n");
+	dev_dbg(uart->dev, "in serial_shutdown\n");
 
 	if (uart->tx_dma_channel) {
 		dmaengine_terminate_sync(uart->tx_dma_channel);
