@@ -22,7 +22,7 @@
 #include "dmaengine.h"
 #include "adi-dma.h"
 
-#define ADI_MEMSET_SIZE 4*sizeof(uint64_t)
+#define ADI_MEMSET_SIZE (4*sizeof(uint64_t))
 
 struct adi_dma_hw {
 	int has_mdma;
@@ -54,10 +54,6 @@ struct adi_dma_descriptor {
 	/* a cyclic descriptor will reuse itself, triggering callbacks as expected,
 	 * and will not free itself when it finishes */
 	int cyclic;
-
-	/* Used for un-queued scatterlist descriptors, next descriptor in the chain
-	 * to be queued after this one */
-	struct adi_dma_descriptor *next_desc;
 
 	/* physical address of source location, in case of peripheral<->mem, the
 	 * mem address is ALWAYS here and dest is unused. */
@@ -509,9 +505,7 @@ static enum dma_status adi_dma_tx_status(struct dma_chan *chan, dma_cookie_t coo
 {
 	struct adi_dma_channel *adi_chan = to_adi_channel(chan);
 	struct adi_dma_descriptor *desc = adi_chan->current_desc;
-	size_t bytes_left;
-	u32 x, y;
-
+	size_t done, bytes;
 	enum dma_status ret;
 
 	ret = dma_cookie_status(chan, cookie, txstate);
@@ -524,20 +518,15 @@ static enum dma_status adi_dma_tx_status(struct dma_chan *chan, dma_cookie_t coo
 	if (desc->result.result != DMA_TRANS_NOERROR)
 		return DMA_ERROR;
 
-	x = get_dma_curr_xcount(adi_chan->iosrc);
-	bytes_left = x * desc->xmod;
+	// @todo this assumes ymod is one element, which is currently true in the only 2D case we support
+	// @todo this is incorrect for scatterlists length > 1, instead it only computes the residue
+	// of the current scatterlist item, but there are also no users that require that currently
+	done = get_dma_curr_addr(adi_chan->iosrc) - desc->src;
+	bytes = (desc->xcnt * desc->xmod);
+	if (desc->cfg & DMA2D)
+		bytes = bytes * desc->ycnt;
 
-	// ymod is used for stride between rows, but doesn't affect bytes copied
-	if (desc->cfg & DMA2D) {
-		y = get_dma_curr_ycount(adi_chan->iosrc);
-
-		// Add full rows that haven't been started to the partial row
-		if (y > 0)
-			bytes_left += (y-1) * (desc->xcnt * desc->xmod);
-	}
-
-	txstate->residue = (u32) bytes_left;
-
+	txstate->residue = (u32) (bytes - done);
 	return DMA_IN_PROGRESS;
 }
 
@@ -982,7 +971,7 @@ static struct dma_async_tx_descriptor *adi_prep_cyclic(struct dma_chan *chan,
 	desc->xcnt = period_len >> shift;
 	desc->xmod = 1 << shift;
 	desc->ycnt = len / period_len;
-	desc->ymod = 0;
+	desc->ymod = desc->xmod;
 
 	// Interpret prep interrupt to mean interrupt between each period,
 	// without it only interrupt after all periods for bookkeeping
