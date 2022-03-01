@@ -135,6 +135,8 @@ struct sport_device {
 	size_t rx_fragsize;
 	unsigned int tx_frags;
 	unsigned int rx_frags;
+	u32 tx_count;
+	u32 rx_count;
 	dma_cookie_t tx_cookie;
 	dma_cookie_t rx_cookie;
 	size_t tx_totalsize;

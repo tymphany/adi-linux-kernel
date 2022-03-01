@@ -109,6 +109,22 @@ void sport_set_rx_callback(struct sport_device *sport,
 }
 EXPORT_SYMBOL(sport_set_rx_callback);
 
+void sport_tx_dma_callback(void *ptr) {
+	struct sport_device *sport = ptr;
+	sport->tx_count += 1;
+	if (sport->tx_count >= sport->tx_frags)
+		sport->tx_count = 0;
+	sport->tx_callback(sport->tx_data);
+}
+
+void sport_rx_dma_callback(void *ptr) {
+	struct sport_device *sport = ptr;
+	sport->rx_count += 1;
+	if (sport->rx_count >= sport->rx_frags)
+		sport->rx_count = 0;
+	sport->rx_callback(sport->rx_data);
+}
+
 int sport_config_tx_dma(struct sport_device *sport, void *buf,
 		int fragcount, size_t fragsize, struct snd_pcm_substream *substream)
 {
@@ -135,13 +151,14 @@ int sport_config_tx_dma(struct sport_device *sport, void *buf,
 		(dma_addr_t) buf, total, fragsize, DMA_MEM_TO_DEV,
 		DMA_PREP_INTERRUPT);
 
-	sport->tx_desc->callback = sport->tx_callback;
-	sport->tx_desc->callback_param = sport->tx_data;
+	sport->tx_desc->callback = sport_tx_dma_callback;
+	sport->tx_desc->callback_param = sport;
 
 	sport->tx_buf = (dma_addr_t)buf;
 	sport->tx_fragsize = fragsize;
 	sport->tx_frags = fragcount;
 	sport->tx_totalsize = total;
+	sport->tx_count = 0;
 
 	sport->tx_substream = substream;
 
@@ -175,13 +192,14 @@ int sport_config_rx_dma(struct sport_device *sport, void *buf,
 		(dma_addr_t) buf, total, fragsize, DMA_DEV_TO_MEM,
 		DMA_PREP_INTERRUPT);
 
-	sport->rx_desc->callback = sport->rx_callback;
-	sport->rx_desc->callback_param = sport->rx_data;
+	sport->rx_desc->callback = sport_rx_dma_callback;
+	sport->rx_desc->callback_param = sport;
 
 	sport->rx_buf = (dma_addr_t)buf;
 	sport->rx_fragsize = fragsize;
 	sport->rx_frags = fragcount;
 	sport->rx_totalsize = total;
+	sport->rx_count = 0;
 
 	sport->rx_substream = substream;
 
@@ -191,17 +209,13 @@ EXPORT_SYMBOL(sport_config_rx_dma);
 
 unsigned long sport_curr_offset_tx(struct sport_device *sport)
 {
-	struct dma_tx_state state;
-	dmaengine_tx_status(sport->tx_dma_chan, sport->tx_cookie, &state);
-	return sport->tx_totalsize - state.residue;
+	return sport->tx_count * sport->tx_fragsize;
 }
 EXPORT_SYMBOL(sport_curr_offset_tx);
 
 unsigned long sport_curr_offset_rx(struct sport_device *sport)
 {
-	struct dma_tx_state state;
-	dmaengine_tx_status(sport->rx_dma_chan, sport->rx_cookie, &state);
-	return sport->rx_totalsize - state.residue;
+	return sport->rx_count * sport->rx_fragsize;
 }
 EXPORT_SYMBOL(sport_curr_offset_rx);
 
