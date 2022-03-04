@@ -102,10 +102,6 @@ int adi_rcu_check_coreid_valid(struct adi_rcu *rcu, int coreid) {
 }
 EXPORT_SYMBOL(adi_rcu_check_coreid_valid);
 
-int adi_rcu_core_is_idle(struct adi_rcu *rcu, int coreid) {
-	return !!(adi_rcu_readl(rcu, ADI_RCU_REG_MSG) & (RCU0_MSG_C0IDLE << coreid));
-}
-
 int adi_rcu_reset_core(struct adi_rcu *rcu, int coreid) {
 	u32 val;
 	int ret;
@@ -168,9 +164,13 @@ int adi_rcu_start_core(struct adi_rcu *rcu, int coreid) {
 }
 EXPORT_SYMBOL(adi_rcu_start_core);
 
-static int adi_rcu_is_core_idle(struct adi_rcu *rcu, int coreid) {
+int adi_rcu_is_core_idle(struct adi_rcu *rcu, int coreid) {
+	int ret = adi_rcu_check_coreid_valid(rcu, coreid);
+	if (ret)
+		return ret;
 	return !!(adi_rcu_readl(rcu, ADI_RCU_REG_MSG) & (RCU0_MSG_C0IDLE << coreid));
 }
+EXPORT_SYMBOL(adi_rcu_is_core_idle);
 
 int adi_rcu_stop_core(struct adi_rcu *rcu, int coreid, int coreirq) {
 	unsigned long timeout = jiffies + ADI_RCU_CORE_INIT_TIMEOUT;
@@ -185,7 +185,7 @@ int adi_rcu_stop_core(struct adi_rcu *rcu, int coreid, int coreirq) {
 		return 0;
 
 	/* Check the IDLE bit in RCU_MSG register */
-	if (!adi_rcu_is_core_idle(rcu, coreid)) {
+	if (adi_rcu_is_core_idle(rcu, coreid) == 0) {
 		/* Set core reset request bit in RCU_MSG bit(12:14) */
 		adi_rcu_msg_set(rcu, RCU0_MSG_CRR0 << coreid);
 
