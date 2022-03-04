@@ -23,19 +23,51 @@
 		reg = <0x95400000 0xac00000>;
 	};
 
+	reserved-memory {
+		vdev0vrings: vdev0vring0@20080000 {
+			reg = <0x20080000 0x4000>;
+			no-map;
+		};
+
+		vdev0buffer: vdev0buffer@20084000 {
+			compatible = "shared-dma-pool";
+			reg = <0x20084000 0x20000>;
+			no-map;
+		};
+
+		vdev1vrings: vdev0vring0@200A4000 {
+			reg = <0x200A4000 0x4000>;
+			no-map;
+		};
+
+		vdev1buffer: vdev0buffer@200A8000 {
+			compatible = "shared-dma-pool";
+			reg = <0x200A8000 0x20000>;
+			no-map;
+		};
+	};
+
+	sram2: sram-reserved@200C8000 {
+		compatible = "mmio-sram";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		reg = <0x200C8000 0x138000>;
+		ranges = <0 0x200C8000 0x138000>; /*1248KiB*/
+	};
+
 	scb {
 		sharc0: core1-rproc@0x28240000 {
 			compatible = "adi,remoteproc";
 			reg = <0x28240000 0x160000>,
 					<0x20000000 0x200000>;
 			core-id = <1>;
-			core-irq = <74>; /* SOFT1 */
+			core-irq = <106>; /* SOFT1 */
 			firmware-name = "adi_adsp_core1_fw.ldr";
 			interrupts = <GIC_SPI 337 IRQ_TYPE_EDGE_RISING>; /* TRU0_SLV3 */
 			adi,rcu = <&rcu>;
 			adi,l1-da = <0x240000 0x3a0000>;
 			adi,l2-da = <0x20000000 0x20200000>;
-			adi,resource-table-offset = <0x1000>;
+			adi,rsc-table = <&rsc_tbl0>;
 			adi,verify = <1>;
 			adi,tru = <&tru>;
 			adi,tru-master-id = <135>; /* trigger master SOFT4 */
@@ -47,13 +79,13 @@
 			reg = <0x28a40000 0x160000>,
 					<0x20000000 0x200000>;
 			core-id = <2>;
-			core-irq = <75>; /* SOFT2 */
+			core-irq = <107>; /* SOFT2 */
 			firmware-name = "adi_adsp_core2_fw.ldr";
 			interrupts = <GIC_SPI 337 IRQ_TYPE_EDGE_RISING>; /* TRU0_SLV3 */
 			adi,rcu = <&rcu>;
 			adi,l1-da = <0x240000 0x3a0000>;
 			adi,l2-da = <0x20000000 0x20200000>;
-			adi,resource-table-offset = <0x1000>;
+			adi,rsc-table = <&rsc_tbl1>;
 			adi,verify = <1>;
 			adi,tru = <&tru>;
 			adi,tru-master-id = <136>; /* trigger master SOFT5 */

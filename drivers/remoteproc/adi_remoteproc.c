@@ -2,7 +2,8 @@
 /*
  * Analog Device SHARC Image Loader for SC5XX processors
  *
- * Copyright (C) 2020, 2021 Analog Devices
+ * Copyright 2020-2022 Analog Devices
+ * 
  * @todo:
  * - sharc idle core as default with dts override
  * - timeout as default with dts override
@@ -37,7 +38,8 @@
 #define SPU_MDMA0_SRC_ID		88
 #define SPU_MDMA0_DST_ID		89
 
-#define CORE_INIT_TIMEOUT msecs_to_jiffies(2000)
+#define CORE_INIT_TIMEOUT_MS (2000)
+#define CORE_INIT_TIMEOUT msecs_to_jiffies(CORE_INIT_TIMEOUT_MS)
 
 #define MEMORY_COUNT 2
 
@@ -46,7 +48,8 @@
 
 #define NUM_TABLE_ENTRIES         1
 /* Resource table for the given remote */
-struct adi_sharc_resource_table {
+
+struct sharc_resource_table {
 	struct resource_table table_hdr;
 	unsigned int offset[NUM_TABLE_ENTRIES];
 	struct fw_rsc_hdr rpmsg_vdev_hdr;
@@ -54,63 +57,58 @@ struct adi_sharc_resource_table {
 	struct fw_rsc_vdev_vring vring[2];
 } __packed;
 
+struct adi_sharc_resource_table {
+	struct adi_resource_table_hdr adi_table_hdr;
+	struct sharc_resource_table rsc_table;
+} __packed;
+
+
 #define VRING_ALIGN 0x1000
 #define VRING_DEFAULT_SIZE 0x800
 
-static struct adi_sharc_resource_table resources_sharc0 = {
-	.table_hdr = {
-		/* resource table header */
-		1, 								 /* version */
-		NUM_TABLE_ENTRIES, /* number of table entries */
-		{0, 0,},					 /* reserved fields */
+/*
+ * In regular case the table comes from a fimware file, since ldr format doesn't have
+ * resource_table section we initialize the table here, and let remoteproc_core.c
+ * copy the initialized cached_table to reserved memory (adi,rsc-table) shared with remote core.
+ * The table must be initalized before core start so the remote core
+ * can't initialize the reserved memory either.
+ */
+static struct adi_sharc_resource_table _rsc_table_template = {
+	.adi_table_hdr = {
+		.tag = ADI_RESOURCE_TABLE_TAG,
+		.version = 1,
+		.initialized = 0,
 	},
-	.offset = {offsetof(struct adi_sharc_resource_table, rpmsg_vdev_hdr),
-	},
-	/* virtio device entry */
-	.rpmsg_vdev_hdr = {RSC_VDEV,}, /* virtio dev type */
-	.rpmsg_vdev = {
-		VIRTIO_ID_RPMSG, /* it's rpmsg virtio */
-		1, /* kick sharc0 */
-		/* 1<<0 is VIRTIO_RPMSG_F_NS bit defined in virtio_rpmsg_bus.c */
-		1<<0, 0, 0, 0, /* dfeatures, gfeatures, config len, status */
-		2, /* num_of_vrings */
-		{0, 0,}, /* reserved */
-	},
-	.vring = {
-		{FW_RSC_ADDR_ANY, VRING_ALIGN, VRING_DEFAULT_SIZE, 1, 0}, /* da allocated by remoteproc driver */
-		{FW_RSC_ADDR_ANY, VRING_ALIGN, VRING_DEFAULT_SIZE, 1, 0}, /* da allocated by remoteproc driver */
-	},
-};
-
-static struct adi_sharc_resource_table resources_sharc1 = {
-	.table_hdr = {
-		/* resource table header */
-		1, 								 /* version */
-		NUM_TABLE_ENTRIES, /* number of table entries */
-		{0, 0,},					 /* reserved fields */
-	},
-	.offset = {offsetof(struct adi_sharc_resource_table, rpmsg_vdev_hdr),
-	},
-	/* virtio device entry */
-	.rpmsg_vdev_hdr = {RSC_VDEV,}, /* virtio dev type */
-	.rpmsg_vdev = {
-		VIRTIO_ID_RPMSG, /* it's rpmsg virtio */
-		2, /* kick sharc0 */
-		/* 1<<0 is VIRTIO_RPMSG_F_NS bit defined in virtio_rpmsg_bus.c */
-		1<<0, 0, 0, 0, /* dfeatures, gfeatures, config len, status */
-		2, /* num_of_vrings */
-		{0, 0,}, /* reserved */
-	},
-	.vring = {
-		{FW_RSC_ADDR_ANY, VRING_ALIGN, VRING_DEFAULT_SIZE, 2, 0}, /* da allocated by remoteproc driver */
-		{FW_RSC_ADDR_ANY, VRING_ALIGN, VRING_DEFAULT_SIZE, 2, 0}, /* da allocated by remoteproc driver */
+	.rsc_table = {
+		.table_hdr = {
+			/* resource table header */
+			1, 								 /* version */
+			NUM_TABLE_ENTRIES, /* number of table entries */
+			{0, 0,},					 /* reserved fields */
+		},
+		.offset = {offsetof(struct sharc_resource_table, rpmsg_vdev_hdr),
+		},
+		/* virtio device entry */
+		.rpmsg_vdev_hdr = {RSC_VDEV,}, /* virtio dev type */
+		.rpmsg_vdev = {
+			VIRTIO_ID_RPMSG, /* it's rpmsg virtio */
+			1, /* kick sharc0 */
+			/* 1<<0 is VIRTIO_RPMSG_F_NS bit defined in virtio_rpmsg_bus.c */
+			1<<0, 0, 0, 0, /* dfeatures, gfeatures, config len, status */
+			2, /* num_of_vrings */
+			{0, 0,}, /* reserved */
+		},
+		.vring = {
+			{FW_RSC_ADDR_ANY, VRING_ALIGN, VRING_DEFAULT_SIZE, 1, 0}, /* da allocated by remoteproc driver */
+			{FW_RSC_ADDR_ANY, VRING_ALIGN, VRING_DEFAULT_SIZE, 1, 0}, /* da allocated by remoteproc driver */
+		},
 	},
 };
 
 enum adi_rproc_rpmsg_state {
-	ADI_RP_RPMSG_SYNCED=0,
-	ADI_RP_RPMSG_WAITING=1,
-	ADI_RP_RPMSG_TIMED_OUT=2,
+	ADI_RP_RPMSG_SYNCED = 0,
+	ADI_RP_RPMSG_WAITING = 1,
+	ADI_RP_RPMSG_TIMED_OUT = 2,
 };
 
 struct adi_rproc_data {
@@ -130,14 +128,13 @@ struct adi_rproc_data {
 	int firmware_format;
 	void __iomem *L1_shared_base;
 	void __iomem *L2_shared_base;
-	struct completion sharc_platform_init_complete;
 	struct workqueue_struct *core_workqueue;
 	enum adi_rproc_rpmsg_state rpmsg_state;
 	u64 l1_da_range[2];
 	u64 l2_da_range[2];
-	u32 rsc_offset;
 	u32 verify;
-	struct adi_sharc_resource_table *loaded_rsc_table;
+	struct adi_sharc_resource_table *adi_rsc_table;
+	struct sharc_resource_table *loaded_rsc_table;
 };
 
 typedef struct block_code_flag {
@@ -187,12 +184,13 @@ static irqreturn_t sharc_virtio_irq_threaded_handler(int irq, void *p);
 
 static int adi_core_start(struct adi_rproc_data *rproc_data)
 {
-	int ret;
-	rproc_data->rpmsg_state = ADI_RP_RPMSG_WAITING;
-	reinit_completion(&rproc_data->sharc_platform_init_complete);
-	ret = devm_request_threaded_irq(rproc_data->dev, rproc_data->icc_irq, NULL,
-		sharc_virtio_irq_threaded_handler, rproc_data->icc_irq_flags,
-		"ICC virtio IRQ", rproc_data);
+	int ret = 0;
+	if(rproc_data->adi_rsc_table != NULL) {
+		rproc_data->rpmsg_state = ADI_RP_RPMSG_WAITING;
+		ret = devm_request_threaded_irq(rproc_data->dev, rproc_data->icc_irq, NULL,
+			sharc_virtio_irq_threaded_handler, rproc_data->icc_irq_flags,
+			"ICC virtio IRQ", rproc_data);
+	}
 	if (ret) {
 		dev_err(rproc_data->dev, "Fail to request ICC IRQ\n");
 		return -ENOENT;
@@ -209,8 +207,10 @@ static int adi_core_reset(struct adi_rproc_data *rproc_data)
 static int adi_core_stop(struct adi_rproc_data *rproc_data)
 {
 	/* After time out the irq is already released */
-	if(rproc_data->rpmsg_state != ADI_RP_RPMSG_TIMED_OUT) {
-		devm_free_irq(rproc_data->dev, rproc_data->icc_irq, rproc_data);
+	if(rproc_data->adi_rsc_table != NULL) {
+		if(rproc_data->rpmsg_state != ADI_RP_RPMSG_TIMED_OUT) {
+			devm_free_irq(rproc_data->dev, rproc_data->icc_irq, rproc_data);
+		}
 	}
 	return adi_rcu_stop_core(rproc_data->rcu,
 		rproc_data->core_id, rproc_data->core_irq);
@@ -472,21 +472,30 @@ static int adi_rproc_stop(struct rproc *rproc)
 
 static int adi_ldr_load_rsc_table(struct rproc *rproc, const struct firmware *fw){
 	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)rproc->priv;
-	struct resource_table *table = NULL;
-	size_t size;
+	size_t size = sizeof(_rsc_table_template.rsc_table);
 
-	if(rproc_data->core_id == 1){
-		table = (struct resource_table *)(&resources_sharc0);
-		size = sizeof(resources_sharc0);
-	}else{
-		table = (struct resource_table *)(&resources_sharc1);
-		size = sizeof(resources_sharc1);
+	if(rproc_data->adi_rsc_table == NULL) {
+		return -EINVAL;
 	}
 
-	rproc->cached_table = kmemdup(table, size, GFP_KERNEL);
+	/* kfree in remoteproc_core.c */
+	rproc->cached_table = kmemdup(&_rsc_table_template.rsc_table, size, GFP_KERNEL);
 	if (!rproc->cached_table){
 		return -ENOMEM;
 	}
+
+	if(rproc_data->core_id == 1){
+		((struct sharc_resource_table *)rproc->cached_table)->rpmsg_vdev.notifyid = 1;
+		((struct sharc_resource_table *)rproc->cached_table)->vring[0].notifyid = 1;
+		((struct sharc_resource_table *)rproc->cached_table)->vring[1].notifyid = 1;
+	}else{
+		((struct sharc_resource_table *)rproc->cached_table)->rpmsg_vdev.notifyid = 2;
+		((struct sharc_resource_table *)rproc->cached_table)->vring[0].notifyid = 2;
+		((struct sharc_resource_table *)rproc->cached_table)->vring[1].notifyid = 2;
+	}
+
+	/* Initialize ADI resource table header*/
+	rproc_data->adi_rsc_table->adi_table_hdr = _rsc_table_template.adi_table_hdr;
 
 	rproc->table_ptr = rproc->cached_table;
 	rproc->table_sz = size;
@@ -517,12 +526,16 @@ static int adi_rproc_parse_fw(struct rproc *rproc, const struct firmware *fw)
 	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)rproc->priv;
 	struct device *dev = rproc->dev.parent;
 	struct device_node *np = dev->of_node;
-	struct adi_sharc_resource_table *rsc_table;
+	struct sharc_resource_table *rsc_table;
 	struct rproc_mem_entry *mem;
 	struct device_node *node;
 	struct reserved_mem *rmem;
 	phys_addr_t size;
 	int ret, i, mem_regions, num;
+
+	if(rproc_data->adi_rsc_table == NULL) {
+		return 0;
+	}
 
 	switch (rproc_data->firmware_format){
 		case ADI_FW_LDR:
@@ -540,7 +553,7 @@ static int adi_rproc_parse_fw(struct rproc *rproc, const struct firmware *fw)
 		return ret;
 
 	/* Set defaults */
-	rsc_table = (struct adi_sharc_resource_table *)rproc->cached_table;
+	rsc_table = (struct sharc_resource_table *)rproc->cached_table;
 	rsc_table->vring[0].da = FW_RSC_ADDR_ANY;
 	rsc_table->vring[0].num = VRING_DEFAULT_SIZE;
 	rsc_table->vring[1].da = FW_RSC_ADDR_ANY;
@@ -554,6 +567,7 @@ static int adi_rproc_parse_fw(struct rproc *rproc, const struct firmware *fw)
 	for (i = 0; i < mem_regions; i++) {
 		node = of_parse_phandle(np, "vdev-vring", i);
 		rmem = of_reserved_mem_lookup(node);
+		of_node_put(node);
 		if (!rmem) {
 			dev_err(dev, "Faied to acquire vdev-vring at idx %d\n", i);
 			return -EINVAL;
@@ -629,22 +643,20 @@ static int adi_rproc_parse_fw(struct rproc *rproc, const struct firmware *fw)
 
 static struct resource_table *adi_ldr_find_loaded_rsc_table(struct rproc *rproc, const struct firmware *fw){
 	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)rproc->priv;
-	u64 da;
-
-	/* resource table stored in L2 memory */
-	da = rproc_data->l2_da_range[0] + rproc_data->rsc_offset;
-
-	/* core 2 resource table is located right after core 1 resource table */
-	if (rproc_data->core_id == 2)
-		da += sizeof(resources_sharc0);
-
-	return rproc_da_to_va(rproc, da, sizeof(resources_sharc0));
+	if(rproc_data->adi_rsc_table == NULL) {
+		return NULL;
+	}
+	return &rproc_data->adi_rsc_table->rsc_table.table_hdr;
 }
 
 static struct resource_table *adi_rproc_find_loaded_rsc_table(struct rproc *rproc, const struct firmware *fw)
 {
 	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)rproc->priv;
 	struct resource_table * ret = NULL;
+
+	if(rproc_data->adi_rsc_table == NULL) {
+		return NULL;
+	}
 
 	switch (rproc_data->firmware_format){
 		case ADI_FW_LDR:
@@ -657,7 +669,7 @@ static struct resource_table *adi_rproc_find_loaded_rsc_table(struct rproc *rpro
 			BUG();
 			break;
 	}
-	rproc_data->loaded_rsc_table = (struct adi_sharc_resource_table *)ret;
+	rproc_data->loaded_rsc_table = (struct sharc_resource_table *)ret;
 	return ret;
 }
 
@@ -665,13 +677,10 @@ static struct resource_table *adi_rproc_find_loaded_rsc_table(struct rproc *rpro
  * notify the correct number of vrings */
 static irqreturn_t sharc_virtio_irq_threaded_handler(int irq, void *p){
 	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)p;
-	struct adi_sharc_resource_table *table = rproc_data->loaded_rsc_table;
+	struct sharc_resource_table *table = rproc_data->loaded_rsc_table;
 
 	/* Firmwares witout resource table shouldn't enable the virtio irq */
 	BUG_ON(!table);
-
-	if (rproc_data->rpmsg_state == ADI_RP_RPMSG_WAITING)
-		complete(&rproc_data->sharc_platform_init_complete);
 
 	rproc_vq_interrupt(rproc_data->rproc, table->vring[0].notifyid);
 	rproc_vq_interrupt(rproc_data->rproc, table->vring[1].notifyid);
@@ -683,27 +692,27 @@ static irqreturn_t sharc_virtio_irq_threaded_handler(int irq, void *p){
 static void adi_rproc_kick(struct rproc *rproc, int vqid)
 {
 	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)rproc->priv;
-	int ret;
+	int wait_time;
 
-	while(rproc_data->rpmsg_state == ADI_RP_RPMSG_WAITING){
-		ret = wait_for_completion_interruptible_timeout(&rproc_data->sharc_platform_init_complete, CORE_INIT_TIMEOUT);
-		if(ret > 0){
-			rproc_data->rpmsg_state = ADI_RP_RPMSG_SYNCED;
-		}else if(ret < 0){
-			if (ret != -ERESTARTSYS){
-				dev_err(rproc_data->dev, "Core%d init error %d\n", rproc_data->core_id, ret);
-				return;
+	/* On first kick check if remote core has done its initialization */
+	if(rproc_data->rpmsg_state == ADI_RP_RPMSG_WAITING) {
+		for(wait_time = 0; wait_time < CORE_INIT_TIMEOUT_MS; wait_time += 20 ){
+			if(rproc_data->adi_rsc_table->adi_table_hdr.initialized == ADI_RESOURCE_TABLE_INIT_MAGIC){
+				rproc_data->rpmsg_state = ADI_RP_RPMSG_SYNCED;
+				break;
 			}
-		}else{
+			msleep(20);
+		}
+		if (rproc_data->rpmsg_state != ADI_RP_RPMSG_SYNCED) {
 			rproc_data->rpmsg_state = ADI_RP_RPMSG_TIMED_OUT;
 			devm_free_irq(rproc_data->dev, rproc_data->icc_irq, rproc_data);
 			dev_info(rproc_data->dev, "Core%d rpmsg init timeout, probably not supported.\n", rproc_data->core_id);
-			return;
 		}
 	}
 
-	if(rproc_data->rpmsg_state == ADI_RP_RPMSG_SYNCED)
+	if(rproc_data->rpmsg_state == ADI_RP_RPMSG_SYNCED) {
 		adi_tru_trigger_device(rproc_data->tru, rproc_data->dev);
+	}
 }
 
 static int adi_rproc_sanity_check(struct rproc *rproc, const struct firmware *fw)
@@ -773,12 +782,14 @@ static int adi_remoteproc_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct adi_rproc_data *rproc_data;
 	struct device_node *np = dev->of_node;
+	struct device_node *node;
 	struct adi_rcu *adi_rcu;
 	struct adi_tru *adi_tru;
 	struct rproc *rproc;
 	struct resource *res;
+	struct reserved_mem *rmem;
 	u32 addr[2];
-	int ret;
+	int ret, core_id;
 	const char *name;
 
 	ret = of_property_read_string(np, "firmware-name", &name);
@@ -790,6 +801,22 @@ static int adi_remoteproc_probe(struct platform_device *pdev)
 	adi_rcu = get_adi_rcu_from_node(dev);
 	if (IS_ERR(adi_rcu))
 		return PTR_ERR(adi_rcu);
+
+	ret = of_property_read_u32(np, "core-id", &core_id);
+	if (ret) {
+		dev_err(dev, "Unable to get core-id property\n");
+		goto free_adi_rcu;
+	}
+
+	ret = adi_rcu_is_core_idle(adi_rcu, core_id);
+	if (ret < 0){
+		dev_err(dev, "Invalid core-id\n");
+		goto free_adi_rcu;
+	} else if (ret == 0) {
+		dev_err(dev, "Error: Core%d not idle\n", core_id);
+		ret = -EBUSY;
+		goto free_adi_rcu;
+	}
 
 	adi_tru = get_adi_tru_from_node(dev);
 	if (IS_ERR(adi_tru)) {
@@ -826,12 +853,36 @@ static int adi_remoteproc_probe(struct platform_device *pdev)
 	rproc_data->l2_da_range[0] = addr[0];
 	rproc_data->l2_da_range[1] = addr[1];
 
-	if (of_property_read_u32(np, "adi,resource-table-offset",
-		&rproc_data->rsc_offset))
-	{
-		dev_err(dev, "Missing adi,resource-table-offset in device tree\n");
-		ret = -ENODEV;
-		goto free_rproc;
+	/* Get ADI resource table addres */
+	node = of_parse_phandle(np, "adi,rsc-table", 0);
+	if (node) {
+		dev_info(&pdev->dev, "Resource table set, enable rpmsg\n");
+		rmem = of_reserved_mem_lookup(node);
+		of_node_put(node);
+		if (!rmem) {
+			dev_err(&pdev->dev, "Translating adi,rsc-table failed\n");
+			ret = -ENOMEM;
+			goto free_adi_rcu;
+		}
+
+		rproc_data->adi_rsc_table = devm_ioremap_wc(dev, rmem->base, rmem->size);
+		if (IS_ERR(rproc_data->adi_rsc_table)) {
+			dev_err(dev, "Can't map adi,rsc-table\n");
+			ret = PTR_ERR(rproc_data->adi_rsc_table);
+			goto free_adi_rcu;
+		}
+
+		rproc_data->icc_irq = platform_get_irq(pdev, 0);
+		if (rproc_data->icc_irq <= 0) {
+			dev_err(dev, "No ICC IRQ specified\n");
+			ret = -ENOENT;
+			goto free_adi_rcu;
+		}
+		res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
+		rproc_data->icc_irq_flags = (res->flags & IORESOURCE_BITS) | IRQF_PERCPU | IRQF_SHARED | IRQF_ONESHOT;
+
+	} else {
+		rproc_data->adi_rsc_table = NULL;
 	}
 
 	rproc_data->core_workqueue = alloc_workqueue("Core workqueue",
@@ -841,28 +892,11 @@ static int adi_remoteproc_probe(struct platform_device *pdev)
 		goto free_rproc;
 	}
 
-	init_completion(&rproc_data->sharc_platform_init_complete);
-
-	ret = of_property_read_u32(np, "core-id", &rproc_data->core_id);
-	if (ret) {
-		dev_err(dev, "Unable to get core-id property\n");
-		goto free_workqueue;
-	}
-
 	ret = of_property_read_u32(np, "core-irq", &rproc_data->core_irq);
 	if (ret) {
 		dev_err(dev, "Unable to get core-irq property\n");
 		goto free_workqueue;
 	}
-
-	rproc_data->icc_irq = platform_get_irq(pdev, 0);
-	if (rproc_data->icc_irq <= 0) {
-		dev_err(dev, "No ICC IRQ specified\n");
-		ret = -ENOENT;
-		goto free_workqueue;
-	}
-	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
-	rproc_data->icc_irq_flags = (res->flags & IORESOURCE_BITS) | IRQF_PERCPU | IRQF_SHARED | IRQF_ONESHOT;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
@@ -899,6 +933,7 @@ static int adi_remoteproc_probe(struct platform_device *pdev)
 		dev_info(dev, "Load verification enabled\n");
 
 	rproc_data->dev = &pdev->dev;
+	rproc_data->core_id = core_id;
 	rproc_data->rcu = adi_rcu;
 	rproc_data->tru = adi_tru;
 	rproc_data->rproc = rproc;
@@ -965,3 +1000,4 @@ module_platform_driver(adi_rproc_driver);
 MODULE_DESCRIPTION("Analog Device sc5xx SHARC Image Loader");
 MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("Greg Chen <jian.chen@analog.com>");
+MODULE_AUTHOR("Piotr Wojtaszczyk <piotr.wojtaszczyk@timesys.com>");

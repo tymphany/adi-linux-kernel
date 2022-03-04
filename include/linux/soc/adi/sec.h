@@ -50,5 +50,7 @@ void sec_raise_irq(struct adi_sec *sec, unsigned int irq);
 void sec_enable_sci(struct adi_sec *sec, unsigned int coreid);
 void sec_enable_ssi(struct adi_sec *sec, unsigned int sid, bool fault, bool source);
 void sec_set_ssi_coreid(struct adi_sec *sec, unsigned int sid, unsigned int coreid);
+struct adi_sec *get_adi_sec_from_node(struct device *dev);
+void put_adi_sec(struct adi_sec *sec);
 
 #endif
