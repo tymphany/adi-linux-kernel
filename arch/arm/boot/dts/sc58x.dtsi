@@ -725,6 +725,13 @@
 			status = "disabled";
 		};
 
+		/* DMA Test Driver */
+		adi_dmacopy: adi_dmacopy@0 {
+			compatible = "adi,dmacopy";
+			adi,sram = <&sram1>;
+			status = "okay";
+		};
+
 		dma0: dma@0 {
 			compatible = "adi,dma2";
 			reg = <0x31022000 0x7F>;
