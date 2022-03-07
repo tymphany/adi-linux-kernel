@@ -204,13 +204,13 @@
 		compatible = "adi,adau1977";
 		reg = <0x11>;
 		enable-pin = <&ssw0 9 GPIO_ACTIVE_LOW>;	/* ADAU1979_EN */
-		reset-gpio = <&gpa 14 0>;
+		/* reset-gpio = <&gpa 14 0>; */
 	};
 	adau1962: adau1962@0x4 {
 		compatible = "adi,adau1962";
 		reg = <0x4>;
 		enable-pin = <&ssw0 8 GPIO_ACTIVE_LOW>;	/* ADAU1962_EN */
-		reset-gpio = <&gpa 14 0>;
+		/* reset-gpio = <&gpa 14 0>; */
 	};
 };
 
@@ -224,9 +224,11 @@
 
 &i2s0 {
 	reg = <0x31002400 0x80>, <0x31002480 0x80>;
-	interrupts = <GIC_SPI 61 IRQ_TYPE_LEVEL_HIGH>,
-			<GIC_SPI 63 IRQ_TYPE_LEVEL_HIGH>;
+	sport-channel = <0>;
+	interrupt-names = "tx_staus", "rx_staus";
+	interrupts = <GIC_SPI 61 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI 63 IRQ_TYPE_LEVEL_HIGH>;
 	dma-channel = <10>, <11>;
+	iram = <&sram1>;
 	status = "okay";
 };
 

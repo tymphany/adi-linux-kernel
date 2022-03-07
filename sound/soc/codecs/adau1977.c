@@ -960,6 +960,7 @@ int adau1977_probe(struct device *dev, struct regmap *regmap,
 				return -EINVAL;
 		}
 
+#ifdef BROKEN
 		#ifndef CONFIG_ARCH_SC59X
 			adau1977->reset_gpio =
 					of_get_named_gpio(dev->of_node, "reset-gpio", 0);
@@ -968,10 +969,12 @@ int adau1977_probe(struct device *dev, struct regmap *regmap,
 				return -EINVAL;
 			}
 		#endif
+#endif
 	}
 
 	dev_set_drvdata(dev, adau1977);
 
+#ifdef BROKEN
 	#ifndef CONFIG_ARCH_SC59X
 		if (adau1977->reset_gpio) {
 			ret = devm_gpio_request_one(dev, adau1977->reset_gpio,
@@ -994,6 +997,7 @@ int adau1977_probe(struct device *dev, struct regmap *regmap,
 			udelay(200);
 		}
 	#endif
+#endif
 
 	ret = adau1977_power_enable(adau1977);
 	if (ret)

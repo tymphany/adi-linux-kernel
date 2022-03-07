@@ -795,6 +795,7 @@ int adau1962_probe(struct device *dev, struct regmap *regmap,
 				return -EINVAL;
 		}
 
+#ifdef BROKEN
 		#ifndef CONFIG_ARCH_SC59X
 			adau1962->reset_gpio =
 					of_get_named_gpio(dev->of_node, "reset-gpio", 0);
@@ -803,10 +804,12 @@ int adau1962_probe(struct device *dev, struct regmap *regmap,
 				return -EINVAL;
 			}
 		#endif
+#endif
 	}
 
 	dev_set_drvdata(dev, adau1962);
 
+#ifdef BROKEN
 	#ifndef CONFIG_ARCH_SC59X
 		if (adau1962->reset_gpio) {
 			ret = devm_gpio_request_one(dev, adau1962->reset_gpio,
@@ -829,6 +832,7 @@ int adau1962_probe(struct device *dev, struct regmap *regmap,
 			msleep(300);
 		}
 	#endif
+#endif
 
 	regmap_update_bits(adau1962->regmap, ADAU1962_REG_PLL_CLK_CTRL0,
 				ADAU1962_PLL_CLK_PUP, ADAU1962_PLL_CLK_PUP);
