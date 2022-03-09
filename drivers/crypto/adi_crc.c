@@ -165,11 +165,13 @@ static int adi_crypto_crc_init(struct ahash_request *req)
 	}
 	spin_unlock_bh(&crc_list.lock);
 
+/*
 	if (sg_nents(req->src) > CRC_MAX_DMA_DESC) {
 		dev_dbg(ctx->crc->dev, "init: requested sg list is too big > %d\n",
 			CRC_MAX_DMA_DESC);
 		return -EINVAL;
 	}
+*/
 
 	ctx->crc = crc;
 	ctx->bufnext_len = 0;
