@@ -514,8 +514,11 @@ static struct ahash_alg algs = {
 static void adi_crypto_crc_done_task(unsigned long data)
 {
 	struct adi_crypto_crc *crc = (struct adi_crypto_crc *)data;
+	struct adi_crypto_crc_reqctx *ctx = ahash_request_ctx(crc->req);
 
 	adi_crypto_crc_handle_queue(crc, NULL);
+
+	dma_unmap_sg(crc->dev, ctx->sg_list, ctx->sg_nents, DMA_TO_DEVICE);
 }
 
 static irqreturn_t adi_crypto_crc_handler(int irq, void *dev_id)
