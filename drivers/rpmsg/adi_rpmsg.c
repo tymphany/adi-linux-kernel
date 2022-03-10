@@ -115,6 +115,7 @@ static bool adi_rpmsg_notify(struct virtqueue *vq)
 
 			for(wait_time = 0; wait_time <= ADI_RESOURCE_TABLE_INIT_TIMEOUT_MS; wait_time += step ){
 				if(rpchan->adi_rsc_table->adi_table_hdr.initialized == ADI_RESOURCE_TABLE_INIT_MAGIC){
+					dev_info(rpchan->dev, "Core%d resource table initialized\n", rpchan->core_id);
 					rpchan->rpmsg_state = ADI_RP_RPMSG_SYNCED;
 					break;
 				}
@@ -257,7 +258,7 @@ static int adi_rpmsg_parse_resource_table(struct adi_rpmsg_channel *rpchan) {
 	int i, offset;
 
 	if (strcmp(adi_rsc_table->adi_table_hdr.tag, ADI_RESOURCE_TABLE_TAG)) {
-		dev_err(dev, "Corupted resource table\n");
+		dev_err(dev, "Corrupted resource table\n");
 		return -ENODEV;
 	}
 	if (adi_rsc_table->adi_table_hdr.version != ADI_RESOURCE_TABLE_VERSION){
