@@ -552,13 +552,8 @@ static struct platform_driver adi_rpmsg_driver = {
 	.probe = adi_rpmsg_probe,
 	.remove = adi_rpmsg_remove,
 };
-
-static int __init adi_rpmsg_init(void)
-{
-	return platform_driver_register(&adi_rpmsg_driver);
-}
+module_platform_driver(adi_rpmsg_driver);
 
 MODULE_DESCRIPTION("Analog Devices rpmsg driver");
 MODULE_AUTHOR("Piotr Wojtaszczyk <piotr.wojtaszczyk@timesys.com>");
 MODULE_LICENSE("GPL v2");
-arch_initcall(adi_rpmsg_init);
