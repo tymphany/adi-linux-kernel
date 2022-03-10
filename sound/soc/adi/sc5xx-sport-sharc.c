@@ -708,7 +708,7 @@ static int sport_request_resource(struct sport_device *sport)
 
 	sport->tx_dma_chan = dma_request_chan(dev, "tx");
 	if (IS_ERR(sport->tx_dma_chan)) {
-		ret = PTR_ERR(sport->tx_dma_chan)
+		ret = PTR_ERR(sport->tx_dma_chan);
 		dev_err(dev, "Missing `tx` dma channel: %d\n", ret);
 		return ret;
 	}
