@@ -99,6 +99,8 @@ struct adi_tru *get_adi_tru_from_node(struct device *dev) {
 	}
 
 	ret = dev_get_drvdata(&tru_pdev->dev);
+	if (!ret)
+		ret = ERR_PTR(-EPROBE_DEFER);
 
 cleanup:
 	of_node_put(tru_node);
@@ -262,8 +264,8 @@ int adi_tru_probe(struct platform_device *pdev) {
 		}
 	}
 
-	dev_set_drvdata(dev, tru);
 	writel(0x01, tru->ioaddr + ADI_TRU_REG_GCTL);
+	dev_set_drvdata(dev, tru);
 	return 0;
 }
 

@@ -77,6 +77,8 @@ struct adi_rcu *get_adi_rcu_from_node(struct device *dev) {
 	}
 
 	ret = dev_get_drvdata(&rcu_pdev->dev);
+	if (!ret)
+		ret = ERR_PTR(-EPROBE_DEFER);
 
 cleanup:
 	of_node_put(rcu_node);
@@ -249,8 +251,6 @@ static int adi_rcu_probe(struct platform_device *pdev) {
 		return -ENOMEM;
 	}
 
-	dev_set_drvdata(dev, adi_rcu);
-
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
 		dev_err(dev, "Cannot get RCU base address\n");
@@ -278,6 +278,8 @@ static int adi_rcu_probe(struct platform_device *pdev) {
 		dev_err(dev, "Unable to register restart handler: %d\n", ret);
 		return ret;
 	}
+
+	dev_set_drvdata(dev, adi_rcu);
 
 	return 0;
 }
