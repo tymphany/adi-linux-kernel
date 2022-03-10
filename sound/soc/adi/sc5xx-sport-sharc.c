@@ -708,14 +708,15 @@ static int sport_request_resource(struct sport_device *sport)
 
 	sport->tx_dma_chan = dma_request_chan(dev, "tx");
 	if (IS_ERR(sport->tx_dma_chan)) {
-		dev_err(dev, "Missing `tx` dma channel: %d\n", sport->tx_dma_chan);
-		return PTR_ERR(sport->tx_dma_chan);
+		ret = PTR_ERR(sport->tx_dma_chan)
+		dev_err(dev, "Missing `tx` dma channel: %d\n", ret);
+		return ret;
 	}
 
 	sport->rx_dma_chan = dma_request_chan(dev, "rx");
 	if (IS_ERR(sport->rx_dma_chan)) {
-		dev_err(dev, "Missing `rx` dma channel: %d\n", sport->rx_dma_chan);
 		ret = PTR_ERR(sport->rx_dma_chan);
+		dev_err(dev, "Missing `rx` dma channel: %d\n", ret);
 		goto err_rx_dma;
 	}
 
@@ -793,7 +794,8 @@ int rpmsg_icap_sport_probe(struct rpmsg_device *rpdev)
 
 	dev_set_drvdata(&rpdev->dev, sport_p);
 
-	ret = icap_application_init(&sport->icap[sharc_core], "sc5xx-sport", &sport_icap_callbacks, (void*)rpdev, (void*)sport);
+	sport->icap[sharc_core].transport.rpdev = rpdev;
+	ret = icap_application_init(&sport->icap[sharc_core], "sc5xx-sport", &sport_icap_callbacks, (void*)sport);
 	if (ret) {
 		goto error_out;
 	}

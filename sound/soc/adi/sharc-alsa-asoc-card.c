@@ -296,7 +296,6 @@ static int sharc_alsa_pcm_new(struct snd_soc_pcm_runtime *rtd)
 	struct snd_card *card = rtd->card->snd_card;
 	size_t size = sharc_alsa_pcm_params.buffer_bytes_max;/* 128KiB */
 	int ret = 0;
-	struct snd_pcm_substream *substream;
 
 	ret = dma_coerce_mask_and_coherent(card->dev, DMA_BIT_MASK(32));
 	if (ret)
@@ -411,7 +410,8 @@ static void sharc_alsa_delayed_probe(struct work_struct *work)
 	int32_t ret = 0;
 
 	/* init Inter Core Audio protocol */
-	ret = icap_application_init(icap, sharc_alsa->card_name, &icap_application_callbacks, (void*)rpdev, (void*)sharc_alsa);
+	icap->transport.rpdev = rpdev;
+	ret = icap_application_init(icap, sharc_alsa->card_name, &icap_application_callbacks, (void*)sharc_alsa);
 	if (ret) {
 		dev_err(dev, "Failed to init ICAP: %d\n", ret);
 		return;
