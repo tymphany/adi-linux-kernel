@@ -98,6 +98,13 @@
 			adi,codec = <&adau1962>, <&adau1979>;
 		};
 
+		firmware {
+			optee {
+				compatible = "linaro,optee-tz";
+				method = "smc";
+			};
+		};
+
 	};
 
 };
