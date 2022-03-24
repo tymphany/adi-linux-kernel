@@ -20,7 +20,7 @@
 
 	memory@95400000 {
 		device_type = "memory";
-		reg = <0x95400000 0xac00000>;
+		reg = <0x95400000 0x8c00000>;
 	};
 
 	reserved-memory {
