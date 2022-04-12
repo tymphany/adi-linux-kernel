@@ -31,40 +31,11 @@
 #include <linux/soc/adi/portmux.h>
 #include <linux/soc/adi/gpio.h>
 
-#include "adi_uart4.h"
-#ifdef CONFIG_ARCH_SC59X
-#include <mach/sc59x.h>
-#elif defined(CONFIG_ARCH_SC59X_64)
-#include <linux/soc/adi/sc59x.h>
-#elif defined(CONFIG_ARCH_SC58X)
-#include <mach/sc58x.h>
-#elif defined(CONFIG_ARCH_SC57X)
-#include <mach/sc57x.h>
-#endif
-
 #if defined(CONFIG_SERIAL_ADI_UART4_CONSOLE) && defined(CONFIG_MAGIC_SYSRQ)
 #define SUPPORT_SYSRQ
 #endif
 
 #define DRIVER_NAME "adi-uart4"
-
-struct uart4_reg {
-	u32 revid;
-	u32 control;
-	u32 status;
-	u32 scr;
-	u32 clock;
-	u32 emask;
-	u32 emaskst;
-	u32 emaskcl;
-	u32 rbr;
-	u32 thr;
-	u32 taip;
-	u32 tsr;
-	u32 rsr;
-	u32 txdiv_cnt;
-	u32 rxdiv_cnt;
-};
 
 struct adi_uart4_serial_port {
 	struct uart_port port;
@@ -99,14 +70,60 @@ struct adi_uart4_serial_port {
 	struct clk *clk;
 };
 
-
 #define ADI_UART_NO_HWFLOW	0
 #define ADI_UART_HWFLOW_PERI	1
 #define ADI_UART_HWFLOW_GPIO	2
 
-
 #define ADI_UART_NR_PORTS 4
 static struct adi_uart4_serial_port *adi_uart4_serial_ports[ADI_UART_NR_PORTS];
+
+/* UART_CTL Masks */
+#define UCEN                     0x1  /* Enable UARTx Clocks */
+#define LOOP_ENA                 0x2  /* Loopback Mode Enable */
+#define UMOD_MDB                 0x10  /* Enable MDB Mode */
+#define UMOD_IRDA                0x20  /* Enable IrDA Mode */
+#define UMOD_MASK                0x30  /* Uart Mode Mask */
+#define WLS(x)                   (((x-5) & 0x03) << 8)  /* Word Length Select */
+#define WLS_MASK                 0x300  /* Word length Select Mask */
+#define WLS_OFFSET               8      /* Word length Select Offset */
+#define STB                      0x1000  /* Stop Bits */
+#define STBH                     0x2000  /* Half Stop Bits */
+#define PEN                      0x4000  /* Parity Enable */
+#define EPS                      0x8000  /* Even Parity Select */
+#define STP                      0x10000  /* Stick Parity */
+#define FPE                      0x20000  /* Force Parity Error On Transmit */
+#define FFE                      0x40000  /* Force Framing Error On Transmit */
+#define SB                       0x80000  /* Set Break */
+#define LCR_MASK		 (SB | STP | EPS | PEN | STB | WLS_MASK)
+#define FCPOL                    0x400000  /* Flow Control Pin Polarity */
+#define RPOLC                    0x800000  /* IrDA RX Polarity Change */
+#define TPOLC                    0x1000000  /* IrDA TX Polarity Change */
+#define MRTS                     0x2000000  /* Manual Request To Send */
+#define XOFF                     0x4000000  /* Transmitter Off */
+#define ARTS                     0x8000000  /* Automatic Request To Send */
+#define ACTS                     0x10000000  /* Automatic Clear To Send */
+#define RFIT                     0x20000000  /* Receive FIFO IRQ Threshold */
+#define RFRT                     0x40000000  /* Receive FIFO RTS Threshold */
+
+/* UART_STAT Masks */
+#define DR                       0x01  /* Data Ready */
+#define OE                       0x02  /* Overrun Error */
+#define PE                       0x04  /* Parity Error */
+#define FE                       0x08  /* Framing Error */
+#define BI                       0x10  /* Break Interrupt */
+#define THRE                     0x20  /* THR Empty */
+#define TEMT                     0x80  /* TSR and UART_THR Empty */
+#define TFI                      0x100  /* Transmission Finished Indicator */
+
+#define ASTKY                    0x200  /* Address Sticky */
+#define ADDR                     0x400  /* Address bit status */
+#define RO			 0x800  /* Reception Ongoing */
+#define SCTS                     0x1000  /* Sticky CTS */
+#define CTS                      0x10000  /* Clear To Send */
+#define RFCS                     0x20000  /* Receive FIFO Count Status */
+
+/* UART_CLOCK Masks */
+#define EDBO                     0x80000000 /* Enable Devide by One */
 
 /* UART_IER Masks */
 #define ERBFI                    0x01  /* Enable Receive Buffer Full Interrupt */
@@ -1308,8 +1325,8 @@ static int adi_uart4_serial_remove(struct platform_device *pdev)
 		if (uart->enable_pin)
 			gpio_direction_output(uart->enable_pin,
 						        uart->enable_pin_active_low ? 1 : 0);
-		kfree(uart);
 		adi_uart4_serial_ports[uart->port.line] = NULL;
+		kfree(uart);
 	}
 
 	return 0;
@@ -1367,12 +1384,7 @@ static void __exit adi_uart4_serial_exit(void)
 module_init(adi_uart4_serial_init);
 module_exit(adi_uart4_serial_exit);
 
-
 /* Early Console Support */
-
-#define STAT_OFFSET	0x08
-#define THR_OFFSET	0x24
-
 static inline u32 adi_uart_read(struct uart_port *port, u32 off)
 {
 	return readl(port->membase + off);
@@ -1396,10 +1408,10 @@ static void adi_uart_wait_bit_set(struct uart_port *port, unsigned int offset,
 static void adi_uart_console_putchar(struct uart_port *port, int ch)
 {
 	/* wait for the hardware fifo to clear up */
-	adi_uart_wait_bit_set(port, STAT_OFFSET, THRE);
+	adi_uart_wait_bit_set(port, OFFSET_STAT, THRE);
 
 	/* queue the character for transmission */
-	adi_uart_write(port, ch, THR_OFFSET);
+	adi_uart_write(port, ch, OFFSET_THR);
 }
 
 
