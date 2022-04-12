@@ -57,7 +57,6 @@ struct adi_uart4_serial_port {
 	spinlock_t rx_lock;
 	struct dma_chan *tx_dma_channel;
 	struct dma_chan *rx_dma_channel;
-	struct work_struct tx_dma_workqueue;
 	/* Hardware flow control specific fields */
 	unsigned int hwflow_mode;
 	unsigned int cts_pin;
@@ -67,6 +66,8 @@ struct adi_uart4_serial_port {
 	unsigned int hwflow_en_pin;
 	unsigned int hwflow_en_pin_active_low;
 	bool hwflow_en;
+	/* Use enable-divide-by-one in divisor? */
+	bool edbo;
 	struct clk *clk;
 };
 
@@ -166,22 +167,17 @@ static struct adi_uart4_serial_port *adi_uart4_serial_ports[ADI_UART_NR_PORTS];
 #define UART_GET_IER(p)       readl(p->port.membase + OFFSET_IER)
 #define UART_SET_IER(p, v)    writel(v, p->port.membase + OFFSET_IER_SET)
 
-#define UART_CLEAR_DLAB(p)    /* MMRs not muxed on BF60x */
-#define UART_SET_DLAB(p)      /* MMRs not muxed on BF60x */
-
 #define UART_CLEAR_LSR(p)     UART_PUT_STAT(p, -1)
 #define UART_GET_LSR(p)       UART_GET_STAT(p)
 #define UART_PUT_LSR(p, v)    UART_PUT_STAT(p, v)
 
 /* This handles hard CTS/RTS */
-#define UART_CTSRTS_HARD
 #define UART_CLEAR_SCTS(p)      UART_PUT_STAT(p, SCTS)
 #define UART_GET_CTS(x)         (UART_GET_MSR(x) & CTS)
 #define UART_DISABLE_RTS(x)     UART_PUT_MCR(x, UART_GET_MCR(x) & ~(ARTS | MRTS))
 #define UART_ENABLE_RTS(x)      UART_PUT_MCR(x, UART_GET_MCR(x) | MRTS | ARTS)
 #define UART_ENABLE_INTS(x, v)  UART_SET_IER(x, v)
 #define UART_DISABLE_INTS(x)    UART_CLEAR_IER(x, 0xF)
-
 
 #define DMA_RX_XCOUNT		512
 #define DMA_RX_YCOUNT		(PAGE_SIZE / DMA_RX_XCOUNT)
@@ -831,8 +827,18 @@ static void adi_uart4_serial_set_termios(struct uart_port *port,
 			port->ignore_status_mask |= OE;
 	}
 
-	baud = uart_get_baud_rate(port, termios, old, 0, port->uartclk/16);
-	quot = uart_get_divisor(port, baud);
+	/*
+	 * uart_get_divisor has a hardcoded /16 factor that will cause integer
+	 * round off errors if we're in divide-by-one mode
+	 */
+	if (uart->edbo) {
+		baud = uart_get_baud_rate(port, termios, old, 0, port->uartclk);
+		quot = EDBO | DIV_ROUND_CLOSEST(port->uartclk, baud);
+	}
+	else {
+		baud = uart_get_baud_rate(port, termios, old, 0, port->uartclk/16);
+		quot = uart_get_divisor(port, baud);
+	}
 
 	/* Wait till the transfer buffer is empty */
 	timeout = jiffies + msecs_to_jiffies(10);
@@ -857,13 +863,7 @@ static void adi_uart4_serial_set_termios(struct uart_port *port,
 	UART_PUT_GCTL(uart, UART_GET_GCTL(uart) & ~UCEN);
 	UART_DISABLE_INTS(uart);
 
-	/* Set DLAB in LCR to Access CLK */
-	UART_SET_DLAB(uart);
-
 	UART_PUT_CLK(uart, quot);
-
-	/* Clear DLAB in LCR to Access THR RBR IER */
-	UART_CLEAR_DLAB(uart);
 
 	UART_PUT_LCR(uart, (UART_GET_LCR(uart) & ~LCR_MASK) | lcr);
 
@@ -969,7 +969,6 @@ static void adi_uart4_serial_poll_put_char(struct uart_port *port, unsigned char
 	while (!(UART_GET_LSR(uart) & THRE))
 		cpu_relax();
 
-	UART_CLEAR_DLAB(uart);
 	UART_PUT_CHAR(uart, (unsigned char)chr);
 }
 
@@ -982,7 +981,6 @@ static int adi_uart4_serial_poll_get_char(struct uart_port *port)
 	while (!(UART_GET_LSR(uart) & DR))
 		cpu_relax();
 
-	UART_CLEAR_DLAB(uart);
 	chr = UART_GET_CHAR(uart);
 
 	return chr;
@@ -1046,15 +1044,13 @@ adi_uart4_serial_console_get_options(struct adi_uart4_serial_port *uart, int *ba
 		}
 		*bits = ((lcr & WLS_MASK) >> WLS_OFFSET) + 5;
 
-		/* Set DLAB in LCR to Access CLK */
-		UART_SET_DLAB(uart);
-
 		clk = UART_GET_CLK(uart);
 
-		/* Clear DLAB in LCR to Access THR RBR IER */
-		UART_CLEAR_DLAB(uart);
-
-		*baud = 5000000 / (16*clk);
+		/* Only the lowest 16 bits are the divisor */
+		if (clk & EDBO)
+			*baud = uart->port.uartclk / (clk & 0xffff);
+		else
+			*baud = uart->port.uartclk / (16*clk);
 	}
 	pr_debug("%s:baud = %d, parity = %c, bits= %d\n", __func__, *baud, *parity, *bits);
 }
@@ -1257,6 +1253,10 @@ static int adi_uart4_serial_probe(struct platform_device *pdev)
 			if (ret)
 				uart->hwflow_mode = ADI_UART_NO_HWFLOW;
 		}
+
+		uart->edbo = false;
+		if (of_property_read_bool(pdev->dev.of_node, "adi,use-edbo"))
+			uart->edbo = true;
 
 #ifndef CONFIG_ARCH_SC59X_64
 		if (pdev->dev.of_node) {
