@@ -209,6 +209,7 @@
 			interrupts = <GIC_SPI 138 IRQ_TYPE_LEVEL_HIGH>,
 			             <GIC_SPI 139 IRQ_TYPE_LEVEL_HIGH>,
 			             <GIC_SPI 140 IRQ_TYPE_LEVEL_HIGH>;
+			adi,use-edbo;
 			status = "disabled";
 		};
 
@@ -223,6 +224,7 @@
 			interrupts = <GIC_SPI 141 IRQ_TYPE_LEVEL_HIGH>,
 			             <GIC_SPI 142 IRQ_TYPE_LEVEL_HIGH>,
 			             <GIC_SPI 143 IRQ_TYPE_LEVEL_HIGH>;
+			adi,use-edbo;
 			status = "disabled";
 		};
 
@@ -237,6 +239,7 @@
 			interrupts = <GIC_SPI 144 IRQ_TYPE_LEVEL_HIGH>,
 			             <GIC_SPI 145 IRQ_TYPE_LEVEL_HIGH>,
 			             <GIC_SPI 146 IRQ_TYPE_LEVEL_HIGH>;
+			adi,use-edbo;
 			status = "disabled";
 		};
 
