@@ -305,8 +305,7 @@
 };
 
 &i2c2 {
-	//status = "okay";
-	status = "disabled";
+	status = "okay";
 
 	ssw0: gpio@0x20 {
 		compatible = "microchip,mcp23018";
