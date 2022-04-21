@@ -23,7 +23,7 @@
 #include <linux/of_irq.h>
 #include <asm/dma.h>
 #include <include/icc.h>
-#include <mach/icc.h>
+#include <linux/soc/adi/icc.h>
 #include <mach/hardware.h>
 #include <mach/cpu.h>
 

@@ -21,7 +21,7 @@
 #include <mach/hardware.h>
 
 #include <include/icc.h>
-#include <mach/icc.h>
+#include <linux/soc/adi/icc.h>
 
 #include <asm/io.h>
 
