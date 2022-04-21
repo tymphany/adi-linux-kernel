@@ -18,7 +18,7 @@
 #include <linux/proc_fs.h>
 #include <linux/platform_device.h>
 
-#include <linux/soc/adi/sram.h>
+#include "sram.h"
 
 #define SRAM_DRV_NAME		"sram_controller"
 
