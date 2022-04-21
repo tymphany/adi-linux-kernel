@@ -20,7 +20,7 @@
 #include <linux/of.h>
 #include <linux/pm.h>
 #include <mach/portmux.h>
-#include <mach/cpu.h>
+#include <linux/soc/adi/cpu.h>
 #include <mach/gpio.h>
 
 #include "dw_mmc.h"

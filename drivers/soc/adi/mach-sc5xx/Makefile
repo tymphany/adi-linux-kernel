@@ -4,4 +4,4 @@
 
 # todo modularize with kconfigs
 
-obj-y := core.o icc.o rcu.o sec.o
+obj-y := gptimers.o

@@ -33,7 +33,7 @@
 #include <linux/pinctrl/consumer.h>
 #include <asm/irq.h>
 #include <mach/dma.h>
-#include <mach/cpu.h>
+#include <linux/soc/adi/cpu.h>
 #include <mach/irqs.h>
 #include <mach/hardware.h>
 #ifdef ARCH_SC58X

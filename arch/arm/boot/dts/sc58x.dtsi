@@ -194,42 +194,42 @@
 		};
 
 		gptimer2: gptimer@0x310010A0 {
-			compatible = "adi,sc58x-timer";
+			compatible = "adi,sc5xx-timer";
 			reg = <0x310010A0 0x20>;
 			interrupt-parent = <&gic>;
 			interrupts = <GIC_SPI 28 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
 		gptimer3: gptimer@0x310010C0 {
-			compatible = "adi,sc58x-timer";
+			compatible = "adi,sc5xx-timer";
 			reg = <0x310010C0 0x20>;
 			interrupt-parent = <&gic>;
 			interrupts = <GIC_SPI 29 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
 		gptimer4: gptimer@0x310010E0 {
-			compatible = "adi,sc58x-timer";
+			compatible = "adi,sc5xx-timer";
 			reg = <0x310010E0 0x20>;
 			interrupt-parent = <&gic>;
 			interrupts = <GIC_SPI 72 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
 		gptimer5: gptimer@0x31001100 {
-			compatible = "adi,sc58x-timer";
+			compatible = "adi,sc5xx-timer";
 			reg = <0x31001100 0x20>;
 			interrupt-parent = <&gic>;
 			interrupts = <GIC_SPI 73 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
 		gptimer6: gptimer@0x31001120 {
-			compatible = "adi,sc58x-timer";
+			compatible = "adi,sc5xx-timer";
 			reg = <0x31001120 0x20>;
 			interrupt-parent = <&gic>;
 			interrupts = <GIC_SPI 74 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
 		gptimer7: gptimer@0x31001140 {
-			compatible = "adi,sc58x-timer";
+			compatible = "adi,sc5xx-timer";
 			reg = <0x31001140 0x20>;
 			interrupt-parent = <&gic>;
 			interrupts = <GIC_SPI 75 IRQ_TYPE_LEVEL_HIGH>;

@@ -24,7 +24,7 @@
 
 #include <mach/hardware.h>
 #include <mach/sc57x.h>
-#include <mach/cpu.h>
+#include <linux/soc/adi/cpu.h>
 #include <mach/dma.h>
 #include <asm/uaccess.h>
 #include <asm/io.h>

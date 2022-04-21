@@ -29,7 +29,7 @@
 #endif
 
 #include <asm/cacheflush.h>
-#include <mach/cpu.h>
+#include <linux/soc/adi/cpu.h>
 #include <media/adi/ppi.h>
 
 static int ppi_attach_irq(struct ppi_if *ppi, irq_handler_t handler);

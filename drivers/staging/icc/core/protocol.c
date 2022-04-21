@@ -25,7 +25,7 @@
 #include <include/icc.h>
 #include <linux/soc/adi/icc.h>
 #include <mach/hardware.h>
-#include <mach/cpu.h>
+#include <linux/soc/adi/cpu.h>
 
 #define DRIVER_NAME "icc"
 

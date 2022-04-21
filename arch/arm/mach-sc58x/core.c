@@ -34,7 +34,7 @@
 #include <asm/mach/map.h>
 #include <asm/mach/irq.h>
 #include <mach/hardware.h>
-#include <mach/cpu.h>
+#include <linux/soc/adi/cpu.h>
 #include <mach/dma.h>
 #include <mach/sc58x.h>
 #include <mach/irqs.h>

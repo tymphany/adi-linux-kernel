@@ -23,7 +23,7 @@
 #include <linux/usb/usb_phy_generic.h>
 #include <linux/usb/usb_phy_generic.h>
 #include <linux/usb/of.h>
-#include <mach/cpu.h>
+#include <linux/soc/adi/cpu.h>
 
 #include "adi.h"
 #include "musb_core.h"

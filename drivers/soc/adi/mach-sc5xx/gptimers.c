@@ -15,9 +15,22 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
+
+#include <linux/soc/adi/cpu.h>
+
+#ifdef CONFIG_ARCH_SC59X_64
+#include <linux/soc/adi/sc59x.h>
+#else
 #include <mach/hardware.h>
+#endif
+
+#ifdef CONFIG_ARCH_SC59X
 #include <mach/sc59x.h>
-#include <mach/cpu.h>
+#elif defined(CONFIG_ARCH_SC58X)
+#include <mach/sc58x.h>
+#elif defined(CONFIG_ARCH_SC57X)
+#include <mach/sc57x.h>
+#endif
 
 static LIST_HEAD(gptimers_list);
 static DEFINE_SPINLOCK(gptimers_lock);
@@ -31,22 +44,22 @@ static DEFINE_SPINLOCK(gptimers_lock);
 #define GPTIMER_WID_OFF   0xC
 #define GPTIMER_DLY_OFF   0x10
 
-static struct gptimer3_group_regs* const group_base = __io_address(TIMER_GROUP);
-static struct gptimer3* const timer0_base = __io_address(TIMER0_CONFIG);
+static struct gptimer3_group_regs* group_base = NULL;
+static struct gptimer3* timer0_base = NULL;
 
-void set_gptimer_pwidth(struct sc59x_gptimer *timer, uint32_t value)
+void set_gptimer_pwidth(struct sc5xx_gptimer *timer, uint32_t value)
 {
 	writel(value, timer->io_base + GPTIMER_WID_OFF);
 }
 EXPORT_SYMBOL(set_gptimer_pwidth);
 
-void set_gptimer_period(struct sc59x_gptimer *timer, uint32_t period)
+void set_gptimer_period(struct sc5xx_gptimer *timer, uint32_t period)
 {
 	writel(period, timer->io_base + GPTIMER_PER_OFF);
 }
 EXPORT_SYMBOL(set_gptimer_period);
 
-uint32_t get_gptimer_count(struct sc59x_gptimer *timer)
+uint32_t get_gptimer_count(struct sc5xx_gptimer *timer)
 {
 	return readl(timer->io_base + GPTIMER_COUNT_OFF);
 }
@@ -70,7 +83,7 @@ void set_gptimer_stopcfg(uint16_t mask)
 }
 EXPORT_SYMBOL(set_gptimer_stopcfg);
 
-void set_gptimer_config(struct sc59x_gptimer *timer, uint16_t config)
+void set_gptimer_config(struct sc5xx_gptimer *timer, uint16_t config)
 {
 	writew(config, timer->io_base + GPTIMER_CFG_OFF);
 }
@@ -91,6 +104,16 @@ static void _disable_gptimers(uint16_t mask)
 	writew(mask, &group_base->disable);
 }
 
+void map_gptimers(void)
+{
+	if(group_base == NULL)
+		group_base = ioremap(TIMER_GROUP, sizeof(struct gptimer3_group_regs));
+
+	if(timer0_base == NULL)
+		timer0_base = ioremap(TIMER0_CONFIG, sizeof(struct gptimer3));
+}
+EXPORT_SYMBOL(map_gptimers);
+
 void disable_gptimers(uint16_t mask)
 {
 	set_gptimer_stopcfg(mask);
@@ -98,9 +121,9 @@ void disable_gptimers(uint16_t mask)
 }
 EXPORT_SYMBOL(disable_gptimers);
 
-struct sc59x_gptimer *gptimer_request(int id)
+struct sc5xx_gptimer *gptimer_request(int id)
 {
-	struct sc59x_gptimer *t = NULL;
+	struct sc5xx_gptimer *t = NULL;
 	unsigned long flags;
 	int found;
 
@@ -127,7 +150,7 @@ struct sc59x_gptimer *gptimer_request(int id)
 }
 EXPORT_SYMBOL(gptimer_request);
 
-int gptimer_free(struct sc59x_gptimer *timer)
+int gptimer_free(struct sc5xx_gptimer *timer)
 {
 	if (!timer)
 		return -EINVAL;
@@ -139,13 +162,15 @@ int gptimer_free(struct sc59x_gptimer *timer)
 }
 EXPORT_SYMBOL(gptimer_free);
 
-static int sc59x_gptimer_probe(struct platform_device *pdev)
+static int sc5xx_gptimer_probe(struct platform_device *pdev)
 {
 	unsigned long flags;
-	struct sc59x_gptimer *timer;
+	struct sc5xx_gptimer *timer;
 	int irq;
 	struct resource *mem;
 	struct device *dev = &pdev->dev;
+
+	map_gptimers();
 
 	if (!dev->of_node) {
 		dev_err(dev, "%s: no platform device.\n", __func__);
@@ -164,7 +189,7 @@ static int sc59x_gptimer_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	timer = devm_kzalloc(dev, sizeof(struct sc59x_gptimer), GFP_KERNEL);
+	timer = devm_kzalloc(dev, sizeof(struct sc5xx_gptimer), GFP_KERNEL);
 	if (!timer) {
 		dev_err(dev, "%s: no memory.\n", __func__);
 		return -ENOMEM;
@@ -185,9 +210,9 @@ static int sc59x_gptimer_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int sc59x_gptimer_remove(struct platform_device *pdev)
+static int sc5xx_gptimer_remove(struct platform_device *pdev)
 {
-	struct sc59x_gptimer *timer;
+	struct sc5xx_gptimer *timer;
 	unsigned long flags;
 	int ret = -EINVAL;
 
@@ -204,30 +229,30 @@ static int sc59x_gptimer_remove(struct platform_device *pdev)
 	return ret;
 }
 
-static const struct of_device_id sc59x_gptimer_match[] = {
+static const struct of_device_id sc5xx_gptimer_match[] = {
 	{
-		.compatible = "adi,sc59x-timer",
+		.compatible = "adi,sc5xx-timer",
 	},
 	{},
 };
-MODULE_DEVICE_TABLE(of, sc59x_gptimer_match);
+MODULE_DEVICE_TABLE(of, sc5xx_gptimer_match);
 
-static struct platform_driver sc59x_gptimer_driver = {
-	.probe = sc59x_gptimer_probe,
-	.remove = sc59x_gptimer_remove,
+static struct platform_driver sc5xx_gptimer_driver = {
+	.probe = sc5xx_gptimer_probe,
+	.remove = sc5xx_gptimer_remove,
 	.driver = {
-		.name = "sc59x_gptimer",
-		.of_match_table = of_match_ptr(sc59x_gptimer_match),
+		.name = "sc5xx_gptimer",
+		.of_match_table = of_match_ptr(sc5xx_gptimer_match),
 	},
 };
 
-static int __init sc59x_gptimer_init(void)
+static int __init sc5xx_gptimer_init(void)
 {
-	return platform_driver_register(&sc59x_gptimer_driver);
+	return platform_driver_register(&sc5xx_gptimer_driver);
 }
-arch_initcall(sc59x_gptimer_init);
+arch_initcall(sc5xx_gptimer_init);
 
-static void __exit sc59x_gptimer_exit(void)
+static void __exit sc5xx_gptimer_exit(void)
 {
-	platform_driver_unregister(&sc59x_gptimer_driver);
+	platform_driver_unregister(&sc5xx_gptimer_driver);
 }

@@ -33,7 +33,7 @@
 #include <media/adi/ppi.h>
 #include <mach/dma.h>
 #include <mach/portmux.h>
-#include <mach/cpu.h>
+#include <linux/soc/adi/cpu.h>
 #else
 #include <asm/adi_ppi.h>
 #include <asm/dma.h>
