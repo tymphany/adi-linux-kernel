@@ -18,7 +18,7 @@
 #include <linux/types.h>
 
 #include <linux/soc/adi/rcu.h>
-#include <linux/soc/adi/sec.h>
+#include "sec.h"
 
 #define ADI_RCU_REBOOT_PRIORITY		255
 #define ADI_RCU_CORE_INIT_TIMEOUT	msecs_to_jiffies(2000)
