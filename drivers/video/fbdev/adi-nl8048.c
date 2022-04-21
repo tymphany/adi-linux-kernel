@@ -30,7 +30,7 @@
 #include <linux/types.h>
 
 #ifdef CONFIG_ARCH_HEADER_IN_MACH
-#include <mach/ppi.h>
+#include <media/adi/ppi.h>
 #include <mach/dma.h>
 #include <mach/portmux.h>
 #include <mach/cpu.h>
