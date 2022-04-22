@@ -93,9 +93,8 @@ void __init register_current_timer_delay(const struct delay_timer *timer)
 	}
 }
 
-unsigned long calibrate_delay_is_known (void)
+unsigned long calibrate_delay_is_known(void)
 {
-printk(KERN_ERR "calibrate_delay_is_known\r\n");
 	delay_calibrated = true;
 	return lpj_fine;
 }
