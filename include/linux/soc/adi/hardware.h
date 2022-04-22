@@ -11,6 +11,9 @@
 /*
  * PCI space virtual addresses
  */
+#define SC59X_PCI_VIRT_BASE		(void __iomem *)0xe8000000ul
+#define SC59X_CFG_VIRT_BASE		(void __iomem *)0xe9000000ul
+
 #define SC58X_PCI_VIRT_BASE		(void __iomem *)0xe8000000ul
 #define SC58X_CFG_VIRT_BASE		(void __iomem *)0xe9000000ul
 

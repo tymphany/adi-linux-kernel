@@ -21,7 +21,7 @@
 #ifdef CONFIG_ARCH_SC59X_64
 #include <linux/soc/adi/sc59x.h>
 #else
-#include <mach/hardware.h>
+#include <linux/soc/adi/hardware.h>
 #endif
 
 #ifdef CONFIG_ARCH_SC59X

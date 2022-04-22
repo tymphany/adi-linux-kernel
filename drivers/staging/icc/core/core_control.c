@@ -18,7 +18,7 @@
 #include <linux/of_address.h>
 #include <linux/device.h>
 #include <linux/delay.h>
-#include <mach/hardware.h>
+#include <linux/soc/adi/hardware.h>
 
 #include <include/icc.h>
 #include <linux/soc/adi/icc.h>

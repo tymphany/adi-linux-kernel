@@ -33,7 +33,7 @@
 #include <asm/mach/time.h>
 #include <asm/mach/map.h>
 #include <asm/mach/irq.h>
-#include <mach/hardware.h>
+#include <linux/soc/adi/hardware.h>
 #include <linux/soc/adi/cpu.h>
 #include <mach/dma.h>
 #include <mach/sc57x.h>

@@ -22,7 +22,7 @@
 #include <linux/of_device.h>
 #include <linux/vmalloc.h>
 
-#include <mach/hardware.h>
+#include <linux/soc/adi/hardware.h>
 #include <mach/sc58x.h>
 #include <linux/soc/adi/cpu.h>
 #include <mach/dma.h>

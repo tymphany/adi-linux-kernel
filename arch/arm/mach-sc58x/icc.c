@@ -4,7 +4,7 @@
 #include <linux/delay.h>
 #include <linux/irq.h>
 #include <linux/gpio.h>
-#include <mach/hardware.h>
+#include <linux/soc/adi/hardware.h>
 #include <mach/sc58x.h>
 #include <linux/soc/adi/icc.h>
 #include <asm/io.h>

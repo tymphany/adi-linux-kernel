@@ -13,7 +13,7 @@
 #include <asm/io.h>
 #include <asm/delay.h>
 #include <mach/sc58x.h>
-#include <mach/hardware.h>
+#include <linux/soc/adi/hardware.h>
 #include <mach/sec.h>
 
 static DEFINE_SPINLOCK(lock);

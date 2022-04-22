@@ -24,7 +24,7 @@
 #include <asm/dma.h>
 #include <include/icc.h>
 #include <linux/soc/adi/icc.h>
-#include <mach/hardware.h>
+#include <linux/soc/adi/hardware.h>
 #include <linux/soc/adi/cpu.h>
 
 #define DRIVER_NAME "icc"

@@ -16,7 +16,7 @@
 #define __SC5XX_SRU_H_
 
 #ifndef CONFIG_ARCH_SC59X_64
-#include <mach/hardware.h>
+#include <linux/soc/adi/hardware.h>
 #endif
 #include "sc5xx-dai.h"
 

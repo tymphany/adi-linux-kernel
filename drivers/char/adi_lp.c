@@ -35,7 +35,7 @@
 #include <mach/dma.h>
 #include <linux/soc/adi/cpu.h>
 #include <mach/irqs.h>
-#include <mach/hardware.h>
+#include <linux/soc/adi/hardware.h>
 #ifdef ARCH_SC58X
 #include <mach/sc58x.h>
 #elif defined(ARCH_SC57X)

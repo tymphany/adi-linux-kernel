@@ -10,7 +10,7 @@
 #include <linux/device.h>
 #include <linux/io.h>
 
-#include <mach/hardware.h>
+#include <linux/soc/adi/hardware.h>
 #include <asm/irq.h>
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
