@@ -1903,6 +1903,8 @@ config UNCOMPRESS_INCLUDE
 	string
 	default "debug/uncompress.h" if ARCH_MULTIPLATFORM || ARCH_MSM || \
 					PLAT_SAMSUNG || ARM_SINGLE_ARMV7M
+	default "linux/soc/adi/uncompress.h" if ARCH_SC57X || ARCH_SC58X || \
+					ARCH_SC59X
 	default "mach/uncompress.h"
 
 config EARLY_PRINTK
