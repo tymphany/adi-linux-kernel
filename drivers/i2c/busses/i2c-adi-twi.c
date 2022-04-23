@@ -26,8 +26,6 @@
 
 #include <asm/irq.h>
 
-#include <linux/soc/adi/portmux.h>
-
 /* TWI_PRESCALE Masks */
 #define	TWI_ENA		0x0080	/* TWI Enable */
 
@@ -835,14 +833,6 @@ static int i2c_adi_twi_probe(struct platform_device *pdev)
 	p_adap->timeout = 5 * HZ;
 	p_adap->retries = 3;
 
-	rc = peripheral_request_list(
-			dev_get_platdata(&pdev->dev),
-			"i2c-adi-twi");
-	if (rc) {
-		dev_err(&pdev->dev, "Can't setup pin mux!\n");
-		return -EBUSY;
-	}
-
 	rc = devm_request_irq(&pdev->dev, iface->irq, adi_twi_interrupt_entry,
 		0, pdev->name, iface);
 	if (rc) {
@@ -890,7 +880,6 @@ disable_clk:
 	clk_disable_unprepare(iface->sclk);
 
 out_error:
-	peripheral_free_list(dev_get_platdata(&pdev->dev));
 	return rc;
 }
 
@@ -900,7 +889,6 @@ static int i2c_adi_twi_remove(struct platform_device *pdev)
 
 	clk_disable_unprepare(iface->sclk);
 	i2c_del_adapter(&(iface->adap));
-	peripheral_free_list(dev_get_platdata(&pdev->dev));
 
 	return 0;
 }

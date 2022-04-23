@@ -23,12 +23,6 @@
 #include <linux/spi/adi_spi3.h>
 #include <linux/types.h>
 
-#ifdef CONFIG_ARCH_HEADER_IN_MACH
-#include <linux/soc/adi/portmux.h>
-#else
-#include <asm/portmux.h>
-#endif
-
 enum adi_spi_state {
 	START_STATE,
 	RUNNING_STATE,

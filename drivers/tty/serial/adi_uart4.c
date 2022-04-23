@@ -28,9 +28,6 @@
 #include <asm/io.h>
 #include <linux/compiler.h>
 
-#include <linux/soc/adi/portmux.h>
-#include <linux/soc/adi/gpio.h>
-
 #if defined(CONFIG_SERIAL_ADI_UART4_CONSOLE) && defined(CONFIG_MAGIC_SYSRQ)
 #define SUPPORT_SYSRQ
 #endif
@@ -65,6 +62,8 @@ struct adi_uart4_serial_port {
 	unsigned int enable_pin_active_low;
 	unsigned int hwflow_en_pin;
 	unsigned int hwflow_en_pin_active_low;
+//	struct gpio_desc *enable_pin;
+//	struct gpio_desc *hwflow_en_pin;
 	bool hwflow_en;
 	/* Use enable-divide-by-one in divisor? */
 	bool edbo;
@@ -1179,19 +1178,6 @@ static int adi_uart4_serial_probe(struct platform_device *pdev)
 	}
 
 	if (adi_uart4_serial_ports[uartid] == NULL) {
-
-		struct pinctrl *pctrl;
-		struct pinctrl_state *pstate;
-
-		pctrl = devm_pinctrl_get(&pdev->dev);
-		pstate = pinctrl_lookup_state(pctrl, PINCTRL_STATE_DEFAULT);
-		if (IS_ERR(pstate))
-			return ret;
-
-		ret = pinctrl_select_state(pctrl, pstate);
-		if (ret)
-			return ret;
-
 		uart = kzalloc(sizeof(*uart), GFP_KERNEL);
 		if (!uart) {
 			dev_err(&pdev->dev,
@@ -1247,18 +1233,23 @@ static int adi_uart4_serial_probe(struct platform_device *pdev)
 		else
 			uart->hwflow_mode = ADI_UART_NO_HWFLOW;
 
-		if (uart->hwflow_mode == ADI_UART_HWFLOW_PERI) {
-			pstate = pinctrl_lookup_state(pctrl, "hwflow");
-			ret = pinctrl_select_state(pctrl, pstate);
-			if (ret)
-				uart->hwflow_mode = ADI_UART_NO_HWFLOW;
-		}
-
 		uart->edbo = false;
 		if (of_property_read_bool(pdev->dev.of_node, "adi,use-edbo"))
 			uart->edbo = true;
 
 #ifndef CONFIG_ARCH_SC59X_64
+		// @todo this should replace the softconfig bit below, rest of driver
+		// also needs updating
+		uart->enable_pin = devm_gpiod_get(dev, "enable", GPIOD_OUT_HIGH);
+		if (IS_ERR(uart->enable_pin))
+			return PTR_ERR(uart->enable_pin);
+
+		if (uart->hwflow_mode == ADI_UART_HWFLOW_PERI) {
+			uart->hwflow_en_pin = devm_gpiod_get(dev, "hwflow-en", GPIOD_OUT_HIGH);
+			if (IS_ERR(uart->hwflow_en_pin))
+				return PTR_ERR(uart->hwflow_en_pin);
+		}
+
 		if (pdev->dev.of_node) {
 			if (likely(of_count_phandle_with_args(pdev->dev.of_node,
 							"enable-pin", NULL) > 0)) {
@@ -1318,7 +1309,6 @@ static int adi_uart4_serial_remove(struct platform_device *pdev)
 		dma_release_channel(uart->tx_dma_channel);
 		dma_release_channel(uart->rx_dma_channel);
 
-		iounmap(uart->port.membase);
 		if (uart->hwflow_en_pin && gpio_is_valid(uart->hwflow_en_pin))
 			gpio_direction_output(uart->hwflow_en_pin,
 						        uart->hwflow_en_pin_active_low ? 1 : 0);
