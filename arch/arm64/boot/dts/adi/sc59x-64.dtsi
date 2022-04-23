@@ -559,150 +559,11 @@
 			status = "disabled";
 		};
 
-		pinctrl0: pinctrl@0 {
-			compatible = "adi,adi2-pinctrl";
+		pinctrl0: pinctrl@0x31004600 {
+			compatible = "adi,adsp-pinctrl";
 			#address-cells = <1>;
 			#size-cells = <1>;
-			#interrupt-cells = <2>;
-			interrupt-controller;
-			reg = <0 0>;
-
-			uart {
-				uart0_default: uart0@0 {
-					pinctrl-use-default;
-					adi,group = "uart0grp";
-					adi,function = "uart0";
-				};
-				uart0_hwflow: uart0@1 {
-					pinctrl-use-default;
-					adi,group = "uart0_hwflowgrp";
-					adi,function = "uart0";
-				};
-				uart1_default: uart1@0 {
-					adi,group = "uart1grp";
-					adi,function = "uart1";
-				};
-				uart1_hwflow: uart1@1 {
-					adi,group = "uart1_hwflowgrp";
-					adi,function = "uart1";
-				};
-				uart2_default: uart2@0 {
-					adi,group = "uart2grp";
-					adi,function = "uart2";
-				};
-				uart2_hwflow: uart2@1 {
-					adi,group = "uart2_hwflowgrp";
-					adi,function = "uart2";
-				};
-			};
-			uart3_default: uart3@0 {
-				adi,group = "uart3grp";
-				adi,function = "uart3";
-			};
-
-			spi {
-				spi0_default: spi0@0 {
-					adi,group = "spi0grp";
-					adi,function = "spi0";
-				};
-				spi1_default: spi1@0 {
-					adi,group = "spi1grp";
-					adi,function = "spi1";
-				};
-				spi2_default: spi2@0 {
-					adi,group = "spi2grp";
-					adi,function = "spi2";
-				};
-				spi2_quad: spi2@1 {
-					adi,group = "spi2quadgrp";
-					adi,function = "spi2";
-				};
-				spi3_default: spi3@0 {
-					adi,group = "spi3grp";
-					adi,function = "spi3";
-				};
-			};
-
-			can {
-				can0_default: can0@0 {
-					adi,group = "can0grp";
-					adi,function = "can0";
-				};
-				can1_default: can1@0 {
-					adi,group = "can1grp";
-					adi,function = "can1";
-				};
-			};
-
-			ppi {
-				ppi0_8b: ppi0@0 {
-					adi,group = "ppi0_8bgrp";
-					adi,function = "ppi0";
-				};
-				ppi0_16b: ppi0@1 {
-					adi,group = "ppi0_16bgrp";
-					adi,function = "ppi0";
-				};
-				ppi0_24b: ppi0@2 {
-					adi,group = "ppi0_24bgrp";
-					adi,function = "ppi0";
-				};
-			};
-
-			eth {
-				eth0_default: eth0@0 {
-					adi,group = "eth0grp";
-					adi,function = "eth0";
-				};
-				eth1_default: eth1@0 {
-					adi,group = "eth1grp";
-					adi,function = "eth1";
-				};
-			};
-
-			mmc {
-				mmc0_8bgrp: mmc0@0 {
-					adi,group = "mmc0_8bgrp";
-					adi,function = "mmc0";
-				};
-				mmc0_4bgrp: mmc0@1 {
-					adi,group = "mmc0_4bgrp";
-					adi,function = "mmc0";
-				};
-			};
-
-			cnt {
-				cnt0_default: cnt0@0 {
-					adi,group = "cnt0grp";
-					adi,function = "cnt0";
-				};
-			};
-
-			linkport {
-				lp0_default: lp0@0 {
-					adi,group = "lp0grp";
-					adi,function = "lp0";
-				};
-				lp1_default: lp1@0 {
-					adi,group = "lp1grp";
-					adi,function = "lp1";
-				};
-			};
-
-			ospi {
-				ospi_default: ospi@0 {
-					adi,group = "ospigrp";
-					adi,function = "ospi";
-				};
-			};
-
-			usbc0 {
-				usbc0_default: usbc0@0 {
-					adi,group = "usbc0grp";
-					adi,function = "usbc0";
-				};
-			};
-
+			reg = <0x31004600 0x400>;
 		};
 
 		sys_clkin0: oscillator@1 {
@@ -793,160 +654,123 @@
 		};
 
 		pint0: pint@0x31005000 {
-			compatible = "adi,pint";
+			compatible = "adi,adsp-pint";
 			reg = <0x31005000 0xFF>;
 			interrupts = <GIC_SPI 65 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
 		pint1: pint@0x31005100 {
-			compatible = "adi,pint";
+			compatible = "adi,adsp-pint";
 			reg = <0x31005100 0xFF>;
 			interrupts = <GIC_SPI 66 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
 		pint2: pint@0x31005200 {
-			compatible = "adi,pint";
+			compatible = "adi,adsp-pint";
 			reg = <0x31005200 0xFF>;
 			interrupts = <GIC_SPI 67 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
 		pint3: pint@0x31005300 {
-			compatible = "adi,pint";
+			compatible = "adi,adsp-pint";
 			reg = <0x31005300 0xFF>;
 			interrupts = <GIC_SPI 68 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
 		pint4: pint@0x31005400 {
-			compatible = "adi,pint";
+			compatible = "adi,adsp-pint";
 			reg = <0x31005400 0xFF>;
 			interrupts = <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
 		pint5: pint@0x31005500 {
-			compatible = "adi,pint";
+			compatible = "adi,adsp-pint";
 			reg = <0x31005500 0xFF>;
 			interrupts = <GIC_SPI 70 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
 		pint6: pint@0x31005600 {
-			compatible = "adi,pint";
+			compatible = "adi,adsp-pint";
 			reg = <0x31005600 0xFF>;
 			interrupts = <GIC_SPI 71 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
 		pint7: pint@0x31005700 {
-			compatible = "adi,pint";
+			compatible = "adi,adsp-pint";
 			reg = <0x31005700 0xFF>;
 			interrupts = <GIC_SPI 72 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
 		gpa: gport@0x31004000 {
-			compatible = "adi,gport";
+			compatible = "adi,adsp-port-gpio";
 			gpio-controller;
 			#gpio-cells = <2>;
 			reg = <0x31004000 0x7F>;
-			port_gpio_base = <0>;
-			port_width = <16>;
 			gpio-ranges = <&pinctrl0 0 0 16>;
-			pint_id = /bits/ 8 <0>;
-			pint_assign;
-			pint_map = /bits/ 8 <0>;
 		};
 
 		gpb: gport@0x31004080 {
-			compatible = "adi,gport";
+			compatible = "adi,adsp-port-gpio";
 			gpio-controller;
 			#gpio-cells = <2>;
 			reg = <0x31004080 0x7F>;
-			port_gpio_base = <16>;
-			port_width = <16>;
 			gpio-ranges = <&pinctrl0 0 16 16>;
-			pint_id = /bits/ 8 <0>;
-			pint_map = /bits/ 8 <1>;
 		};
 
 		gpc: gport@0x31004100 {
-			compatible = "adi,gport";
+			compatible = "adi,adsp-port-gpio";
 			gpio-controller;
 			#gpio-cells = <2>;
 			reg = <0x31004100 0x7F>;
-			port_gpio_base = <32>;
-			port_width = <16>;
 			gpio-ranges = <&pinctrl0 0 32 16>;
-			pint_id = /bits/ 8 <1>;
-			pint_map = /bits/ 8 <1>;
 		};
 
 		gpd: gport@0x31004180 {
-			compatible = "adi,gport";
+			compatible = "adi,adsp-port-gpio";
 			gpio-controller;
 			#gpio-cells = <2>;
 			reg = <0x31004180 0x7F>;
-			port_gpio_base = <48>;
-			port_width = <16>;
 			gpio-ranges = <&pinctrl0 0 48 16>;
-			pint_id = /bits/ 8 <2>;
-			pint_map = /bits/ 8 <1>;
 		};
 
 		gpe: gport@0x31004200 {
-			compatible = "adi,gport";
+			compatible = "adi,adsp-port-gpio";
 			gpio-controller;
 			#gpio-cells = <2>;
 			reg = <0x31004200 0x7F>;
-			port_gpio_base = <64>;
-			port_width = <16>;
 			gpio-ranges = <&pinctrl0 0 64 16>;
-			pint_id = /bits/ 8 <3>;
-			pint_map = /bits/ 8 <1>;
 		};
 
 		gpf: gport@0x31004280 {
-			compatible = "adi,gport";
+			compatible = "adi,adsp-port-gpio";
 			gpio-controller;
 			#gpio-cells = <2>;
 			reg = <0x31004280 0x7F>;
-			port_gpio_base = <80>;
-			port_width = <16>;
 			gpio-ranges = <&pinctrl0 0 80 16>;
-			pint_id = /bits/ 8 <4>;
-			pint_map = /bits/ 8 <1>;
 		};
 
 		gpg: gport@0x31004300 {
-			compatible = "adi,gport";
+			compatible = "adi,adsp-port-gpio";
 			gpio-controller;
 			#gpio-cells = <2>;
 			reg = <0x31004300 0x7F>;
-			port_gpio_base = <96>;
-			port_width = <16>;
 			gpio-ranges = <&pinctrl0 0 96 16>;
-			pint_id = /bits/ 8 <5>;
-			pint_map = /bits/ 8 <1>;
 		};
 
 		gph: gport@0x31004380 {
-			compatible = "adi,gport";
+			compatible = "adi,adsp-port-gpio";
 			gpio-controller;
 			#gpio-cells = <2>;
 			reg = <0x31004380 0x7F>;
-			port_gpio_base = <112>;
-			port_width = <16>;
 			gpio-ranges = <&pinctrl0 0 112 16>;
-			pint_id = /bits/ 8 <6>;
-			pint_map = /bits/ 8 <1>;
 		};
 
 		gpi: gport@0x31004400 {
-			compatible = "adi,gport";
+			compatible = "adi,adsp-port-gpio";
 			gpio-controller;
 			#gpio-cells = <2>;
 			reg = <0x31004400 0x7F>;
-			port_gpio_base = <128>;
-			port_width = <16>;
 			gpio-ranges = <&pinctrl0 0 128 16>;
-			pint_id = /bits/ 8 <7>;
-			pint_map = /bits/ 8 <1>;
 		};
 
 		usb0_phy: usbphy {

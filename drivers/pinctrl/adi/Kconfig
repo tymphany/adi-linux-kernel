@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: GPL-2.0-only
+
+config PINCTRL_ADSP
+	bool
+	depends on OF
+	select PINMUX
+	select GENERIC_PINCONF
+
+config PINCTRL_ADSP_SC598
+	bool "ADSP-SC598 pinctrl driver"
+	depends on ARCH_SC59X_64
+	select PINCTRL_ADSP
+	help
+	  Say Y here to enable the ADSP-SC598 pinctrl driver. This is required for
+	  correct peripheral functionality on the SoC.
