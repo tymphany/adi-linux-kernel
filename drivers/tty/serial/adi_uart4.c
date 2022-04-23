@@ -2,31 +2,27 @@
 /*
  * ADI UART4 Serial Driver
  *
- * Copyright 2013-2021 Analog Devices Inc.
+ * Copyright (C) 2013-2022, Analog Devices Inc.
  */
 
-#include <linux/module.h>
-#include <linux/ioport.h>
-#include <linux/gfp.h>
-#include <linux/io.h>
-#include <linux/init.h>
-#include <linux/console.h>
 #include <linux/clk.h>
-#include <linux/sysrq.h>
-#include <linux/platform_device.h>
-#include <linux/tty.h>
-#include <linux/tty_flip.h>
-#include <linux/serial_core.h>
-#include <linux/gpio.h>
-#include <linux/irq.h>
-#include <linux/irqflags.h>
-#include <linux/slab.h>
+#include <linux/compiler.h>
+#include <linux/console.h>
 #include <linux/dma-mapping.h>
 #include <linux/dmaengine.h>
+#include <linux/gpio.h>
+#include <linux/init.h>
+#include <linux/irq.h>
+#include <linux/module.h>
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
+#include <linux/platform_device.h>
+#include <linux/serial_core.h>
+#include <linux/sysrq.h>
+#include <linux/tty.h>
+#include <linux/tty_flip.h>
+
 #include <asm/io.h>
-#include <linux/compiler.h>
 
 #if defined(CONFIG_SERIAL_ADI_UART4_CONSOLE) && defined(CONFIG_MAGIC_SYSRQ)
 #define SUPPORT_SYSRQ
@@ -56,23 +52,20 @@ struct adi_uart4_serial_port {
 	struct dma_chan *rx_dma_channel;
 	/* Hardware flow control specific fields */
 	unsigned int hwflow_mode;
-	unsigned int cts_pin;
-	unsigned int rts_pin;
-	unsigned int enable_pin;
-	unsigned int enable_pin_active_low;
-	unsigned int hwflow_en_pin;
-	unsigned int hwflow_en_pin_active_low;
-//	struct gpio_desc *enable_pin;
-//	struct gpio_desc *hwflow_en_pin;
+	struct gpio_desc *enable_pin;
+	struct gpio_desc *hwflow_en_pin;
 	bool hwflow_en;
 	/* Use enable-divide-by-one in divisor? */
 	bool edbo;
 	struct clk *clk;
 };
 
+struct adi_uart4_serial_port *to_adi_serial_port(struct uart_port *port) {
+	return container_of(port, struct adi_uart4_serial_port, port);
+}
+
 #define ADI_UART_NO_HWFLOW	0
 #define ADI_UART_HWFLOW_PERI	1
-#define ADI_UART_HWFLOW_GPIO	2
 
 #define ADI_UART_NR_PORTS 4
 static struct adi_uart4_serial_port *adi_uart4_serial_ports[ADI_UART_NR_PORTS];
@@ -190,8 +183,7 @@ static void adi_uart4_serial_reset_irda(struct uart_port *port);
 
 static unsigned int adi_uart4_serial_get_mctrl(struct uart_port *port)
 {
-	struct adi_uart4_serial_port *uart =
-		container_of(port, struct adi_uart4_serial_port, port);
+	struct adi_uart4_serial_port *uart = to_adi_serial_port(port);
 	if (!uart->hwflow_mode || !uart->hwflow_en)
 		return TIOCM_CTS | TIOCM_DSR | TIOCM_CAR;
 
@@ -204,8 +196,7 @@ static unsigned int adi_uart4_serial_get_mctrl(struct uart_port *port)
 
 static void adi_uart4_serial_set_mctrl(struct uart_port *port, unsigned int mctrl)
 {
-	struct adi_uart4_serial_port *uart =
-		container_of(port, struct adi_uart4_serial_port, port);
+	struct adi_uart4_serial_port *uart = to_adi_serial_port(port);
 	if (!uart->hwflow_mode || !uart->hwflow_en)
 		return;
 
@@ -248,8 +239,7 @@ static irqreturn_t adi_uart4_serial_mctrl_cts_int(int irq, void *dev_id)
  */
 static void adi_uart4_serial_stop_tx(struct uart_port *port)
 {
-	struct adi_uart4_serial_port *uart =
-		container_of(port, struct adi_uart4_serial_port, port);
+	struct adi_uart4_serial_port *uart = to_adi_serial_port(port);
 	struct circ_buf *xmit = &uart->port.state->xmit;
 
 	while (!(UART_GET_LSR(uart) & TEMT))
@@ -276,8 +266,7 @@ static void adi_uart4_serial_stop_tx(struct uart_port *port)
  */
 static void adi_uart4_serial_start_tx(struct uart_port *port)
 {
-	struct adi_uart4_serial_port *uart =
-		container_of(port, struct adi_uart4_serial_port, port);
+	struct adi_uart4_serial_port *uart = to_adi_serial_port(port);
 	struct tty_struct *tty = uart->port.state->port.tty;
 
 	/*
@@ -301,8 +290,7 @@ static void adi_uart4_serial_start_tx(struct uart_port *port)
  */
 static void adi_uart4_serial_stop_rx(struct uart_port *port)
 {
-	struct adi_uart4_serial_port *uart =
-		container_of(port, struct adi_uart4_serial_port, port);
+	struct adi_uart4_serial_port *uart = to_adi_serial_port(port);
 
 	UART_CLEAR_IER(uart, ERBFI);
 }
@@ -595,8 +583,7 @@ static void adi_uart4_serial_dma_rx(void *data)
  */
 static unsigned int adi_uart4_serial_tx_empty(struct uart_port *port)
 {
-	struct adi_uart4_serial_port *uart =
-		container_of(port, struct adi_uart4_serial_port, port);
+	struct adi_uart4_serial_port *uart = to_adi_serial_port(port);
 	unsigned int lsr;
 
 	lsr = UART_GET_LSR(uart);
@@ -608,8 +595,7 @@ static unsigned int adi_uart4_serial_tx_empty(struct uart_port *port)
 
 static void adi_uart4_serial_break_ctl(struct uart_port *port, int break_state)
 {
-	struct adi_uart4_serial_port *uart =
-		container_of(port, struct adi_uart4_serial_port, port);
+	struct adi_uart4_serial_port *uart = to_adi_serial_port(port);
 	u32 lcr = UART_GET_LCR(uart);
 	if (break_state)
 		lcr |= SB;
@@ -620,8 +606,7 @@ static void adi_uart4_serial_break_ctl(struct uart_port *port, int break_state)
 
 static int adi_uart4_serial_startup(struct uart_port *port)
 {
-	struct adi_uart4_serial_port *uart =
-		container_of(port, struct adi_uart4_serial_port, port);
+	struct adi_uart4_serial_port *uart = to_adi_serial_port(port);
 	struct dma_slave_config dma_config = {0};
 	struct dma_async_tx_descriptor *desc;
 	int ret;
@@ -680,47 +665,9 @@ static int adi_uart4_serial_startup(struct uart_port *port)
 			dev_err(uart->dev, "Error configuring TX DMA channel\n");
 			return -EINVAL;
 		}
-	} else {
-		if (request_irq(uart->rx_irq, adi_uart4_serial_rx_int, 0,
-			"ADI_UART_RX", uart)) {
-			dev_err(port->dev, "Unable to attach UART RX int\n");
-			return -EBUSY;
-		}
-
-		if (request_irq(uart->tx_irq, adi_uart4_serial_tx_int, 0,
-			"ADI_UART_TX", uart)) {
-			dev_err(port->dev, "Unable to attach UART TX int\n");
-			free_irq(uart->rx_irq, uart);
-			return -EBUSY;
-		}
 	}
 
-	if (uart->hwflow_mode == ADI_UART_HWFLOW_GPIO) {
-		if (request_irq(gpio_to_irq(uart->cts_pin),
-			adi_uart4_serial_mctrl_cts_int,
-			IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING |
-			0, "ADI_UART_CTS", uart)) {
-			uart->hwflow_mode = ADI_UART_NO_HWFLOW;
-			dev_err(port->dev, "Unable to attach UART CTS int.\n");
-		}
-		if (gpio_request(uart->rts_pin, DRIVER_NAME)) {
-			dev_err(port->dev,
-				"fail to request RTS PIN at GPIO_%d\n",
-				uart->rts_pin);
-			uart->hwflow_mode = ADI_UART_NO_HWFLOW;
-			free_irq(gpio_to_irq(uart->cts_pin), uart);
-		} else
-			gpio_direction_output(uart->rts_pin, 0);
-
-	} else if (uart->hwflow_mode == ADI_UART_HWFLOW_PERI) {
-		if (request_irq(uart->status_irq,
-			adi_uart4_serial_mctrl_cts_int,
-			0, "ADI_UART_MODEM_STATUS", uart)) {
-			uart->hwflow_mode = ADI_UART_NO_HWFLOW;
-			dev_info(port->dev,
-				"Unable to attach UART Modem Status int.\n");
-		}
-
+	if (uart->hwflow_mode == ADI_UART_HWFLOW_PERI) {
 		/* CTS RTS PINs are negative assertive. */
 		UART_PUT_MCR(uart, UART_GET_MCR(uart) | ACTS);
 		UART_SET_IER(uart, EDSSI);
@@ -732,8 +679,7 @@ static int adi_uart4_serial_startup(struct uart_port *port)
 
 static void adi_uart4_serial_shutdown(struct uart_port *port)
 {
-	struct adi_uart4_serial_port *uart =
-		container_of(port, struct adi_uart4_serial_port, port);
+	struct adi_uart4_serial_port *uart = to_adi_serial_port(port);
 
 	dev_dbg(uart->dev, "in serial_shutdown\n");
 
@@ -744,16 +690,7 @@ static void adi_uart4_serial_shutdown(struct uart_port *port)
 		dmam_free_coherent(uart->dev, UART_XMIT_SIZE, uart->rx_dma_buf.buf,
 			uart->rx_dma_phy);
 		del_timer(&uart->rx_dma_timer);
-	} else {
-		free_irq(uart->rx_irq, uart);
-		free_irq(uart->tx_irq, uart);
 	}
-
-	if (uart->hwflow_mode == ADI_UART_HWFLOW_GPIO) {
-		free_irq(gpio_to_irq(uart->cts_pin), uart);
-		gpio_free(uart->rts_pin);
-	} else if (uart->hwflow_mode == ADI_UART_HWFLOW_PERI)
-		free_irq(uart->status_irq, uart);
 
 	clk_disable_unprepare(uart->clk);
 }
@@ -761,8 +698,7 @@ static void adi_uart4_serial_shutdown(struct uart_port *port)
 static void adi_uart4_serial_set_termios(struct uart_port *port,
 		struct ktermios *termios, struct ktermios *old)
 {
-	struct adi_uart4_serial_port *uart =
-		container_of(port, struct adi_uart4_serial_port, port);
+	struct adi_uart4_serial_port *uart = to_adi_serial_port(port);
 	unsigned long flags;
 	unsigned int baud, quot;
 	unsigned int ier, lcr = 0;
@@ -878,9 +814,7 @@ static void adi_uart4_serial_set_termios(struct uart_port *port,
 
 static const char *adi_uart4_serial_type(struct uart_port *port)
 {
-	struct adi_uart4_serial_port *uart =
-		container_of(port, struct adi_uart4_serial_port, port);
-
+	struct adi_uart4_serial_port *uart = to_adi_serial_port(port);
 	return uart->port.type == PORT_BFIN ? "ADI-UART4" : NULL;
 }
 
@@ -904,8 +838,7 @@ static int adi_uart4_serial_request_port(struct uart_port *port)
  */
 static void adi_uart4_serial_config_port(struct uart_port *port, int flags)
 {
-	struct adi_uart4_serial_port *uart =
-		container_of(port, struct adi_uart4_serial_port, port);
+	struct adi_uart4_serial_port *uart = to_adi_serial_port(port);
 
 	if (flags & UART_CONFIG_TYPE &&
 	    adi_uart4_serial_request_port(&uart->port) == 0)
@@ -929,8 +862,7 @@ adi_uart4_serial_verify_port(struct uart_port *port, struct serial_struct *ser)
  */
 static void adi_uart4_serial_set_ldisc(struct uart_port *port, struct ktermios *termios)
 {
-	struct adi_uart4_serial_port *uart =
-		container_of(port, struct adi_uart4_serial_port, port);
+	struct adi_uart4_serial_port *uart = to_adi_serial_port(port);
 	unsigned int val;
 
 	switch (termios->c_line) {
@@ -948,8 +880,7 @@ static void adi_uart4_serial_set_ldisc(struct uart_port *port, struct ktermios *
 
 static void adi_uart4_serial_reset_irda(struct uart_port *port)
 {
-	struct adi_uart4_serial_port *uart =
-		container_of(port, struct adi_uart4_serial_port, port);
+	struct adi_uart4_serial_port *uart = to_adi_serial_port(port);
 	unsigned int val;
 
 	val = UART_GET_GCTL(uart);
@@ -962,8 +893,7 @@ static void adi_uart4_serial_reset_irda(struct uart_port *port)
 #ifdef CONFIG_CONSOLE_POLL
 static void adi_uart4_serial_poll_put_char(struct uart_port *port, unsigned char chr)
 {
-	struct adi_uart4_serial_port *uart =
-		container_of(port, struct adi_uart4_serial_port, port);
+	struct adi_uart4_serial_port *uart = to_adi_serial_port(port);
 
 	while (!(UART_GET_LSR(uart) & THRE))
 		cpu_relax();
@@ -973,8 +903,7 @@ static void adi_uart4_serial_poll_put_char(struct uart_port *port, unsigned char
 
 static int adi_uart4_serial_poll_get_char(struct uart_port *port)
 {
-	struct adi_uart4_serial_port *uart =
-		container_of(port, struct adi_uart4_serial_port, port);
+	struct adi_uart4_serial_port *uart = to_adi_serial_port(port);
 	unsigned char chr;
 
 	while (!(UART_GET_LSR(uart) & DR))
@@ -1014,8 +943,7 @@ static struct uart_ops adi_uart4_serial_pops = {
 #ifdef CONFIG_SERIAL_ADI_UART4_CONSOLE
 static void adi_uart4_serial_console_putchar(struct uart_port *port, int ch)
 {
-	struct adi_uart4_serial_port *uart =
-		container_of(port, struct adi_uart4_serial_port, port);
+	struct adi_uart4_serial_port *uart = to_adi_serial_port(port);
 	while (!(UART_GET_LSR(uart) & THRE))
 		barrier();
 	UART_PUT_CHAR(uart, ch);
@@ -1153,6 +1081,7 @@ static int adi_uart4_serial_resume(struct platform_device *pdev)
 static int adi_uart4_serial_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
+	struct device_node *np = dev->of_node;
 	struct resource *res;
 	struct adi_uart4_serial_port *uart = NULL;
 	int ret = 0;
@@ -1162,13 +1091,9 @@ static int adi_uart4_serial_probe(struct platform_device *pdev)
 
 	dev_info(dev, "Serial probe\n");
 
-	if (pdev->dev.of_node) {
-		uartid = of_alias_get_id(pdev->dev.of_node, "serial");
-		tx_dma_channel = dma_request_chan(dev, "tx");
-		rx_dma_channel = dma_request_chan(dev, "rx");
-	} else {
-		uartid = pdev->id;
-	}
+	uartid = of_alias_get_id(np, "serial");
+	tx_dma_channel = dma_request_chan(dev, "tx");
+	rx_dma_channel = dma_request_chan(dev, "rx");
 
 	if (uartid < 0) {
 		dev_err(&pdev->dev, "failed to get alias/pdev id, errno %d\n",
@@ -1207,11 +1132,6 @@ static int adi_uart4_serial_probe(struct platform_device *pdev)
 			goto out_error_unmap;
 		}
 
-		uart->tx_irq = platform_get_irq(pdev, 0);
-		uart->rx_irq = platform_get_irq(pdev, 1);
-		uart->status_irq = platform_get_irq(pdev, 2);
-		uart->port.irq = uart->rx_irq;
-
 		uart->port.membase = devm_ioremap(&pdev->dev, res->start,
 						resource_size(res));
 		if (!uart->port.membase) {
@@ -1225,73 +1145,70 @@ static int adi_uart4_serial_probe(struct platform_device *pdev)
 		uart->tx_done	    = 1;
 		uart->tx_count	    = 0;
 
-		if (of_get_property(pdev->dev.of_node,
-				"uart-has-rtscts", NULL) ||
-			of_get_property(pdev->dev.of_node,
-				"adi,uart-has-rtscts", NULL) /* deprecated */)
+		if (!tx_dma_channel) {
+			uart->tx_irq = platform_get_irq_byname(pdev, "tx");
+			uart->rx_irq = platform_get_irq_byname(pdev, "rx");
+			uart->status_irq = platform_get_irq_byname(pdev, "status");
+			uart->port.irq = uart->rx_irq;
+
+			ret = devm_request_threaded_irq(dev, uart->rx_irq,
+				adi_uart4_serial_rx_int, NULL, 0, "ADI UART RX", uart);
+			if (ret) {
+				dev_err(dev, "Unable to attach UART RX int\n");
+				return ret;
+			}
+
+			ret = devm_request_threaded_irq(dev, uart->tx_irq,
+				adi_uart4_serial_tx_int, NULL, 0, "ADI UART TX", uart);
+			if (ret) {
+				dev_err(dev, "Unable to attach UART TX int\n");
+				return ret;
+			}
+		}
+
+		/* adi,uart-has-rtscts is deprecated */
+		if (of_property_read_bool(np, "uart-has-rtscts")
+			|| of_property_read_bool(np, "adi,uart-has-rtscts"))
+		{
 			uart->hwflow_mode = ADI_UART_HWFLOW_PERI;
+			ret = devm_request_threaded_irq(dev, uart->status_irq,
+				adi_uart4_serial_mctrl_cts_int, NULL, 0, "ADI UART Modem Status",
+				uart);
+			if (ret) {
+				uart->hwflow_mode = ADI_UART_NO_HWFLOW;
+				dev_info(dev, "Unable to attach UART Modem Status int.\n");
+			}
+		}
 		else
 			uart->hwflow_mode = ADI_UART_NO_HWFLOW;
 
 		uart->edbo = false;
-		if (of_property_read_bool(pdev->dev.of_node, "adi,use-edbo"))
+		if (of_property_read_bool(np, "adi,use-edbo"))
 			uart->edbo = true;
 
-#ifndef CONFIG_ARCH_SC59X_64
-		// @todo this should replace the softconfig bit below, rest of driver
-		// also needs updating
-		uart->enable_pin = devm_gpiod_get(dev, "enable", GPIOD_OUT_HIGH);
-		if (IS_ERR(uart->enable_pin))
-			return PTR_ERR(uart->enable_pin);
+		uart->enable_pin = devm_gpiod_get_optional(dev, "enable", GPIOD_OUT_HIGH);
 
 		if (uart->hwflow_mode == ADI_UART_HWFLOW_PERI) {
 			uart->hwflow_en_pin = devm_gpiod_get(dev, "hwflow-en", GPIOD_OUT_HIGH);
-			if (IS_ERR(uart->hwflow_en_pin))
+			if (IS_ERR(uart->hwflow_en_pin)) {
+				dev_err(dev, "hwflow-en required in peripheral hwflow mode\n");
 				return PTR_ERR(uart->hwflow_en_pin);
-		}
-
-		if (pdev->dev.of_node) {
-			if (likely(of_count_phandle_with_args(pdev->dev.of_node,
-							"enable-pin", NULL) > 0)) {
-				ret = softconfig_of_set_active_pin_output(&pdev->dev,
-							pdev->dev.of_node, "enable-pin", 0,
-							&uart->enable_pin, &uart->enable_pin_active_low,
-							true);
-				if (ret)
-					goto out_error_unmap;
-			}
-
-			if (uart->hwflow_mode == ADI_UART_HWFLOW_PERI &&
-						likely(of_count_phandle_with_args(pdev->dev.of_node,
-							"hwflow-en-pin", NULL) > 0)) {
-				ret = softconfig_of_set_active_pin_output(&pdev->dev,
-							pdev->dev.of_node, "hwflow-en-pin", 0,
-							&uart->hwflow_en_pin,
-							&uart->hwflow_en_pin_active_low, true);
-				if (ret) {
-					uart->hwflow_mode = ADI_UART_NO_HWFLOW;
-					goto out_error_unmap;
-				}
 			}
 		}
-#endif
 	}
-
 
 	uart = adi_uart4_serial_ports[uartid];
 	uart->port.dev = &pdev->dev;
 	dev_set_drvdata(&pdev->dev, uart);
 
 	ret = uart_add_one_port(&adi_uart4_serial_reg, &uart->port);
-
-	if (!ret) {
+	if (!ret)
 		return 0;
-	}
 
 	if (uart) {
 out_error_unmap:
-		kfree(uart);
 		adi_uart4_serial_ports[uartid] = NULL;
+		kfree(uart);
 	}
 
 	return ret;
@@ -1305,16 +1222,8 @@ static int adi_uart4_serial_remove(struct platform_device *pdev)
 
 	if (uart) {
 		uart_remove_one_port(&adi_uart4_serial_reg, &uart->port);
-
 		dma_release_channel(uart->tx_dma_channel);
 		dma_release_channel(uart->rx_dma_channel);
-
-		if (uart->hwflow_en_pin && gpio_is_valid(uart->hwflow_en_pin))
-			gpio_direction_output(uart->hwflow_en_pin,
-						        uart->hwflow_en_pin_active_low ? 1 : 0);
-		if (uart->enable_pin)
-			gpio_direction_output(uart->enable_pin,
-						        uart->enable_pin_active_low ? 1 : 0);
 		adi_uart4_serial_ports[uart->port.line] = NULL;
 		kfree(uart);
 	}
@@ -1322,13 +1231,11 @@ static int adi_uart4_serial_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#ifdef CONFIG_OF
 static const struct of_device_id adi_uart_dt_match[] = {
-	{ .compatible = "arm,adi-uart4"},
+	{ .compatible = "adi,uart4"},
 	{},
 };
 MODULE_DEVICE_TABLE(of, adi_uart_dt_match);
-#endif
 
 static struct platform_driver adi_uart4_serial_driver = {
 	.probe		= adi_uart4_serial_probe,
@@ -1338,9 +1245,7 @@ static struct platform_driver adi_uart4_serial_driver = {
 	.driver		= {
 		.name	= DRIVER_NAME,
 		.owner	= THIS_MODULE,
-#ifdef CONFIG_OF
-		.of_match_table	= of_match_ptr(adi_uart_dt_match),
-#endif
+		.of_match_table	= adi_uart_dt_match,
 	},
 };
 

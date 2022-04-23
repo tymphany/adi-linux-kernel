@@ -192,7 +192,7 @@ static int adsp_pint_probe(struct platform_device *pdev) {
 		return -EINVAL;
 	}
 
-	pint->irq = irq_of_parse_and_map(np, 0);
+	pint->irq = platform_get_irq(pdev, 0);
 	if (!pint->irq) {
 		dev_err(dev, "Could not find parent interrupt for port\n");
 		return -EINVAL;
