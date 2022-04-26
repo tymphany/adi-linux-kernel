@@ -436,7 +436,6 @@
 			interrupts = <GIC_SPI 124 IRQ_TYPE_LEVEL_HIGH>;
 			dmas = <&spi_cluster 22>, <&spi_cluster 23>;
 			dma-names = "tx", "rx";
-			num-cs = <128>;
 			status = "disabled";
 		};
 
@@ -450,7 +449,6 @@
 			dma-names = "tx", "rx";
 			clocks = <&clk ADSP_SC59X_CLK_SPI>;
 			clock-names = "spi";
-			num-cs = <128>;
 			status = "disabled";
 		};
 
@@ -464,7 +462,6 @@
 			dma-names = "tx", "rx";
 			clocks = <&clk ADSP_SC59X_CLK_SPI>;
 			clock-names = "spi";
-			num-cs = <128>;
 			status = "disabled";
 		};
 
@@ -478,7 +475,6 @@
 			dma-names = "tx", "rx";
 			clocks = <&clk ADSP_SC59X_CLK_SPI>;
 			clock-names = "spi";
-			num-cs = <128>;
 			status = "disabled";
 		};
 

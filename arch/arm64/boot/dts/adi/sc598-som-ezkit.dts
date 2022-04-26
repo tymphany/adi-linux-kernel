@@ -163,36 +163,24 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&spi1_default>;
 	status = "disabled";
+	cs-gpios = <&gpa 13 GPIO_ACTIVE_LOW>;
 
-	spidev@13{
+	spidev@0 {
 		compatible = "adi,generic-spidev";
-		reg = <13>; // SPI1_SSEL1 / GPIO_PA13
+		reg = <0>;
 		spi-max-frequency = <4000000>;
 	};
 };
-
-/*
-&spi2 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&spi2_default>;
-	status = "disabled";
-
-	spidev@5{
-		compatible = "adi,generic-spidev";
-		reg = <5>; // SPI2_SSEL1 / GPIO_PA5
-		spi-max-frequency = <4000000>;
-	};
-};
-*/
 
 &spi3 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&spi3_default>;
 	status = "disabled";
+	cs-gpios = <&gpg 15 GPIO_ACTIVE_LOW>;
 
-	spidev@111{
+	spidev@0 {
 		compatible = "adi,generic-spidev";
-		reg = <111>; // SPI3_SSEL5 / GPIO_PG15
+		reg = <0>;
 		spi-max-frequency = <4000000>;
 	};
 };
@@ -201,15 +189,14 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&spi2_quad>;
 	status = "okay";
+	cs-gpios = <&gpa 5 GPIO_ACTIVE_LOW>;
 
 	flash: is25lp512@0 {
 		#address-cells = <1>;
 		#size-cells = <1>;
 		compatible = "is25lp512", "jedec,spi-nor";
-		spi-max-frequency = <5000000>;
-		reg = <5>;
-		spi-cpol;
-		spi-cpha;
+		reg = <0>;
+		spi-max-frequency = <25000000>;
 		spi-rx-bus-width = <4>;
 
 		partition@0 {
@@ -617,9 +604,10 @@
 	spi2_quad: spi2_quad_pins {
 		pins {
 			pinmux = <ADI_ADSP_PINMUX('A', 0, ADI_ADSP_PINFUNC_ALT0)>,
-			         <ADI_ADSP_PINMUX('A', 1, ADI_ADSP_PINFUNC_ALT1)>,
-			         <ADI_ADSP_PINMUX('A', 2, ADI_ADSP_PINFUNC_ALT1)>,
-			         <ADI_ADSP_PINMUX('A', 3, ADI_ADSP_PINFUNC_ALT1)>;
+			         <ADI_ADSP_PINMUX('A', 1, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('A', 2, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('A', 3, ADI_ADSP_PINFUNC_ALT0)>,
+					 <ADI_ADSP_PINMUX('A', 4, ADI_ADSP_PINFUNC_ALT0)>;
 		};
 	};
 	spi3_default: spi3_default_pins {
