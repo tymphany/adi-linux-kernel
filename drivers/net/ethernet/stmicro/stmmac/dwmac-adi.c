@@ -12,69 +12,24 @@
 #include <linux/of.h>
 #include <linux/platform_device.h>
 #include <linux/gpio.h>
-#ifndef CONFIG_ARCH_SC59X_64
-	#include <mach/gpio.h>
-#endif
 
 #include "stmmac.h"
 #include "stmmac_platform.h"
 
-struct adi_dwmac {
-	unsigned int enable_pin;
-	unsigned int enable_pin_active_low;
-};
-
 static int dwmac_adi_probe(struct platform_device *pdev)
 {
-	struct adi_dwmac *dwmac;
 	struct plat_stmmacenet_data *plat_dat;
 	struct stmmac_resources stmmac_res;
 	int ret;
-
-	dwmac = devm_kzalloc(&pdev->dev, sizeof(*dwmac), GFP_KERNEL);
-	if (!dwmac)
-		return -ENOMEM;
 
 	ret = stmmac_get_platform_resources(pdev, &stmmac_res);
 	if (ret)
 		return ret;
 
-	if (pdev->dev.of_node) {
-		plat_dat = stmmac_probe_config_dt(pdev, &stmmac_res.mac);
-		if (IS_ERR(plat_dat)) {
-			dev_err(&pdev->dev, "dt configuration failed\n");
-			return PTR_ERR(plat_dat);
-		}
-
-#ifndef CONFIG_ARCH_SC59X_64
-		if (likely(of_count_phandle_with_args(pdev->dev.of_node,
-							"enable-pin", NULL) > 0)) {
-			if (softconfig_of_set_active_pin_output(&pdev->dev,
-						pdev->dev.of_node, "enable-pin", 0, &dwmac->enable_pin,
-						&dwmac->enable_pin_active_low, true))
-				return -ENODEV;
-		}
-#endif
-	} else {
-		plat_dat = dev_get_platdata(&pdev->dev);
-		if (!plat_dat) {
-			dev_err(&pdev->dev, "no platform data provided\n");
-			return  -EINVAL;
-		}
-
-		/* Set default value for multicast hash bins */
-		plat_dat->multicast_filter_bins = HASH_TABLE_SIZE;
-
-		/* Set default value for unicast filter entries */
-		plat_dat->unicast_filter_entries = 1;
-	}
-
-	plat_dat->bsp_priv = dwmac;
-	/* Custom initialisation (if needed) */
-	if (plat_dat->init) {
-		ret = plat_dat->init(pdev, plat_dat->bsp_priv);
-		if (ret)
-			goto err_remove_config_dt;
+	plat_dat = stmmac_probe_config_dt(pdev, &stmmac_res.mac);
+	if (IS_ERR(plat_dat)) {
+		dev_err(&pdev->dev, "dt configuration failed\n");
+		return PTR_ERR(plat_dat);
 	}
 
 	ret = stmmac_dvr_probe(&pdev->dev, plat_dat, &stmmac_res);
@@ -84,27 +39,14 @@ static int dwmac_adi_probe(struct platform_device *pdev)
 	return 0;
 
 err_exit:
-	if (plat_dat->exit)
-		plat_dat->exit(pdev, plat_dat->bsp_priv);
-err_remove_config_dt:
-	if (pdev->dev.of_node)
-		stmmac_remove_config_dt(pdev, plat_dat);
+	stmmac_remove_config_dt(pdev, plat_dat);
 
 	return ret;
 }
 
 static int dwmac_adi_remove(struct platform_device *pdev)
 {
-	struct net_device *ndev = platform_get_drvdata(pdev);
-	struct stmmac_priv *priv = netdev_priv(ndev);
-	struct adi_dwmac *dwmac = (struct adi_dwmac *)priv->plat->bsp_priv;
-	int ret = stmmac_dvr_remove(&pdev->dev);
-
-	if (dwmac->enable_pin && gpio_is_valid(dwmac->enable_pin))
-		gpio_direction_output(dwmac->enable_pin,
-					    dwmac->enable_pin_active_low ? 1 : 0);
-
-	return ret;
+	return stmmac_dvr_remove(&pdev->dev);
 }
 
 static const struct of_device_id dwmac_adi_match[] = {
