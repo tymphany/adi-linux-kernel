@@ -52,7 +52,6 @@ struct adi_uart4_serial_port {
 	struct dma_chan *rx_dma_channel;
 	/* Hardware flow control specific fields */
 	unsigned int hwflow_mode;
-	struct gpio_desc *enable_pin;
 	struct gpio_desc *hwflow_en_pin;
 	bool hwflow_en;
 	/* Use enable-divide-by-one in divisor? */
@@ -1185,8 +1184,6 @@ static int adi_uart4_serial_probe(struct platform_device *pdev)
 		uart->edbo = false;
 		if (of_property_read_bool(np, "adi,use-edbo"))
 			uart->edbo = true;
-
-		uart->enable_pin = devm_gpiod_get_optional(dev, "enable", GPIOD_OUT_HIGH);
 
 		if (uart->hwflow_mode == ADI_UART_HWFLOW_PERI) {
 			uart->hwflow_en_pin = devm_gpiod_get(dev, "hwflow-en", GPIOD_OUT_HIGH);
