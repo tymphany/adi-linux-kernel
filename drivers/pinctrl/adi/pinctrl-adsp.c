@@ -55,6 +55,14 @@
 /* Convert from pin number to pull down enable register offset */
 #define ADSP_PADS_PORTx_PDE(p)			(0xc4 + 0x04*(p/ADSP_PADS_PUD_PINS_PER_REG))
 
+/* Non GPIO PORT drive strength settings */
+#define ADSP_NONPORTS_DS_CKOUT			0
+#define ADSP_NONPORTS_DS_RESOUTB		1
+#define ADSP_NONPORTS_DS_FAULTB			2
+#define ADSP_NONPORTS_DS_LP1CK			3
+#define ADSP_NONPORTS_DS_LP0CK			4
+#define ADSP_NONPORTS_DS_OSPI			5
+
 /* @todo handle DAI pins/SRU configuration in pinctrl: */
 //#define REG_PADS0_DAI0_0_DS                  0x31004678
 //#define REG_PADS0_DAI0_1_DS                  0x3100467C
@@ -632,11 +640,25 @@ static int adsp_pinctrl_init_groups(struct adsp_pinctrl *adsp_pinctrl,
 	return 0;
 }
 
+static void adsp_set_nongpio_ds(struct adsp_pinctrl *p, int type, bool high) {
+	u32 val = readl(p->regs + ADSP_PADS_NONPORTS_DS);
+	u32 shift = ADSP_PADS_DS_BITS * type;
+	u32 mask = GENMASK(ADSP_PADS_DS_BITS-1, 0) << shift;
+	val = val & ~mask;
+
+	if (high)
+		writel(val | (ADSP_PADS_DS_HIGH << shift), p->regs + ADSP_PADS_NONPORTS_DS);
+	else
+		writel(val | (ADSP_PADS_DS_LOW << shift), p->regs + ADSP_PADS_NONPORTS_DS);
+}
+
 int adsp_pinctrl_probe(struct platform_device *pdev) {
 	struct device *dev = &pdev->dev;
+	struct device_node *np = dev->of_node;
 	struct adsp_pinctrl *adsp_pinctrl;
 	struct pinctrl_desc *pnctrl_desc;
 	struct resource *res;
+	u32 val;
 	int ret;
 
 	adsp_pinctrl = devm_kzalloc(dev, sizeof(*adsp_pinctrl), GFP_KERNEL);
@@ -653,6 +675,31 @@ int adsp_pinctrl_probe(struct platform_device *pdev) {
 	adsp_pinctrl->regs = devm_ioremap_resource(dev, res);
 	if (IS_ERR(adsp_pinctrl->regs))
 		return PTR_ERR(adsp_pinctrl->regs);
+
+	/* Only if requested, adjust non-port drive strengths */
+	ret = of_property_read_u32(np, "adi,clkout-drive-strength", &val);
+	if (!ret)
+		adsp_set_nongpio_ds(adsp_pinctrl, ADSP_NONPORTS_DS_CKOUT, !!val);
+
+	ret = of_property_read_u32(np, "adi,resoutb-drive-strength", &val);
+	if (!ret)
+		adsp_set_nongpio_ds(adsp_pinctrl, ADSP_NONPORTS_DS_RESOUTB, !!val);
+
+	ret = of_property_read_u32(np, "adi,faultb-drive-strength", &val);
+	if (!ret)
+		adsp_set_nongpio_ds(adsp_pinctrl, ADSP_NONPORTS_DS_FAULTB, !!val);
+
+	ret = of_property_read_u32(np, "adi,lp1ck-drive-strength", &val);
+	if (!ret)
+		adsp_set_nongpio_ds(adsp_pinctrl, ADSP_NONPORTS_DS_LP1CK, !!val);
+
+	ret = of_property_read_u32(np, "adi,lp0ck-drive-strength", &val);
+	if (!ret)
+		adsp_set_nongpio_ds(adsp_pinctrl, ADSP_NONPORTS_DS_LP0CK, !!val);
+
+	ret = of_property_read_u32(np, "adi,ospi-drive-strength", &val);
+	if (!ret)
+		adsp_set_nongpio_ds(adsp_pinctrl, ADSP_NONPORTS_DS_OSPI, !!val);
 
 	pnctrl_desc->name = dev_name(dev);
 	pnctrl_desc->pctlops = &adsp_pctlops;
