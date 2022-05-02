@@ -60,11 +60,7 @@ DEFINE_STATIC_SRCU(netpoll_srcu);
 
 static void zap_completion_queue(void);
 
-#ifdef CONFIG_ARCH_SC59X_64
-static unsigned int carrier_timeout = 8;
-#else
 static unsigned int carrier_timeout = 4;
-#endif
 module_param(carrier_timeout, uint, 0644);
 
 #define np_info(np, fmt, ...)				\
