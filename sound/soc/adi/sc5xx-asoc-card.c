@@ -15,12 +15,12 @@
 
 #include <linux/device.h>
 #include <linux/module.h>
+#include <linux/pinctrl/pinctrl.h>
+#include <linux/gpio.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/soc.h>
 #include <sound/pcm_params.h>
-
-#include <linux/soc/adi/portmux.h>
 
 #include "../codecs/adau1962.h"
 #include "../codecs/adau1977.h"

@@ -19,10 +19,10 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
+#include <linux/pinctrl/pinctrl.h>
+#include <linux/gpio.h>
 
 #include <linux/soc/adi/cpu.h>
-#include <linux/soc/adi/portmux.h>
-
 #include "sc5xx-sport.h"
 
 int sport_set_tx_params(struct sport_device *sport,
