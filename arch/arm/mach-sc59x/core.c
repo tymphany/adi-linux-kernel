@@ -38,7 +38,6 @@
 #include <mach/sc59x.h>
 #include <mach/irqs.h>
 #include <mach/clkdev.h>
-#include <mach/sec.h>
 
 #include "core.h"
 
@@ -444,9 +443,6 @@ void __init sc59x_init(void)
 #endif
 
 	pr_info("%s: registering device resources\n", __func__);
-
-	sec_init(__io_address(SEC_COMMON_BASE), __io_address(SEC_SCI_BASE),
-			__io_address(SEC_SSI_BASE));
 
 #ifdef CONFIG_OF
 	of_platform_populate(NULL, sc59x_of_bus_ids,

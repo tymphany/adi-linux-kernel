@@ -39,7 +39,6 @@
 #include <mach/sc58x.h>
 #include <mach/irqs.h>
 #include <mach/clkdev.h>
-#include <mach/sec.h>
 
 #include "core.h"
 
@@ -443,8 +442,6 @@ void __init sc58x_init(void)
 
 	pr_info("%s: registering device resources\n", __func__);
 
-	sec_init(__io_address(SEC_COMMON_BASE), __io_address(SEC_SCI_BASE),
-			__io_address(SEC_SSI_BASE));
 #ifdef CONFIG_OF
 	of_platform_populate(NULL, sc58x_of_bus_ids,
 				sc58x_auxdata_lookup, NULL);
@@ -663,13 +660,14 @@ void __init sc58x_timer_init(void)
 			(of_alias_get_id(np, "timer") == TIMER_CLOCKEVENT)) {
 			clockevent_np = np;
 		}
-
 	}
 
 	timer_clock = sc58x_timer_of_init(clocksrc_np);
 	timer_event = sc58x_timer_of_init(clockevent_np);
 
 	clockevent_gptmr.irq = timer_event->irq;
+
+	map_gptimers();
 
 	cs_gptimer_init();
 
