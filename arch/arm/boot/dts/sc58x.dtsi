@@ -129,7 +129,8 @@
 		uart0: uart@0x31003000 {
 			compatible = "arm,adi-uart4";
 			reg = <0x31003000 0x40>;
-			dma-channel = <20>, <21>;
+			dmas = <&dma_cluster2 20>, <&dma_cluster2 21>;
+			dma-names = "tx", "rx";
 			interrupt-parent = <&gic>;
 			interrupts = <GIC_SPI 114 IRQ_TYPE_LEVEL_HIGH>,
 			             <GIC_SPI 115 IRQ_TYPE_LEVEL_HIGH>,
@@ -140,7 +141,8 @@
 		uart1: uart@0x31003400 {
 			compatible = "arm,adi-uart4";
 			reg = <0x31003400 0x40>;
-			dma-channel = <34>, <35>;
+			dmas = <&dma_cluster2 34>, <&dma_cluster2 35>;
+			dma-names = "tx", "rx";
 			interrupt-parent = <&gic>;
 			interrupts = <GIC_SPI 117 IRQ_TYPE_LEVEL_HIGH>,
 			             <GIC_SPI 118 IRQ_TYPE_LEVEL_HIGH>,
@@ -151,7 +153,8 @@
 		uart2: uart@0x31003800 {
 			compatible = "arm,adi-uart4";
 			reg = <0x31003800 0x40>;
-			dma-channel = <37>, <38>;
+			dmas = <&dma_cluster2 37>, <&dma_cluster2 38>;
+			dma-names = "tx", "rx";
 			interrupt-parent = <&gic>;
 			interrupts = <GIC_SPI 120 IRQ_TYPE_LEVEL_HIGH>,
 			             <GIC_SPI 121 IRQ_TYPE_LEVEL_HIGH>,
@@ -283,7 +286,8 @@
 			reg = <0x31042000 0xFF>;
 			interrupts = <GIC_SPI 109 IRQ_TYPE_LEVEL_HIGH>;
 			num-cs = <128>;
-			dma-channel = <22>, <23>;
+			dmas = <&spi_cluster 22>, <&spi_cluster 23>;
+			dma-names = "tx", "rx";
 			status = "disabled";
 		};
 
@@ -294,7 +298,8 @@
 			reg = <0x31043000 0xFF>;
 			interrupts = <GIC_SPI 113 IRQ_TYPE_LEVEL_HIGH>;
 			num-cs = <128>;
-			dma-channel = <24>, <25>;
+			dmas = <&spi_cluster 24>, <&spi_cluster 25>;
+			dma-names = "tx", "rx";
 			status = "disabled";
 		};
 
@@ -305,7 +310,8 @@
 			reg = <0x31044000 0xFF>;
 			interrupts = <GIC_SPI 71 IRQ_TYPE_LEVEL_HIGH>;
 			num-cs = <128>;
-			dma-channel = <26>, <27>;
+			dmas = <&spi_cluster 26>, <&spi_cluster 27>;
+			dma-names = "tx", "rx";
 			status = "disabled";
 		};
 
@@ -504,6 +510,7 @@
 			status = "disabled";
 		};
 
+/*
 		video_decoder: cap@0x31040000 {
 			compatible = "adi,cap";
 			card-name = "SC58X";
@@ -515,6 +522,8 @@
 			i2c_bus_id = <0>;
 			status = "disabled";
 		};
+*/
+
 		gp_counter: cnt@0x3100B000 {
 			compatible = "adi,gp_counter";
 			reg = <0x3100B000 0xFF>;
@@ -524,6 +533,7 @@
 			status = "disabled";
         };
 
+/*
 		video_encoder: disp@0x31040000 {
 			compatible = "adi,disp";
 			card-name = "SC58X";
@@ -535,6 +545,7 @@
 			i2c_bus_id = <0>;
 			status = "disabled";
 		};
+*/
 
 		lp0: linkport@0 {
 			compatible = "linkport0";
@@ -732,6 +743,7 @@
 			status = "okay";
 		};
 
+/*
 		dma0: dma@0 {
 			compatible = "adi,dma2";
 			reg = <0x31022000 0x7F>;
@@ -1046,5 +1058,117 @@
 			interrupts = <GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
 			spu_securep_id = <141>;
 		};
+*/
+
+		spi_cluster: dma@0x31046000 {
+			compatible = "adi,dma-controller";
+			reg = <0x31046000 0x1000>;
+			status = "okay";
+			#dma-cells = <1>;
+
+			spi0_tx: channel@22 {
+				adi,id = <22>;
+				interrupts = <GIC_SPI 106 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 198 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "complete", "error";
+				adi,src-offset = <0>;
+			};
+
+			spi0_rx: channel@23 {
+				adi,id = <23>;
+				interrupts = <GIC_SPI 107 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 199 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "complete", "error";
+				adi,src-offset = <0x80>;
+			};
+
+			spi1_tx: channel@24 {
+				adi,id = <24>;
+				interrupts = <GIC_SPI 110 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 200 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "complete", "error";
+				adi,src-offset = <0x100>;
+			};
+
+			spi1_rx: channel@25 {
+				adi,id = <25>;
+				interrupts = <GIC_SPI 111 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 201 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "complete", "error";
+				adi,src-offset = <0x180>;
+			};
+
+			spi2_tx: channel@26 {
+				adi,id = <26>;
+				interrupts = <GIC_SPI 68 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 188 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "complete", "error";
+				adi,src-offset = <0x200>;
+			};
+
+			spi2_rx: channel@27 {
+				adi,id = <27>;
+				interrupts = <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 189 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "complete", "error";
+				adi,src-offset = <0x280>;
+			};
+		};
+
+		dma_cluster2: dma@0x31026000 {
+			compatible = "adi,dma-controller";
+			reg = <0x31026000 0x1000>;
+			status = "okay";
+			#dma-cells = <1>;
+
+			uart0_tx: channel@20 {
+				adi,id = <20>;
+				interrupts = <GIC_SPI 114 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 202 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "complete", "error";
+				adi,src-offset = <0x80>;
+			};
+
+			uart0_rx: channel@21 {
+				adi,id = <21>;
+				interrupts = <GIC_SPI 115 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 203 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "complete", "error";
+				adi,src-offset = <0>;
+			};
+
+			uart1_tx: channel@34 {
+				adi,id = <34>;
+				interrupts = <GIC_SPI 117 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 204 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "complete", "error";
+				adi,src-offset = <0x180>;
+			};
+
+			uart1_rx: channel@35 {
+				adi,id = <35>;
+				interrupts = <GIC_SPI 118 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 205 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "complete", "error";
+				adi,src-offset = <0x100>;
+			};
+
+			uart2_tx: channel@37 {
+				adi,id = <37>;
+				interrupts = <GIC_SPI 120 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 206 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "complete", "error";
+				adi,src-offset = <0x280>;
+			};
+
+			uart2_rx: channel@38 {
+				adi,id = <38>;
+				interrupts = <GIC_SPI 121 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 207 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "complete", "error";
+				adi,src-offset = <0x200>;
+			};
+		};
+
 	};
 };

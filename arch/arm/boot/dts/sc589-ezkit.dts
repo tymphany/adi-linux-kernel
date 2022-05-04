@@ -327,6 +327,7 @@
 	status = "okay";
 };
 
+/*
 &video_decoder {
 	pinctrl-names = "8bit", "16bit", "24bit";
 	pinctrl-0 = <&ppi0_8b>;
@@ -342,6 +343,7 @@
 	pinctrl-2 = <&ppi0_24b>;
 	status = "okay";
 };
+*/
 
 &lp0 {
 	pinctrl-names = "default";
