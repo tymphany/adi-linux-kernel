@@ -26,6 +26,10 @@
 
 #include <asm/irq.h>
 
+#ifndef CONFIG_ARCH_SC59X_64
+#include <mach/clkdev.h>
+#endif
+
 /* TWI_PRESCALE Masks */
 #define	TWI_ENA		0x0080	/* TWI Enable */
 
@@ -796,12 +800,23 @@ static int i2c_adi_twi_probe(struct platform_device *pdev)
 	} else
 		iface->twi_clk = CONFIG_I2C_ADI_TWI_CLK_KHZ;
 
+#ifdef CONFIG_ARCH_SC59X_64
 	iface->sclk = devm_clk_get(&pdev->dev, "sclk0");
 	if (IS_ERR(iface->sclk)) {
 		if (PTR_ERR(iface->sclk) != -EPROBE_DEFER)
 			dev_err(&pdev->dev, "Missing i2c clock\n");
 		return PTR_ERR(iface->sclk);
 	}
+#else
+	iface->sclk = clk_get(&pdev->dev, "cgu0_sys0_clk");
+	if (IS_ERR(iface->sclk)) {
+		if (PTR_ERR(iface->sclk) != -EPROBE_DEFER)
+			dev_err(&pdev->dev, "Missing i2c clock\n");
+		return PTR_ERR(iface->sclk);
+	}
+#endif
+
+
 
 	/* Find and map our resources */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
