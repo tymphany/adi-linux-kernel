@@ -6,10 +6,10 @@ config PINCTRL_ADSP
 	select PINMUX
 	select GENERIC_PINCONF
 
-config PINCTRL_ADSP_SC598
-	bool "ADSP-SC598 pinctrl driver"
-	depends on ARCH_SC59X_64
+config PINCTRL_ADSP_SC5XX
+	bool "ADSP-SC5XX pinctrl driver"
+	depends on (ARCH_SC59X_64 || ARCH_SC59X || ARCH_SC58X || ARCH_SC57X)
 	select PINCTRL_ADSP
 	help
-	  Say Y here to enable the ADSP-SC598 pinctrl driver. This is required for
+	  Say Y here to enable the ADSP-SC5XX pinctrl driver. This is required for
 	  correct peripheral functionality on the SoC.

@@ -19,7 +19,6 @@
 #include <linux/mmc/mmc.h>
 #include <linux/of.h>
 #include <linux/pm.h>
-#include <mach/portmux.h>
 #include <linux/soc/adi/cpu.h>
 #include <mach/gpio.h>
 
