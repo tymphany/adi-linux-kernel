@@ -1112,9 +1112,16 @@ static int adi_uart4_serial_probe(struct platform_device *pdev)
 		adi_uart4_serial_ports[uartid] = uart;
 		uart->dev = &pdev->dev;
 
+#ifdef CONFIG_ARCH_SC59X_64
 		uart->clk = devm_clk_get(dev, "sclk0");
 		if (IS_ERR(uart->clk))
 			return -ENODEV;
+#else
+		uart->clk = clk_get(&pdev->dev, "adi-uart4");
+		if (IS_ERR(uart->clk)) {
+			return -ENODEV;
+		}
+#endif
 
 		spin_lock_init(&uart->port.lock);
 		uart->port.uartclk   = clk_get_rate(uart->clk);
