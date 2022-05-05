@@ -996,7 +996,7 @@ static int __init
 adi_uart4_serial_console_setup(struct console *co, char *options)
 {
 	struct adi_uart4_serial_port *uart;
-	int baud = 57600;
+	int baud = 115200;
 	int bits = 8;
 	int parity = 'n';
 	int flow = 'n';
