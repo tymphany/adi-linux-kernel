@@ -8,19 +8,22 @@
  * All possible system register IDs across all platforms supported by this driver
  */
 enum adi_system_reg_id {
-	/* EMAC0 PTP Clock 0 source select */
-	ADI_SYSTEM_REG_EMAC0_PTPCLK0 = 0,
-	/* EMAC0 EMACRESET line */
-	ADI_SYSTEM_REG_EMAC0_EMACRESET,
-	/* EMAC0 PHY interface select */
-	ADI_SYSTEM_REG_EMAC0_PHYISEL,
-	/* EMAC0 PTP_AUXIN input enable */
-	ADI_SYSTEM_REG_EMAC0_AUXIE,
-	/* Endianness for EMAC0 DMA */
-	ADI_SYSTEM_REG_EMAC0_ENDIANNESS,
-	/* Endianness for EMAC1 DMA */
-	ADI_SYSTEM_REG_EMAC1_ENDIANNESS,
-
+	ADI_SYSTEM_REG_EMAC0_PTPCLK0 = 0,   /* PTP Clock Source 0 */
+	ADI_SYSTEM_REG_EMAC0_EMACRESET,     /* Reset Enable for RGMII */
+	ADI_SYSTEM_REG_EMAC0_PHYISEL,       /* Select PHY Interface RGMII/RMII/MII */
+	ADI_SYSTEM_REG_CNT0UDSEL,           /* CNT0 Down Input Select */
+	ADI_SYSTEM_REG_CNT0DGSEL,           /* CNT0 Up Input Select */
+	ADI_SYSTEM_REG_TWI0VSEL,            /* TWI2 Voltage Select */
+	ADI_SYSTEM_REG_TWI1VSEL,            /* TWI1 Voltage Select */
+	ADI_SYSTEM_REG_TWI2VSEL,            /* TWI0 Voltage Select */
+	ADI_SYSTEM_REG_PUMSIDLC,            /* Pull-Up Enable for MSI DATA[3:0] bits and CMD Pin */
+	ADI_SYSTEM_REG_PUMSIHL,             /* Pull-Up Enable for MSI DATA[7:4] bits */
+	ADI_SYSTEM_REG_PUTMS,               /* Pull-Up Enable for MSI DATA[7:4] bits */
+	ADI_SYSTEM_REG_EMAC0_AUXIE,         /* Input enable control for PTP_AUXIN pins */
+	ADI_SYSTEM_REG_FAULT_DIS,           /* FAULT does not exist */
+	ADI_SYSTEM_REG_EMAC0_ENDIANNESS,    /* EMAC0 DMA transfer endian format */
+	ADI_SYSTEM_REG_EMAC1_ENDIANNESS,    /* EMAC1 DMA transfer endian format */
+	ADI_SYSTEM_REG_MSHC_CCLK_DIV_EN,    /* Enable MSHC Card Clock Divider */
 	__ADI_SYSTEM_REG_COUNT
 };
 
