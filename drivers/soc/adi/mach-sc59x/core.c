@@ -28,7 +28,6 @@
 
 #include <linux/soc/adi/sc59x.h>
 #include <linux/soc/adi/cpu.h>
-#include "sec.h"
 
 #include "core.h"
 
