@@ -270,15 +270,6 @@ struct adi_spi_device {
 	u32 control;
 };
 
-static void adi_spi_enable(struct adi_spi_master *drv_data)
-{
-	u32 ctl;
-
-	ctl = ioread32(&drv_data->regs->control);
-	ctl |= SPI_CTL_EN;
-	iowrite32(ctl, &drv_data->regs->control);
-}
-
 static void adi_spi_disable(struct adi_spi_master *drv_data)
 {
 	u32 ctl;
@@ -434,25 +425,21 @@ static int adi_spi_pio_xfer(struct spi_master *master, struct spi_device *spi,
 	if (!xfer->rx_buf) {
 		iowrite32(SPI_RXCTL_REN, &drv->regs->rx_control);
 		iowrite32(SPI_TXCTL_TEN | SPI_TXCTL_TTI, &drv->regs->tx_control);
-		adi_spi_enable(drv);
 		drv->ops->write(drv, xfer);
 	}
 	else if (!xfer->tx_buf) {
 		iowrite32(0, &drv->regs->tx_control);
 		iowrite32(SPI_RXCTL_REN | SPI_RXCTL_RTI, &drv->regs->rx_control);
-		adi_spi_enable(drv);
 		drv->ops->read(drv, xfer);
 	}
 	else {
 		iowrite32(SPI_RXCTL_REN, &drv->regs->rx_control);
 		iowrite32(SPI_TXCTL_TEN | SPI_TXCTL_TTI, &drv->regs->tx_control);
-		adi_spi_enable(drv);
 		drv->ops->duplex(drv, xfer);
 	}
 
 	iowrite32(0, &drv->regs->tx_control);
 	iowrite32(0, &drv->regs->rx_control);
-	adi_spi_disable(drv);
 	return 0;
 }
 
@@ -472,7 +459,6 @@ static void adi_spi_rx_dma_isr(void *data) {
 
 	iowrite32(0, &drv_data->regs->tx_control);
 	iowrite32(0, &drv_data->regs->rx_control);
-	adi_spi_disable(drv_data);
 	spi_finalize_current_transfer(drv_data->master);
 }
 
@@ -497,7 +483,6 @@ static void adi_spi_tx_dma_isr(void *data) {
 		dma_async_issue_pending(drv->master->dma_rx);
 	}
 	else {
-		adi_spi_disable(drv);
 		spi_finalize_current_transfer(drv->master);
 	}
 }
@@ -544,7 +529,6 @@ static int adi_spi_dma_xfer(struct spi_master *master, struct spi_device *spi,
 		dma_async_issue_pending(master->dma_rx);
 	}
 
-	adi_spi_enable(drv);
 	return 1;
 
 error:
@@ -620,7 +604,7 @@ static int adi_spi_prepare_message(struct spi_master *master, struct spi_message
 	}
 
 	cr = chip->control;
-	cr |= cr_width;
+	cr |= cr_width | SPI_CTL_EN;
 	cr &= ~SPI_CTL_SOSI;
 	iowrite32(cr, &drv->regs->control);
 
@@ -642,6 +626,13 @@ static int adi_spi_prepare_message(struct spi_master *master, struct spi_message
 		return ret;
 	}
 
+	return 0;
+}
+
+static int adi_spi_unprepare_message(struct spi_master *master, struct spi_message *msg)
+{
+	struct adi_spi_master *drv = spi_master_get_devdata(master);
+	adi_spi_disable(drv);
 	return 0;
 }
 
@@ -749,6 +740,7 @@ static int adi_spi_probe(struct platform_device *pdev)
 	master->cleanup = adi_spi_cleanup;
 	master->setup = adi_spi_setup;
 	master->prepare_message = adi_spi_prepare_message;
+	master->unprepare_message = adi_spi_unprepare_message;
 	master->transfer_one = adi_spi_transfer_one;
 	master->can_dma = adi_spi_can_dma;
 	master->bits_per_word_mask = BIT(32 - 1) | BIT(16 - 1) | BIT(8 - 1);
