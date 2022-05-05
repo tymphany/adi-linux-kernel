@@ -4,6 +4,7 @@
 #
 
 obj-$(CONFIG_ARCH_ACTIONS)	+= actions/
+obj-$(CONFIG_ARCH_SC59X_64) += adi/
 obj-$(CONFIG_ARCH_SC59X_64)	+= adi/mach-sc59x/
 obj-$(CONFIG_ARCH_SC59X_64)	+= adi/mach-sc5xx/
 obj-$(CONFIG_ARCH_SC59X)	+= adi/mach-sc5xx/
