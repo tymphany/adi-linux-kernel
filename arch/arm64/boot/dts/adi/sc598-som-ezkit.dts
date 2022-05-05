@@ -16,12 +16,12 @@
 
 	chosen {
 		stdout-path = &uart1;
-		bootargs = "root=/dev/mtdblock4 rw rootfstype=jffs2 earlycon=adi_uart,0x31003000 console=ttySC0,115200 mem=172M";
+		bootargs = "root=/dev/mtdblock4 rw rootfstype=jffs2 earlycon=adi_uart,0x31003000 console=ttySC0,115200 mem=224M";
 	};
 
-	memory@95400000 {
+	memory@90000000 {
 		device_type = "memory";
-		reg = <0x95400000 0x8c00000>;
+		reg = <0x90000000 0x0e000000>;
 	};
 
 	reserved-memory {
