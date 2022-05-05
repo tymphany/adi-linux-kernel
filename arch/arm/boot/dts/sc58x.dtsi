@@ -98,6 +98,12 @@
 		#size-cells = <1>;
 		ranges;
 
+		pads_system_config: adi-control@31004400 {
+			compatible = "adi,pads-system-config";
+			reg = <0x31004400 0x100>;
+			status = "okay";
+		};
+
 		sram-controller@20080000 {
 			compatible = "adi,sram-controller";
 			#address-cells = <1>;
@@ -285,7 +291,6 @@
 			compatible = "adi,spi3";
 			reg = <0x31042000 0xFF>;
 			interrupts = <GIC_SPI 109 IRQ_TYPE_LEVEL_HIGH>;
-			num-cs = <128>;
 			dmas = <&spi_cluster 22>, <&spi_cluster 23>;
 			dma-names = "tx", "rx";
 			status = "disabled";
@@ -297,7 +302,6 @@
 			compatible = "adi,spi3";
 			reg = <0x31043000 0xFF>;
 			interrupts = <GIC_SPI 113 IRQ_TYPE_LEVEL_HIGH>;
-			num-cs = <128>;
 			dmas = <&spi_cluster 24>, <&spi_cluster 25>;
 			dma-names = "tx", "rx";
 			status = "disabled";
@@ -309,7 +313,6 @@
 			compatible = "adi,spi3";
 			reg = <0x31044000 0xFF>;
 			interrupts = <GIC_SPI 71 IRQ_TYPE_LEVEL_HIGH>;
-			num-cs = <128>;
 			dmas = <&spi_cluster 26>, <&spi_cluster 27>;
 			dma-names = "tx", "rx";
 			status = "disabled";
@@ -326,6 +329,7 @@
 			snps,force_sf_dma_mode;
 			snps,perfect-filter-entries = <32>;
 			clock-names = "stmmaceth";
+			adi,system-config = <&pads_system_config>;
 			status = "disabled";
 		};
 

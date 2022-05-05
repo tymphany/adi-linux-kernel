@@ -27,43 +27,14 @@
 	};
 
 	scb {
-		softconfig_default {
-			boot-pins = <&ssw0 0 GPIO_ACTIVE_LOW>,	/* EEPROM_EN */
-			            <&ssw0 1 GPIO_ACTIVE_LOW>,	/* UART0_FLOW_EN */
-			            /* should enable UART0_EN by default in bootloader */
-			            <&ssw0 3 GPIO_ACTIVE_LOW>,	/* ETH0_EN */
-			            <&ssw0 4 GPIO_ACTIVE_LOW>,	/* ETH1_EN */
-			            <&ssw0 5 GPIO_ACTIVE_LOW>,	/* MLB3_EN */
-			            <&ssw0 6 GPIO_ACTIVE_LOW>,	/* CAN0_EN */
-			            <&ssw0 7 GPIO_ACTIVE_LOW>,	/* CAN1_EN */
-			            <&ssw0 8 GPIO_ACTIVE_LOW>,	/* ADAU1962_EN */
-			            <&ssw0 9 GPIO_ACTIVE_LOW>,	/* ADAU1979_EN */
-			            <&ssw0 11 GPIO_ACTIVE_LOW>,	/* SD_WP_EN */
-			            <&ssw0 12 GPIO_ACTIVE_LOW>,	/* SP2IFLASH_CS_EN */
-			            <&ssw0 13 GPIO_ACTIVE_LOW>,	/* SPI2D2_D3_EN */
-			            <&ssw0 14 GPIO_ACTIVE_LOW>,	/* SPDIF_OPTICAL_EN */
-			            <&ssw0 15 GPIO_ACTIVE_LOW>,	/* SPDIF_DIGITAL_EN */
-			            <&ssw1 0 GPIO_ACTIVE_LOW>,	/* PUSHBUTTON1_EN */
-			            <&ssw1 1 GPIO_ACTIVE_LOW>,	/* PUSHBUTTON2_EN */
-			            <&ssw1 2 GPIO_ACTIVE_LOW>,	/* LED10_EN */
-			            <&ssw1 3 GPIO_ACTIVE_LOW>,	/* LED11_EN */
-			            <&ssw1 4 GPIO_ACTIVE_LOW>;	/* LED12_EN */
-			reboot-pins = <&ssw0 12 GPIO_ACTIVE_LOW>,	/* SP2IFLASH_CS_EN */
-			              <&ssw0 13 GPIO_ACTIVE_LOW>;	/* SPI2D2_D3_EN */
-		};
-
 		button0: button@0 {
 			compatible = "adi,button-led";
-			en-pins = <&ssw1 0 GPIO_ACTIVE_LOW>,	/* PUSHBUTTON1_EN */
-			          <&ssw1 2 GPIO_ACTIVE_LOW>;	/* LED10_EN */
 			button_gpio = <80>;
 			led_gpio = <77>;
 		};
 
 		button1: button@1 {
 			compatible = "adi,button-led";
-			en-pins = <&ssw1 1 GPIO_ACTIVE_LOW>,	/* PUSHBUTTON2_EN */
-			          <&ssw1 3 GPIO_ACTIVE_LOW>;	/* LED11_EN */
 			button_gpio = <81>;
 			led_gpio = <78>;
 		};
@@ -109,8 +80,6 @@
 };
 
 &uart0 {
-	enable-pin = <&ssw0 2 GPIO_ACTIVE_LOW>;		/* UART0_EN */
-	hwflow-en-pin = <&ssw0 1 GPIO_ACTIVE_LOW>;	/* UART0_FLOW_EN */
 	pinctrl-names = "default";
 	pinctrl-0 = <&uart0_default>;
 	status = "okay";
@@ -125,20 +94,23 @@
 	pinctrl-0 = <&spi0_default>;
 	status = "okay";
 
-	spidev {
+	cs-gpios = <&gpc 12 GPIO_ACTIVE_LOW>,
+				<&gpc 0 GPIO_ACTIVE_LOW>;
+
+	spidev@0 {
 		#address-cells = <1>;
 		#size-cells = <1>;
 		compatible = "rohm,dh2228fv";
 		spi-max-frequency = <5000000>;
-		reg = <44>;
+		reg = <0>;
 	};
 
-	ad7879_touchscreen {
+	ad7879_touchscreen@1 {
 		#address-cells = <1>;
 		#size-cells = <1>;
 		compatible = "adi,ad7879";
 		spi-max-frequency = <5000000>;
-		reg = <32>;
+		reg = <1>;
 		gpio = <88>;
 		gpio-controller;
 		spi-cpha;
@@ -158,18 +130,18 @@
 	pinctrl-0 = <&spi2_quad>;
 	status = "okay";
 
+	cs-gpios = <&gpc 6 GPIO_ACTIVE_LOW>;
+
 	flash: w25q32@0 {
 		#address-cells = <1>;
 		#size-cells = <1>;
 		compatible = "winbond,w25q32", "jedec,spi-nor";
-		en-pins = <&ssw0 12 GPIO_ACTIVE_LOW>,	/* SP2IFLASH_CS_EN */
-		          <&ssw0 13 GPIO_ACTIVE_LOW>;	/* SPI2D2_D3_EN */
-		spi-max-frequency = <5000000>;
-		reg = <38>;
+		reg = <0>;
 		spi-cpol;
 		spi-cpha;
+		spi-max-frequency = <5000000>;
 		spi-rx-bus-width = <4>;
-		dma-mode;
+		adi,enable-dma;
 
 		partition@0 {
 			label = "uboot (spi)";
@@ -193,24 +165,163 @@
 		gpio-controller;
 		#gpio-cells = <2>;
 		reg = <0x21>;
+
+		eeprom {
+			gpio-hog;
+			gpios = <0 0x0>;
+			output-high;
+			line-name = "~eeprom-en";
+		};
+
+		uart0-flow-en {
+			gpio-hog;
+			gpios = <1 0x0>;
+			output-high;
+			line-name = "~uart0-flow-en";
+		};
+
+		uart0-en {
+			gpio-hog;
+			gpios = <2 0x0>;
+			output-low;
+			line-name = "~uart0-en";
+		};
+
+		eth0 {
+			gpio-hog;
+			gpios = <3 0x0>;
+			output-low;
+			line-name = "~eth0-en";
+		};
+
+		eth1 {
+			gpio-hog;
+			gpios = <4 0x0>;
+			output-low;
+			line-name = "~eth1-en";
+		};
+
+		mlb {
+			gpio-hog;
+			gpios = <5 0x0>;
+			output-high;
+			line-name = "~mlb-en";
+		};
+
+		can0 {
+			gpio-hog;
+			gpios = <6 0x0>;
+			output-high;
+			line-name = "~can0-en";
+		};
+
+		can1 {
+			gpio-hog;
+			gpios = <7 0x0>;
+			output-high;
+			line-name = "~can1-en";
+		};
+
+		adau1962 {
+			gpio-hog;
+			gpios = <8 0x0>;
+			output-high;
+			line-name = "~adau1962-en";
+		};
+
+		adau1979 {
+			gpio-hog;
+			gpios = <9 0x0>;
+			output-high;
+			line-name = "~adau1979-en";
+		};
+
+		sd_wp {
+			gpio-hog;
+			gpios = <11 0x0>;
+			output-high;
+			line-name = "~sd-wp-en";
+		};
+
+		spi2d2-d3 {
+			gpio-hog;
+			gpios = <12 0x0>;
+			output-low;
+			line-name = "~spi2d2-d3-en";
+		};
+
+		spi2flash-cs {
+			gpio-hog;
+			gpios = <13 0x0>;
+			output-low;
+			line-name = "~spi2flash-cs";
+		};
+
+		spdif-opt {
+			gpio-hog;
+			gpios = <14 0x0>;
+			output-high;
+			line-name = "~spdif-optical-en";
+		};
+
+		spdif-dig {
+			gpio-hog;
+			gpios = <15 0x0>;
+			output-high;
+			line-name = "~spdif-digital-en";
+		};
 	};
+
 	ssw1: gpio@0x22 {
 		compatible = "microchip,mcp23017";
 		gpio-controller;
 		#gpio-cells = <2>;
 		reg = <0x22>;
+
+		pushbutton1 {
+			gpio-hog;
+			gpios = <0 0x0>;
+			output-low;
+			line-name = "~pushbutton1-en";
+		};
+
+		pushbutton2 {
+			gpio-hog;
+			gpios = <1 0x0>;
+			output-low;
+			line-name = "~pushbutton2-en";
+		};
+
+		led10 {
+			gpio-hog;
+			gpios = <2 0x0>;
+			output-low;
+			line-name = "~led10-en";
+		};
+
+		led11 {
+			gpio-hog;
+			gpios = <3 0x0>;
+			output-low;
+			line-name = "~led11-en";
+		};
+
+		led12 {
+			gpio-hog;
+			gpios = <4 0x0>;
+			output-low;
+			line-name = "~led12-en";
+		};
 	};
+
 	adau1979: adau1979@0x11 {
 		compatible = "adi,adau1977";
 		reg = <0x11>;
-		enable-pin = <&ssw0 9 GPIO_ACTIVE_LOW>;	/* ADAU1979_EN */
-		/* reset-gpio = <&gpa 14 0>; */
 	};
+
 	adau1962: adau1962@0x4 {
 		compatible = "adi,adau1962";
 		reg = <0x4>;
-		enable-pin = <&ssw0 8 GPIO_ACTIVE_LOW>;	/* ADAU1962_EN */
-		/* reset-gpio = <&gpa 14 0>; */
 	};
 };
 
@@ -241,7 +352,6 @@
 };
 
 &can0 {
-	enable-pin = <&ssw0 6 GPIO_ACTIVE_LOW>; /* CAN0_EN */
 	pinctrl-names = "default";
 	pinctrl-0 = <&can0_default>;
 	phy-name = "tja1055";
@@ -251,7 +361,6 @@
 };
 
 &can1 {
-	enable-pin = <&ssw0 7 GPIO_ACTIVE_LOW>;	/* CAN1_EN */
 	pinctrl-names = "default";
 	pinctrl-0 = <&can1_default>;
 	phy-name = "tja1145";
@@ -262,7 +371,6 @@
 };
 
 &emac0 {
-	enable-pin = <&ssw0 3 GPIO_ACTIVE_LOW>;	/* ETH0_EN */
 	snps,reset-gpio = <&gpb 14 0>;
 	snps,reset-active-low;
 	snps,reset-delays-us = <0 200 500>;
@@ -286,7 +394,6 @@
 };
 
 &emac1 {
-	enable-pin = <&ssw0 4 GPIO_ACTIVE_LOW>;	/* ETH1_EN */
 	phy-mode = "rmii";
 	pinctrl-names = "default";
 	pinctrl-0 = <&eth1_default>;

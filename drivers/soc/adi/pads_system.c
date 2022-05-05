@@ -23,8 +23,10 @@ static struct system_register adi_pads_regs[] = {
 	ADI_SYSREG_BITS(EMAC0_EMACRESET, 0x04, 1, 2),
 	ADI_SYSREG_BITS(EMAC0_PHYISEL, 0x04, 2, 3),
 	ADI_SYSREG_BITS(EMAC0_AUXIE, 0x04, 1, 17),
+#ifdef CONFIG_ARCH_SC59X_64
 	ADI_SYSREG_BITS(EMAC0_ENDIANNESS, 0x04, 1, 19),
 	ADI_SYSREG_BITS(EMAC1_ENDIANNESS, 0x04, 1, 20),
+#endif
 };
 
 static struct system_config adi_pads_config = {
