@@ -6,7 +6,7 @@
  * Author: Greg Malysa <greg.malysa@timesys.com>
  */
 
-#include <dt-bindings/clock/adi-sc59x-clock.h>
+#include <dt-bindings/clock/adi-sc5xx-clock.h>
 #include <linux/err.h>
 #include <linux/clk.h>
 #include <linux/clk-provider.h>
@@ -195,11 +195,11 @@ static int sc59x_clock_probe(struct platform_device *pdev) {
 		"cgu1_in_sel", CLK_SET_RATE_PARENT, pll3, 3, 1, 0, &cdu_lock);
 
 	// VCO output inside PLL
-	clks[ADSP_SC59X_CLK_CGU0_VCO_OUT] = sc59x_cgu_pll(dev, "cgu0_vco", "cgu0_df",
+	clks[ADSP_SC59X_CLK_CGU0_VCO_OUT] = sc5xx_cgu_pll(dev, "cgu0_vco", "cgu0_df",
 		cgu0 + CGU_CTL, CGU_MSEL_SHIFT, CGU_MSEL_WIDTH, 0, &cdu_lock);
-	clks[ADSP_SC59X_CLK_CGU1_VCO_OUT] = sc59x_cgu_pll(dev, "cgu1_vco", "cgu1_df",
+	clks[ADSP_SC59X_CLK_CGU1_VCO_OUT] = sc5xx_cgu_pll(dev, "cgu1_vco", "cgu1_df",
 		cgu1 + CGU_CTL, CGU_MSEL_SHIFT, CGU_MSEL_WIDTH, 0, &cdu_lock);
-	clks[ADSP_SC59X_CLK_3PLL_VCO_OUT] = sc59x_cgu_pll(dev, "3pll_vco", "3pll_df",
+	clks[ADSP_SC59X_CLK_3PLL_VCO_OUT] = sc5xx_cgu_pll(dev, "3pll_vco", "3pll_df",
 		pll3, PLL3_MSEL_SHIFT, PLL3_MSEL_WIDTH, 1, &cdu_lock);
 
 	// Final PLL output

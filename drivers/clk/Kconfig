@@ -34,9 +34,18 @@ source "drivers/clk/versatile/Kconfig"
 
 config COMMON_CLK_ADI_SC59X
 	bool "Clock driver for ADI SC59X SoCs"
-	depends on OF && ARCH_SC59X_64
+	depends on OF && (ARCH_SC59X_64 || ARCH_SC59X)
 	help
 	  This driver supports the system clocks on Analog Devices SC59x-series
+	  SoCs. It includes CGU and CDU clocks and supports gating unused clocks.
+	  Modifying PLL configuration is not supported; that must be done prior
+	  to booting the kernel. Clock dividers after the PLLs may be configured.
+
+config COMMON_CLK_ADI_SC58X
+	bool "Clock driver for ADI SC58X SoCs"
+	depends on OF && ARCH_SC58X
+	help
+	  This driver supports the system clocks on Analog Devices SC5Xx-series
 	  SoCs. It includes CGU and CDU clocks and supports gating unused clocks.
 	  Modifying PLL configuration is not supported; that must be done prior
 	  to booting the kernel. Clock dividers after the PLLs may be configured.

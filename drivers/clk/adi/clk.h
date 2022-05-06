@@ -7,7 +7,7 @@
 #include <linux/spinlock.h>
 #include <linux/types.h>
 
-struct clk *sc59x_cgu_pll(struct device *dev, const char *name,
+struct clk *sc5xx_cgu_pll(struct device *dev, const char *name,
 	const char *parent_name, void __iomem *base, u8 shift, u8 width,
 	u32 m_offset, spinlock_t *lock);
 

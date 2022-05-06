@@ -11,7 +11,7 @@
 
 #include "clk.h"
 
-struct clk_sc59x_cgu_pll {
+struct clk_sc5xx_cgu_pll {
 	struct clk_hw hw;
 	struct device *dev;
 	void __iomem *base;
@@ -23,34 +23,34 @@ struct clk_sc59x_cgu_pll {
 	u8 shift;
 };
 
-struct clk_sc59x_cgu_pll *to_clk_sc59x_cgu_pll(struct clk_hw *hw) {
-	return container_of(hw, struct clk_sc59x_cgu_pll, hw);
+struct clk_sc5xx_cgu_pll *to_clk_sc5xx_cgu_pll(struct clk_hw *hw) {
+	return container_of(hw, struct clk_sc5xx_cgu_pll, hw);
 }
 
 /*
  * For now, prepare/unprepare do nothing because we want to leave the PLLs running
  * but eventually this could be used to bypass or disable the PLLs if desired
  */
-static int sc59x_cgu_pll_prepare(struct clk_hw *hw) {
-	struct clk_sc59x_cgu_pll *pll = to_clk_sc59x_cgu_pll(hw);
+static int sc5xx_cgu_pll_prepare(struct clk_hw *hw) {
+	struct clk_sc5xx_cgu_pll *pll = to_clk_sc5xx_cgu_pll(hw);
 	pll->prepared = 1;
 	return 0;
 }
 
-static int sc59x_cgu_pll_is_prepared(struct clk_hw *hw) {
-	struct clk_sc59x_cgu_pll *pll = to_clk_sc59x_cgu_pll(hw);
+static int sc5xx_cgu_pll_is_prepared(struct clk_hw *hw) {
+	struct clk_sc5xx_cgu_pll *pll = to_clk_sc5xx_cgu_pll(hw);
 	return pll->prepared;
 }
 
-static void sc59x_cgu_pll_unprepare(struct clk_hw *hw) {
-	struct clk_sc59x_cgu_pll *pll = to_clk_sc59x_cgu_pll(hw);
+static void sc5xx_cgu_pll_unprepare(struct clk_hw *hw) {
+	struct clk_sc5xx_cgu_pll *pll = to_clk_sc5xx_cgu_pll(hw);
 	pll->prepared = 0;
 }
 
-static long sc59x_cgu_pll_round_rate(struct clk_hw *hw, unsigned long rate,
+static long sc5xx_cgu_pll_round_rate(struct clk_hw *hw, unsigned long rate,
 	unsigned long *parent_rate)
 {
-	struct clk_sc59x_cgu_pll *pll = to_clk_sc59x_cgu_pll(hw);
+	struct clk_sc5xx_cgu_pll *pll = to_clk_sc5xx_cgu_pll(hw);
 	struct clk_hw *parent_hw;
 	unsigned long prate = *parent_rate;
 	int parent_inc;
@@ -58,7 +58,11 @@ static long sc59x_cgu_pll_round_rate(struct clk_hw *hw, unsigned long rate,
 
 	parent_hw = clk_hw_get_parent(hw);
 
+#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC59X_64)
 	m = rate / prate / 2;
+#else
+	m = rate / prate;
+#endif
 
 	if (m > pll->max) {
 		// cannot scale this far, need bigger input
@@ -91,25 +95,36 @@ static long sc59x_cgu_pll_round_rate(struct clk_hw *hw, unsigned long rate,
 	return new_rate;
 }
 
-static unsigned long sc59x_cgu_pll_recalc_rate(struct clk_hw *hw,
+static unsigned long sc5xx_cgu_pll_recalc_rate(struct clk_hw *hw,
 	unsigned long parent_rate)
 {
-	struct clk_sc59x_cgu_pll *pll = to_clk_sc59x_cgu_pll(hw);
+	struct clk_sc5xx_cgu_pll *pll = to_clk_sc5xx_cgu_pll(hw);
 	u32 reg = readl(pll->base);
 	u32 m = ((reg & pll->mask) >> pll->shift) + pll->m_offset;
 
 	if (m == 0)
 		m = pll->max;
+
+#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC59X_64)
 	return parent_rate * m * 2;
+#else
+	return parent_rate * m;
+#endif
+
 }
 
-static int sc59x_cgu_pll_set_rate(struct clk_hw *hw, unsigned long rate,
+static int sc5xx_cgu_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	unsigned long parent_rate)
 {
-	struct clk_sc59x_cgu_pll *pll = to_clk_sc59x_cgu_pll(hw);
+	struct clk_sc5xx_cgu_pll *pll = to_clk_sc5xx_cgu_pll(hw);
 	u32 m;
 
+#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC59X_64)
 	m = (rate / parent_rate / 2) - pll->m_offset;
+#else
+	m = (rate / parent_rate) - pll->m_offset;
+#endif
+
 	if (m >= pll->max)
 		m = 0;
 
@@ -118,20 +133,20 @@ static int sc59x_cgu_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	return -ENOENT;
 }
 
-static const struct clk_ops clk_sc59x_cgu_pll_ops = {
-	.prepare = sc59x_cgu_pll_prepare,
-	.unprepare = sc59x_cgu_pll_unprepare,
-	.is_prepared = sc59x_cgu_pll_is_prepared,
-	.recalc_rate = sc59x_cgu_pll_recalc_rate,
-	.round_rate = sc59x_cgu_pll_round_rate,
-	.set_rate = sc59x_cgu_pll_set_rate,
+static const struct clk_ops clk_sc5xx_cgu_pll_ops = {
+	.prepare = sc5xx_cgu_pll_prepare,
+	.unprepare = sc5xx_cgu_pll_unprepare,
+	.is_prepared = sc5xx_cgu_pll_is_prepared,
+	.recalc_rate = sc5xx_cgu_pll_recalc_rate,
+	.round_rate = sc5xx_cgu_pll_round_rate,
+	.set_rate = sc5xx_cgu_pll_set_rate,
 };
 
-struct clk *sc59x_cgu_pll(struct device *dev, const char *name,
+struct clk *sc5xx_cgu_pll(struct device *dev, const char *name,
 	const char *parent_name, void __iomem *base, u8 shift, u8 width,
 	u32 m_offset, spinlock_t *lock)
 {
-	struct clk_sc59x_cgu_pll *pll;
+	struct clk_sc5xx_cgu_pll *pll;
 	struct clk *clk;
 	struct clk_init_data init;
 
@@ -143,7 +158,7 @@ struct clk *sc59x_cgu_pll(struct device *dev, const char *name,
 	init.flags = CLK_SET_RATE_PARENT;
 	init.parent_names = &parent_name;
 	init.num_parents = 1;
-	init.ops = &clk_sc59x_cgu_pll_ops;
+	init.ops = &clk_sc5xx_cgu_pll_ops;
 
 	pll->base = base;
 	pll->hw.init = &init;
@@ -156,7 +171,7 @@ struct clk *sc59x_cgu_pll(struct device *dev, const char *name,
 
 	clk = clk_register(dev, &pll->hw);
 	if (IS_ERR(clk)) {
-		dev_err(dev, "Failed to register sc59x_cgu_pll with code %lu\n",
+		dev_err(dev, "Failed to register sc5xx_cgu_pll with code %lu\n",
 			PTR_ERR(clk));
 	}
 

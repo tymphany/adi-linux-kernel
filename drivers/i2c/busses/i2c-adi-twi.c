@@ -800,7 +800,7 @@ static int i2c_adi_twi_probe(struct platform_device *pdev)
 	} else
 		iface->twi_clk = CONFIG_I2C_ADI_TWI_CLK_KHZ;
 
-#ifdef CONFIG_ARCH_SC59X_64
+#if defined(CONFIG_ARCH_SC59X_64) || defined(CONFIG_ARCH_SC58X)
 	iface->sclk = devm_clk_get(&pdev->dev, "sclk0");
 	if (IS_ERR(iface->sclk)) {
 		if (PTR_ERR(iface->sclk) != -EPROBE_DEFER)

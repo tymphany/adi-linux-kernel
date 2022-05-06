@@ -65,7 +65,7 @@ unsigned long cpu_get_cclk(void)
 	struct clk *clk;
 	unsigned long rate = 0;
 
-	clk = clk_get(NULL, "cgu0_cclk");
+	clk = clk_get(NULL, "cgu0_pllclk");
 	if (IS_ERR(clk))
 		return -ENODEV;
 
@@ -85,13 +85,30 @@ unsigned long cpu_set_cclk(int cpu, unsigned long new)
 	struct clk *clk;
 	int ret;
 
-	clk = clk_get(NULL, "cgu0_cclk");
+	clk = clk_get(NULL, "cgu0_pllclk");
+
 	if (IS_ERR(clk))
 		return -ENODEV;
 
 	ret = clk_set_rate(clk, new);
 	clk_put(clk);
 	return ret;
+}
+
+unsigned long cpu_get_sclk(void)
+{
+	struct clk *clk;
+	unsigned long rate = 0;
+
+	clk = clk_get(NULL, "sclk0_0");
+
+	if (IS_ERR(clk))
+		return -ENODEV;
+
+	rate = clk_get_rate(clk);
+	clk_put(clk);
+
+	return rate;
 }
 
 static int sc5xx_cpufreq_target(struct cpufreq_policy *policy,
@@ -129,7 +146,12 @@ static int sc5xx_freq_init(struct cpufreq_policy *policy)
 	unsigned long cclk, sclk;
 
 	cclk = cpu_get_cclk() / 1000;
-	sclk = get_sclk() / 1000;
+
+#if defined(CONFIG_ARCH_SC59X_64) || defined(CONFIG_ARCH_SC58X)
+		sclk = cpu_get_sclk() / 1000;
+#else
+		sclk = get_sclk() / 1000;
+#endif
 
 	sc5xx_init_tables(cclk, sclk);
 
