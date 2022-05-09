@@ -93,7 +93,6 @@ void pads_init(void)
 }
 EXPORT_SYMBOL(pads_init);
 
-#ifdef CONFIG_MACH_SC58X_DT
 static const char * const sc58x_dt_board_compat[] __initconst = {
 	"adi,sc58x",
 	NULL
@@ -243,23 +242,13 @@ static int __init sc58x_softconfig_init(void)
 }
 subsys_initcall_sync(sc58x_softconfig_init);
 
+extern void __init adsp_sc5xx_timer_core_init(void);
+
 DT_MACHINE_START(SC58X_DT, "SC58x-EZKIT (Device Tree Support)")
 	.map_io		= sc58x_map_io,
 	.init_early	= sc58x_init_early,
-	.init_time	= sc58x_timer_init,
+	.init_time	= adsp_sc5xx_timer_core_init,
 	.init_machine	= sc58x_init,
 	.dt_compat	= sc58x_dt_board_compat,
 	.restart        = sc58x_ezkit_restart,
 MACHINE_END
-
-#else
-MACHINE_START(SC58X, "SC58x-EZKIT")
-	.atag_offset	= 0x100,
-	.map_io		= sc58x_map_io,
-	.init_early	= sc58x_init_early,
-	.init_irq	= sc58x_init_irq,
-	.init_time	= sc58x_timer_init,
-	.init_machine	= sc58x_init,
-	.restart        = sc58x_restart,
-MACHINE_END
-#endif

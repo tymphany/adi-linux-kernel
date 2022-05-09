@@ -75,6 +75,7 @@ struct sc5xx_gptimer {
 	int reserved;
 	int int_enable;
 	void __iomem *io_base;
+	void __iomem *cgu0_ctl;
 	unsigned long isr_count;
 	struct platform_device *pdev;
 	struct list_head node;
