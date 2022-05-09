@@ -5016,14 +5016,6 @@ static int spi_nor_probe(struct spi_mem *spimem)
 	if (!nor->mtd.name)
 		nor->mtd.name = spi_mem_get_name(spimem);
 
-
-#if defined (CONFIG_ARCH_SC58X) || defined (CONFIG_ARCH_SC57X)
-	ret = softconfig_of_set_group_active_pins_output(nor->dev,
-					    spi_nor_get_flash_node(nor), "en-pins", true);
-	if (ret)
-		printk(KERN_ERR "Softconfig error %x\n", ret);
-#endif
-
 	/*
 	 * For some (historical?) reason many platforms provide two different
 	 * names in flash_platform_data: "name" and "type". Quite often name is
@@ -5066,13 +5058,6 @@ static int spi_nor_remove(struct spi_mem *spimem)
 	int ret;
 
 	spi_nor_restore(nor);
-
-#if defined (CONFIG_ARCH_SC58X) || defined (CONFIG_ARCH_SC57X)
-	ret = softconfig_of_set_group_active_pins_output(nor->dev,
-					    spi_nor_get_flash_node(nor), "en-pins", false);
-	if (ret)
-		printk(KERN_ERR "Softconfig error %x\n", ret);
-#endif
 
 	/* Clean up MTD stuff. */
 	return mtd_device_unregister(&nor->mtd);

@@ -75,17 +75,12 @@ static int dwmmc_adi_probe(struct platform_device *pdev)
 		return -1;
 
 	drv_data = match->data;
-	if (softconfig_of_set_group_active_pins_output(&pdev->dev,
-					pdev->dev.of_node, "wp-en-pin", true))
-		return -1;
 
 	return dw_mci_pltfm_register(pdev, drv_data);
 }
 
 static int dwmmc_adi_remove(struct platform_device *pdev)
 {
-	softconfig_of_set_group_active_pins_output(&pdev->dev,
-					pdev->dev.of_node, "wp-en-pin", false);
 	return dw_mci_pltfm_remove(pdev);
 }
 
