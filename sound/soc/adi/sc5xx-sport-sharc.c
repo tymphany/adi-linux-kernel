@@ -27,7 +27,6 @@
 
 #include <linux/soc/adi/cpu.h>
 #include <linux/soc/adi/portmux.h>
-#include <sound/sc5xx-sru.h>
 #include <sound/sc5xx-dai.h>
 #include <sound/pcm.h>
 #include <linux/rpmsg.h>

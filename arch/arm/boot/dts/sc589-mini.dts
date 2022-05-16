@@ -140,6 +140,8 @@
 	interrupts = <0 53 IRQ_TYPE_LEVEL_HIGH>,
 			<0 55 IRQ_TYPE_LEVEL_HIGH>;
 	dma-channel = <0>, <1>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&sru_dai0>;
 	status = "okay";
 };
 
@@ -193,5 +195,32 @@
 };
 
 &sram_mmap {
+	status = "okay";
+};
+
+&sru_ctrl_dai0 {
+	status = "okay";
+
+	sru_dai0: sru_dai0_mux {
+		route {
+			sru-routing =
+				<DAI0_HIGH_F         DAI0_PBEN05_I>,
+				<DAI0_LOW_F          DAI0_PBEN06_I>,
+				<DAI0_LOW_F          DAI0_PB05_I>,
+				<DAI0_HIGH_F         DAI0_PBEN01_I>,  /* set DAI0_PIN01 for ADAU1761 DAC data as an output */
+				<DAI0_LOW_F          DAI0_PBEN02_I>,  /* set DAI0_PIN02 for ADAU1761 ADC data as an input */
+				<DAI0_LOW_F          DAI0_PBEN03_I>,  /* set DAI0_PIN03 for ADAU1761 CLK as an input */
+				<DAI0_LOW_F          DAI0_PBEN04_I>,  /* set DAI0_PIN04 for ADAU1761 FS as an input */
+				<DAI0_PB02_O_ABCDE   SPT0_BD0_I>,     /* route ADAU1761 ADC pin to SPT0 BD0 input */
+				<DAI0_PB02_O_ABCDE   DAI0_PB01_I>,    /* route SPT0A AD0 output to 1761 DAC pin */
+				<DAI0_PB03_O_ABCDE   SPT0_ACLK_I>,    /* route ADAU1761 BCLK pin to SPORT0A clock input */
+				<DAI0_PB03_O_ABCDE   SPT0_BCLK_I>,    /* route ADAU1761 BCLK pin to SPORT0B clock input */
+				<DAI0_PB04_O_ABCDE   SPT0_AFS_I>,     /* route ADAU1761 FS pin to SPORT0A frame sync */
+				<DAI0_PB04_O_ABCDE   SPT0_BFS_I>;     /* route ADAU1761 FS pin to SPORT0B frame sync */
+		};
+	};
+};
+
+&sru_ctrl_dai1 {
 	status = "okay";
 };

@@ -197,6 +197,8 @@
 };
 
 &i2s0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&sru_dai0>;
 	status = "okay";
 };
 
@@ -320,3 +322,30 @@
 &sram_mmap {
 	status = "okay";
 };
+
+&sru_ctrl_dai0 {
+	status = "okay";
+
+	sru_dai0: sru_dai0_mux {
+		route {
+			sru-routing =
+				<DAI0_LOW_F          DAI0_PBEN02_I>,  /* set DAI0_PIN02 to input */
+				<DAI0_PB02_O_ABCDE   SPT0_ACLK_I>,    /* route DAI0_PIN02 to SPT4_ACLK */
+				<DAI0_LOW_F          DAI0_PBEN04_I>,  /* set DAI0_PIN04 to input */
+				<DAI0_PB04_O_ABCDE   SPT0_AFS_I>,     /* route DAI0_PIN04 to SPT4_AFS */
+				<DAI0_HIGH_F         DAI0_PBEN01_I>,  /* set DAI0_PIN01 to output */
+				<SPT4_AD0_O_BD       DAI0_PB01_I>,    /* route SPT4_AD0 to DAI0_PIN01 */
+				<DAI0_LOW_F          DAI0_PBEN12_I>,  /* set DAI0_PIN12 to input */
+				<DAI0_PB12_O_ABCDE   SPT0_BCLK_I>,    /* route DAI0_PIN12 to SPT4_BCLK */
+				<DAI0_LOW_F          DAI0_PBEN20_I>,  /* set DAI0_PIN20 to input */
+				<DAI0_PB20_O_ABCDE   SPT0_BFS_I>,     /* route DAI0_PIN20 to SPT4_BFS */
+				<DAI0_LOW_F          DAI0_PBEN06_I>,  /* set DAI0_PIN06 to input */
+				<DAI0_PB06_O_ABCDE   SPT0_BD0_I>;     /* route DAI0_PIN06 to SPT4_BD0 */
+		};
+	};
+};
+
+&sru_ctrl_dai1 {
+	status = "okay";
+};
+

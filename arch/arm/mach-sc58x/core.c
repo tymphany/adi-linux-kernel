@@ -82,41 +82,6 @@ void sc58x_restart(enum reboot_mode mode, const char *cmd)
 }
 
 
-#include <asm/siginfo.h>
-#include <asm/signal.h>
-
-
-static bool first_fault = true;
-
-static int sc58x_abort_handler(unsigned long addr, unsigned int fsr,
-		struct pt_regs *regs)
-{
-	if (fsr == 0x1c06 && first_fault) {
-		first_fault = false;
-
-		/*
-		 * These faults with code 0x1c06 happens for no good reason,
-		 * possibly left over from the CFE boot loader.
-		 */
-		pr_warn("External imprecise Data abort at addr=%#lx, fsr=%#x ignored.\n",
-				addr, fsr);
-
-		/* Returning non-zero causes fault display and panic */
-		return 0;
-	}
-
-	/* Others should cause a fault */
-	return 1;
-}
-
-/* Early initializations */
-void __init sc58x_init_early(void)
-{
-	/* Install our hook */
-	hook_fault_code(16 + 6, sc58x_abort_handler, SIGBUS, BUS_OBJERR,
-			"imprecise external abort");
-	//sc58x_clock_init();
-}
 
 #if IS_ENABLED(CONFIG_VIDEO_ADI_CAPTURE)
 #include <linux/videodev2.h>
@@ -355,10 +320,6 @@ static struct adi_display_config adi_display_data = {
 
 #ifdef CONFIG_OF
 static const struct of_dev_auxdata sc58x_auxdata_lookup[] __initconst = {
-	OF_DEV_AUXDATA("adi,adi2-pinctrl", 0, "pinctrl-adi2.0", NULL),
-	OF_DEV_AUXDATA("arm,adi-uart4", UART0_REVID, "adi-uart4.0", NULL),
-	OF_DEV_AUXDATA("arm,adi-watchdog", REG_WDOG0_CTL, "adi-watchdog.0", NULL),
-	OF_DEV_AUXDATA("adi,spi3", 0, "adi-spi3.2", NULL),
 #if IS_ENABLED(CONFIG_VIDEO_ADI_DISPLAY)
 	OF_DEV_AUXDATA("adi,disp", 0x31040000, "adi_display.0", &adi_display_data),
 #endif

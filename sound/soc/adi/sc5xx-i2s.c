@@ -23,7 +23,6 @@
 #include <sound/soc.h>
 #include <sound/soc-dai.h>
 
-#include <sound/sc5xx-sru.h>
 #include <sound/sc5xx-dai.h>
 
 #include "sc5xx-sport.h"
@@ -222,7 +221,6 @@ static int sc5xx_dai_probe(struct platform_device *pdev)
 	int ret;
 
 	pads_init();
-	sru_init();
 
 	clk = devm_clk_get(dev, "sclk");
 	if (IS_ERR(clk)) {
