@@ -114,8 +114,7 @@
 &i2s4 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&sru_dai1>;
-	//status = "okay";
-	status = "disabled";
+	status = "okay";
 };
 
 &tru {
@@ -423,6 +422,20 @@
 			line-name = "~can-en";
 		};
 
+		adau1962 {
+			gpio-hog;
+			gpios = <6 0x0>;
+			output-low;
+			line-name = "adau1962-en";
+		};
+
+		adau1979 {
+			gpio-hog;
+			gpios = <7 0x0>;
+			output-low;
+			line-name = "adau1979-en";
+		};
+
 		octal {
 			gpio-hog;
 			gpios = <8 0x0>;
@@ -483,15 +496,12 @@
 	adau1979: adau1979@0x11 {
 		compatible = "adi,adau1979";
 		reg = <0x11>;
-		enable-gpios = <&ssw1 7 GPIO_ACTIVE_LOW>; /* ADAU1979_EN */
-		reset-gpios = <&ssw1 5 GPIO_ACTIVE_LOW>; /* ADAU_RESET */
 	};
 
 	adau1962: adau1962@0x4 {
 		compatible = "adi,adau1962";
 		reg = <0x4>;
-		enable-gpios = <&ssw1 6 GPIO_ACTIVE_LOW>; /* ADAU1962_EN */
-		reset-gpios = <&ssw1 5 GPIO_ACTIVE_LOW>; /* ADAU_RESET */
+		reset-gpios = <&ssw1 5 GPIO_ACTIVE_LOW>;
 	};
 };
 
@@ -699,12 +709,10 @@
 
 &sru_ctrl_dai0 {
 	status = "okay";
-	has-extended;
 };
 
 &sru_ctrl_dai1 {
 	status = "okay";
-	has-extended;
 
 	sru_dai1: sru_dai1_mux {
 		route {

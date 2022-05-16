@@ -584,11 +584,11 @@
 			status = "disabled";
 		};
 
-		sru_ctrl_dai1: sru-ctrl-dai1@0x310CB000 {
+		sru_ctrl_dai1: sru-ctrl-dai1@0x310CA000 {
 			compatible = "adi,adsp-sru-ctrl";
 			#address-cells = <1>;
 			#size-cells = <1>;
-			reg = <0x310CB000 0x224>;
+			reg = <0x310CA000 0x224>;
 			status = "disabled";
 		};
 
@@ -1061,7 +1061,7 @@
 			sport4a: channel@10 {
 				adi,id = <10>;
 				adi,src-offset = <0>;
-				adi,skip-interrupts = <1>;
+				adi,skip-interrupts = <0>;
 				interrupts = <GIC_SPI 97 IRQ_TYPE_LEVEL_HIGH>,
 					<GIC_SPI 305 IRQ_TYPE_LEVEL_HIGH>;
 				interrupt-names = "complete", "error";
@@ -1070,7 +1070,7 @@
 			sport4b: channel@11 {
 				adi,id = <11>;
 				adi,src-offset = <0x80>;
-				adi,skip-interrupts = <1>;
+				adi,skip-interrupts = <0>;
 				interrupts = <GIC_SPI 99 IRQ_TYPE_LEVEL_HIGH>,
 					<GIC_SPI 306 IRQ_TYPE_LEVEL_HIGH>;
 				interrupt-names = "complete", "error";

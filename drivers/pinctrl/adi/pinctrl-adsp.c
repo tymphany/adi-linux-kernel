@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /**
  * Analog Devices ADSP family pinctrl driver.
+ * @todo extend pad configuration support to DAI pads as well
  *
  * Copyright (c) 2022, Analog Devices, Inc.
  */
@@ -63,17 +64,17 @@
 #define ADSP_NONPORTS_DS_LP0CK			4
 #define ADSP_NONPORTS_DS_OSPI			5
 
-/* @todo handle DAI pins/SRU configuration in pinctrl: */
-//#define REG_PADS0_DAI0_0_DS                  0x31004678
-//#define REG_PADS0_DAI0_1_DS                  0x3100467C
-//#define REG_PADS0_DAI1_0_DS                  0x31004680
-//#define REG_PADS0_DAI1_1_DS                  0x31004684
-//#define REG_PADS0_DAI0_IE                    0x31004690
-//#define REG_PADS0_DAI1_IE                    0x31004694
-//#define REG_PADS0_DAI0_PUE                   0x310046BC
-//#define REG_PADS0_DAI1_PUE                   0x310046C0
-//#define REG_PADS0_DAI0_PDE                   0x310046FC
-//#define REG_PADS0_DAI1_PDE                   0x31004700
+/* DAI pad configuration offsets */
+#define ADSP_PADS_REG_DAI0_0_DS			0x78
+#define ADSP_PADS_REG_DAI0_1_DS			0x7c
+#define ADSP_PADS_REG_DAI1_0_DS			0x80
+#define ADSP_PADS_REG_DAI1_1_DS			0x84
+#define ADSP_PADS_REG_DAI0_IE			0x90
+#define ADSP_PADS_REG_DAI1_IE			0x94
+#define ADSP_PADS_REG_DAI0_PUE			0xbc
+#define ADSP_PADS_REG_DAI1_PUE			0xc0
+#define ADSP_PADS_REG_DAI0_PDE			0xfc
+#define ADSP_PADS_REG_DAI1_PDE			0x100
 
 /*
  * Represents a function setting for pins, controls the mux modes essentially
@@ -700,6 +701,10 @@ int adsp_pinctrl_probe(struct platform_device *pdev) {
 	ret = of_property_read_u32(np, "adi,ospi-drive-strength", &val);
 	if (!ret)
 		adsp_set_nongpio_ds(adsp_pinctrl, ADSP_NONPORTS_DS_OSPI, !!val);
+
+	/* @todo create a device tree property for dai config, for now enable all */
+	writel(0xffffffff, adsp_pinctrl->regs + ADSP_PADS_REG_DAI0_IE);
+	writel(0xffffffff, adsp_pinctrl->regs + ADSP_PADS_REG_DAI1_IE);
 
 	pnctrl_desc->name = dev_name(dev);
 	pnctrl_desc->pctlops = &adsp_pctlops;

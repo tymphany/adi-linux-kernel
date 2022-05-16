@@ -220,8 +220,6 @@ static int sc5xx_dai_probe(struct platform_device *pdev)
 	struct clk *clk;
 	int ret;
 
-	pads_init();
-
 	clk = devm_clk_get(dev, "sclk");
 	if (IS_ERR(clk)) {
 		dev_err(dev, "Missing clock node `sclk` for i2s\n");
