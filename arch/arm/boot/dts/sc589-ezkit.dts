@@ -226,14 +226,14 @@
 		adau1962 {
 			gpio-hog;
 			gpios = <8 0x0>;
-			output-high;
+			output-low;
 			line-name = "~adau1962-en";
 		};
 
 		adau1979 {
 			gpio-hog;
 			gpios = <9 0x0>;
-			output-high;
+			output-low;
 			line-name = "~adau1979-en";
 		};
 
@@ -315,14 +315,15 @@
 		};
 	};
 
-	adau1979: adau1979@0x11 {
-		compatible = "adi,adau1977";
-		reg = <0x11>;
-	};
-
 	adau1962: adau1962@0x4 {
 		compatible = "adi,adau1962";
 		reg = <0x4>;
+		reset-gpios = <&gpa 14 1>;
+	};
+
+	adau1979: adau1979@0x11 {
+		compatible = "adi,adau1977";
+		reg = <0x11>;
 	};
 };
 

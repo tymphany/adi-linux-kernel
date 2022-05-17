@@ -943,32 +943,7 @@ int adau1977_probe(struct device *dev, struct regmap *regmap,
 		adau1977->dvdd_reg = NULL;
 	}
 
-	adau1977->reset_gpio = devm_gpiod_get(dev, "reset", GPIOD_OUT_HIGH);
-	if (IS_ERR(adau1977->reset_gpio)) {
-		if(PTR_ERR(adau1977->reset_gpio) == -EPROBE_DEFER) {
-			return -EPROBE_DEFER;
-		}
-		dev_info(dev, "invalid or missing reset-gpios: %ld\n", PTR_ERR(adau1977->reset_gpio));
-	}
-
-	adau1977->enable_gpio = devm_gpiod_get(dev, "enable", GPIOD_OUT_HIGH);
-	if (IS_ERR(adau1977->enable_gpio)) {
-		if(PTR_ERR(adau1977->enable_gpio) == -EPROBE_DEFER) {
-			return -EPROBE_DEFER;
-		}
-		dev_info(dev, "invalid or missing enable-gpios: %ld\n", PTR_ERR(adau1977->enable_gpio));
-	}
-
 	dev_set_drvdata(dev, adau1977);
-
-	if (!IS_ERR(adau1977->reset_gpio)) {
-		/* Hardware power-on reset */
-		udelay(200);    /* Tc time */
-		gpiod_set_value_cansleep(adau1977->reset_gpio, 1);
-		msleep(38);     /* Td time */
-		gpiod_set_value_cansleep(adau1977->reset_gpio, 0);
-		udelay(200);
-	}
 
 	ret = adau1977_power_enable(adau1977);
 	if (ret)

@@ -788,20 +788,12 @@ int adau1962_probe(struct device *dev, struct regmap *regmap,
 		dev_info(dev, "invalid or missing reset-gpios: %ld\n", PTR_ERR(adau1962->reset_gpio));
 	}
 
-	adau1962->enable_gpio = devm_gpiod_get(dev, "enable", GPIOD_OUT_HIGH);
-	if (IS_ERR(adau1962->enable_gpio)) {
-		if(PTR_ERR(adau1962->enable_gpio) == -EPROBE_DEFER) {
-			return -EPROBE_DEFER;
-		}
-		dev_info(dev, "invalid or missing enable-gpios: %ld\n", PTR_ERR(adau1962->enable_gpio));
-	}
-
 	dev_set_drvdata(dev, adau1962);
 
 	if (!IS_ERR(adau1962->reset_gpio)) {
 		/* Hardware power-on reset */
 		gpiod_set_value_cansleep(adau1962->reset_gpio, 1);
-		msleep(1);
+		msleep(38);
 		gpiod_set_value_cansleep(adau1962->reset_gpio, 0);
 		/* After asserting the PU/RST pin high, ADAU1962
 			* requires 300ms to stabilize */
