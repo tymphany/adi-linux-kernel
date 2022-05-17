@@ -379,18 +379,6 @@ static void sc58x_init_ethernet(void)
 	}
 }
 
-#if IS_ENABLED(CONFIG_SND_SC5XX_PCM)
-static struct platform_device sc58x_pcm = {
-	.name = "sc5xx-pcm-audio",
-	.id = -1,
-};
-#endif
-
-static struct platform_device *ezkit_devices[] __initdata = {
-#if IS_ENABLED(CONFIG_SND_SC5XX_PCM)
-	&sc58x_pcm,
-#endif
-};
 void __init sc58x_init(void)
 {
 #ifdef CONFIG_CACHE_L2X0
@@ -404,7 +392,6 @@ void __init sc58x_init(void)
 				sc58x_auxdata_lookup, NULL);
 #endif
 	sc58x_init_ethernet();
-	platform_add_devices(ezkit_devices, ARRAY_SIZE(ezkit_devices));
 }
 
 static void __iomem *spu_base;
