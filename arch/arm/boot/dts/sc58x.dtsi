@@ -122,6 +122,22 @@
 			status = "disabled";
 		};
 
+		rcu: rcu@0x3108B000 {
+			compatible = "adi,reset-controller";
+			reg = <0x3108B000 0x1000>;
+			adi,sharc-min = <1>;
+			adi,sharc-max = <2>;
+			status = "okay";
+		};
+
+		tru: tru@0x3108a000 {
+			compatible = "adi,trigger-routing-unit";
+			reg = <0x3108a000 0x1000>;
+			adi,max-master-id = <139>;
+			adi,max-slave-id = <137>;
+			status = "okay";
+		};
+
 		rtc0: rtc@0x310C8000 {
 			compatible = "adi,rtc2";
 			reg = <0x310C8000 0x100>;
@@ -1126,6 +1142,25 @@
 					<GIC_SPI 207 IRQ_TYPE_LEVEL_HIGH>;
 				interrupt-names = "complete", "error";
 				adi,src-offset = <0x200>;
+			};
+		};
+
+
+		mdma: dma@0x3109a000 {
+			compatible = "adi,mdma-controller";
+			reg = <0x3109a000 0x1000>;
+			status = "okay";
+
+			sdma2: channel@40 {
+				adi,id = <40>;
+				// The destination interrupts are used for primary complete detection
+				interrupts = <GIC_SPI 169 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 221 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 168 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 222 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "complete", "error", "complete2", "error2";
+				adi,src-offset = <0>;
+				adi,dest-offset = <0x80>;
 			};
 		};
 

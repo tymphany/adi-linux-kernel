@@ -40,22 +40,34 @@
 			led_gpio = <78>;
 		};
 
-		core1-rproc@0x3108b000 {
+		core1-rproc@0x28240000 {
 			compatible = "adi,remoteproc";
-			reg = <0x3108b000 0x70>;
+			reg = <0x28240000 0x160000>,
+					<0x20080000 0x40000>;
 			core-id = <1>;
 			core-irq = <76>;
 			firmware-name = "adi_adsp_core1_fw.ldr";
 			interrupts = <GIC_SPI 251 IRQ_TYPE_EDGE_RISING>;
+			adi,rcu = <&rcu>;
+			adi,l1-da = <0x240000 0x3a0000>;
+			adi,l2-da = <0x20080000 0x200C0000>;
+			adi,tru = <&tru>;
+			adi,tru-master-id = <97>; /* trigger master SOFT4 */
 		};
 
-		core2-rproc@0x3108b000 {
+		core2-rproc@0x28a40000 {
 			compatible = "adi,remoteproc";
-			reg = <0x3108b000 0x70>;
+			reg = <0x28a40000 0x160000>,
+					<0x20080000 0x40000>;
 			core-id = <2>;
 			core-irq = <77>;
 			firmware-name = "adi_adsp_core2_fw.ldr";
 			interrupts = <GIC_SPI 251 IRQ_TYPE_EDGE_RISING>;
+			adi,rcu = <&rcu>;
+			adi,l1-da = <0x240000 0x3a0000>;
+			adi,l2-da = <0x20080000 0x200C0000>;
+			adi,tru = <&tru>;
+			adi,tru-master-id = <98>; /* trigger master SOFT5 */
 		};
 
 		sound {
@@ -440,6 +452,7 @@
 };
 
 &icc0 {
+	adi,tru = <&tru>;
 	status = "okay";
 };
 
@@ -698,5 +711,21 @@
 				<DAI1_LOW_F          DAI1_PBEN06_I>,  /* set DAI1_PIN06 to input */
 				<DAI1_PB06_O_ABCDE   SPT4_BD0_I>;     /* route DAI1_PIN06 to SPT4_BD0 */
 		};
+	};
+};
+
+
+&tru {
+	rpmsg_to_a55: channel@0 {
+		adi,tru-master-id = <96>; /* trigger master SOFT3 */
+		adi,tru-slave-id = <87>; /* TRU0_IRQ3 */
+	};
+	rpmsg_to_sharc0: channel@1 {
+		adi,tru-master-id = <97>; /* trigger master SOFT4 */
+		adi,tru-slave-id = <91>; /* TRU0_IRQ7 */
+	};
+	rpmsg_to_sharc1: channel@2 {
+		adi,tru-master-id = <98>; /* trigger master SOFT5 */
+		adi,tru-slave-id = <95>; /* TRU0_IRQ11 */
 	};
 };

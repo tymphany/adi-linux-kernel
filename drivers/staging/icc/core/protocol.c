@@ -46,12 +46,13 @@ static struct adi_icc {
 	struct sm_proto *sm_protos[SP_MAX];
 	struct proc_dir_entry *icc_dump;
 	char name[20];
+	struct adi_tru *adi_tru;
 } *adi_icc;
 
 
 void icc_send_ipi_cpu(unsigned int cpu, int irq)
 {
-	platform_send_ipi_cpu(cpu, irq);
+	adi_tru_trigger(adi_icc->adi_tru, irq);
 }
 
 void icc_clear_ipi_cpu(unsigned int cpu, int irq)
@@ -2344,6 +2345,12 @@ static int adi_icc_probe(struct platform_device *pdev)
 		return -ENOENT;
 	}
 */
+
+	icc->adi_tru = get_adi_tru_from_node(dev);
+	if (IS_ERR(icc->adi_tru)) {
+		ret = PTR_ERR(icc->adi_tru);
+		return -ENODEV;
+	}
 
 	for (i = 0, icc_info = icc->icc_info; i < icc->peer_count;
 				i++, icc_info++) {
