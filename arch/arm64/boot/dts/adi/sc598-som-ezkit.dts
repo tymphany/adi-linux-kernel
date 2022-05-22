@@ -474,14 +474,14 @@
 		eth1 {
 			gpio-hog;
 			gpios = <13 0x0>;
-			output-high;
+			output-low;
 			line-name = "~eth1-en";
 		};
 
 		eth1-reset {
 			gpio-hog;
 			gpios = <14 0x0>;
-			output-low;
+			output-high;
 			line-name = "~eth1-reset";
 		};
 
@@ -560,6 +560,14 @@
 			ti,dp83867-rxctrl-strap-quirk;
 		};
 	};
+};
+
+&emac1 {
+	phy-mode = "rmii";
+	pinctrl-names = "default";
+	pinctrl-0 = <&eth1_default>;
+	adi,skip-phyconfig;
+	status = "disabled";
 };
 
 &mmc0{
@@ -669,6 +677,19 @@
 			         <ADI_ADSP_PINMUX('H', 14, ADI_ADSP_PINFUNC_ALT0)>,
 			         <ADI_ADSP_PINMUX('H', 15, ADI_ADSP_PINFUNC_ALT0)>,
 			         <ADI_ADSP_PINMUX('I', 0, ADI_ADSP_PINFUNC_ALT0)>;
+		};
+	};
+	eth1_default: eth1_default_pins {
+		pins {
+			pinmux = <ADI_ADSP_PINMUX('E', 11, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('E', 12, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('E', 13, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('E', 14, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('E', 15, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('F', 0, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('F', 1, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('F', 2, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('F', 3, ADI_ADSP_PINFUNC_ALT0)>;
 		};
 	};
 	mmc0_8bgrp: mmc0_8bgrp_pins {

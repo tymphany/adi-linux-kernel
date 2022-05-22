@@ -30,9 +30,7 @@
 		timer6 = &gptimer6;
 		timer7 = &gptimer7;
 		ethernet0 = &emac0;
-/*
 		ethernet1 = &emac1;
-*/
 		spi0   = &spi0;
 		spi1   = &spi1;
 		spi2   = &spi2;
@@ -520,7 +518,7 @@
 		};
 
 		emac1: ethernet@0x31042000 {
-			compatible = "adi,dwmac", "snps,dwmac-3.710", "snps,dwmac";
+			compatible = "adi,dwmac", "snps,dwmac-4.20a", "snps,dwmac-5.20a";
 			reg = <0x31042000 0x2000>;
 			interrupt-parent = <&gic>;
 			interrupts = <GIC_SPI 227 IRQ_TYPE_LEVEL_HIGH>;
