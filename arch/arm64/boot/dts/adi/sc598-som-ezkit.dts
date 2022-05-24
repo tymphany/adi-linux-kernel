@@ -474,14 +474,16 @@
 		eth1 {
 			gpio-hog;
 			gpios = <13 0x0>;
-			output-low;
+			output-low; 
 			line-name = "~eth1-en";
 		};
 
 		eth1-reset {
 			gpio-hog;
 			gpios = <14 0x0>;
-			output-high;
+/* USB0 lines are shared with Eth1 so  Eth PHY must be held in reset 
+   when using the USB */
+			output-low;
 			line-name = "~eth1-reset";
 		};
 
