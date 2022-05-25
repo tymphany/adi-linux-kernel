@@ -483,7 +483,7 @@
 			gpios = <14 0x0>;
 /* USB0 lines are shared with Eth1 so  Eth PHY must be held in reset 
    when using the USB */
-			output-low;
+			output-high;
 			line-name = "~eth1-reset";
 		};
 
@@ -569,7 +569,7 @@
 	phy-mode = "rmii";
 	pinctrl-names = "default";
 	pinctrl-0 = <&eth1_default>;
-	status = "disabled";
+	status = "okay";
 
 	mdio1 {
 		compatible = "snps,dwmac-mdio";
@@ -600,11 +600,11 @@
 	dr_mode = "host";
 	pinctrl-names = "default";
 	pinctrl-0 = <&usbc0_default>;
-	status = "okay";
+	status = "disabled";
 };
 
 &sram_mmap {
-	status = "okay";
+	status = "disabled";
 };
 
 &pinctrl0 {
