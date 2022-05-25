@@ -16,6 +16,7 @@
 #include <linux/thermal.h>
 #include <linux/types.h>
 #include <linux/workqueue.h>
+#include <linux/delay.h>
 
 /* Register offsets */
 #define SC59X_TMU_CTL				0x00
@@ -60,6 +61,9 @@
 /* Minimum value for triggers */
 #define SC59X_LIM_HI_MIN			60
 
+/* Default temperature value (27 Celsius) */
+#define SC59X_DEFAULT_TEMP          0xd80
+
 struct sc59x_thermal_data {
 	void __iomem *ioaddr;
 	struct thermal_zone_device *tzdev;
@@ -91,6 +95,13 @@ static int sc59x_get_temp(struct thermal_zone_device *tzdev, int *temp) {
 	/* data is 9.7 fixed point representing temperature in celsius
 	 * linux expects integer millicelsius */
 	tmu_temp = readl(data->ioaddr + SC59X_TMU_TEMP);
+
+	/* Check if value was read too soon after thermal event interrupt was cleared */
+	while (tmu_temp == SC59X_DEFAULT_TEMP) {
+		msleep_interruptible(50);
+		tmu_temp = readl(data->ioaddr + SC59X_TMU_TEMP);
+	}
+
 	*temp = (tmu_temp * 1000) >> 7;
 
 	return 0;
