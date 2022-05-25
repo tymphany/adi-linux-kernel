@@ -528,6 +528,7 @@
 			snps,force_thresh_dma_mode;
 			clocks = <&emac1_clkin>;
 			clock-names = "stmmaceth";
+			adi,system-config = <&pads_system_config>;
 			status = "disabled";
 		};
 

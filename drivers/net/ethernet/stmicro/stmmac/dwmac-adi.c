@@ -30,9 +30,17 @@ static int dwmac_adi_probe(struct platform_device *pdev)
 	struct regmap *regmap;
 	struct stmmac_resources stmmac_res;
 	int ret;
+	int emac_alias;
 	u32 val;
 
 	if (!of_property_read_bool(np, "adi,skip-phyconfig")) {
+
+		emac_alias = of_alias_get_id(np, "ethernet");
+		if (emac_alias < 0) {
+			dev_err(&pdev->dev, "Failed to get EMAC alias id\n");
+			return NULL;
+		}
+
 		regmap = system_config_regmap_lookup_by_phandle(np, "adi,system-config");
 		if (IS_ERR(regmap)) {
 			if (PTR_ERR(regmap) == -EPROBE_DEFER)
@@ -42,35 +50,40 @@ static int dwmac_adi_probe(struct platform_device *pdev)
 			return PTR_ERR(regmap);
 		}
 
-		ret = of_get_phy_mode(np);
-		if (ret < 0) {
-			dev_err(dev, "phy-mode must be specified to configure interface\n");
-			return ret;
-		}
+		if(emac_alias == 0){
+			ret = of_get_phy_mode(np);
+			if (ret < 0) {
+				dev_err(dev, "phy-mode must be specified to configure interface\n");
+				return ret;
+			}
 
-		val = 0;
-		switch (ret) {
-		case PHY_INTERFACE_MODE_MII:
-			val = ADI_PHYISEL_MII;
-			break;
-		case PHY_INTERFACE_MODE_RMII:
-			val = ADI_PHYISEL_RMII;
-			break;
-		case PHY_INTERFACE_MODE_RGMII:
-		case PHY_INTERFACE_MODE_RGMII_ID:
-		case PHY_INTERFACE_MODE_RGMII_RXID:
-		case PHY_INTERFACE_MODE_RGMII_TXID:
-			val = ADI_PHYISEL_RGMII;
-			break;
-		default:
-			dev_err(dev, "Unsupported PHY interface mode %d selected\n", ret);
-			return -EINVAL;
-		}
+			val = 0;
+			switch (ret) {
+			case PHY_INTERFACE_MODE_MII:
+				val = ADI_PHYISEL_MII;
+				break;
+			case PHY_INTERFACE_MODE_RMII:
+				val = ADI_PHYISEL_RMII;
+				break;
+			case PHY_INTERFACE_MODE_RGMII:
+			case PHY_INTERFACE_MODE_RGMII_ID:
+			case PHY_INTERFACE_MODE_RGMII_RXID:
+			case PHY_INTERFACE_MODE_RGMII_TXID:
+				val = ADI_PHYISEL_RGMII;
+				break;
+			default:
+				dev_err(dev, "Unsupported PHY interface mode %d selected\n", ret);
+				return -EINVAL;
+			}
 
-		/* write config registers if available */
-		regmap_write(regmap, ADI_SYSTEM_REG_EMAC0_EMACRESET, 0);
-		regmap_write(regmap, ADI_SYSTEM_REG_EMAC0_PHYISEL, val);
-		regmap_write(regmap, ADI_SYSTEM_REG_EMAC0_EMACRESET, 1);
+			/* write config registers if available */
+			regmap_write(regmap, ADI_SYSTEM_REG_EMAC0_EMACRESET, 0);
+			regmap_write(regmap, ADI_SYSTEM_REG_EMAC0_PHYISEL, val);
+			regmap_write(regmap, ADI_SYSTEM_REG_EMAC0_EMACRESET, 1);
+			regmap_write(regmap, ADI_SYSTEM_REG_EMAC0_ENDIANNESS, 0);
+		}else if(emac_alias == 1){
+			regmap_write(regmap, ADI_SYSTEM_REG_EMAC1_ENDIANNESS, 0);
+		}
 	}
 
 	ret = stmmac_get_platform_resources(pdev, &stmmac_res);
