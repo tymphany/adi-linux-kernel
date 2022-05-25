@@ -565,11 +565,21 @@
 };
 
 &emac1 {
+	phy-handle = <&dp83848>;
 	phy-mode = "rmii";
 	pinctrl-names = "default";
 	pinctrl-0 = <&eth1_default>;
-	adi,skip-phyconfig;
 	status = "disabled";
+
+	mdio1 {
+		compatible = "snps,dwmac-mdio";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		dp83848: ethernet-phy@1 {
+			reg = <1>;
+		};
+	};
+
 };
 
 &mmc0{
