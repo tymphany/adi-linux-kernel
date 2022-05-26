@@ -68,8 +68,6 @@ struct sc59x_thermal_data {
 	void __iomem *ioaddr;
 	struct thermal_zone_device *tzdev;
 	struct device *dev;
-	struct work_struct work_alert;
-	struct work_struct work_fault;
 	int last_temp;
 	enum thermal_device_mode mode;
 };
@@ -193,8 +191,8 @@ static struct thermal_zone_device_ops sc59x_tmu_ops = {
 	.set_trip_temp = sc59x_set_trip_temp,
 };
 
-static void sc59x_alert_handler(struct work_struct *work) {
-	struct sc59x_thermal_data *data = container_of(work, struct sc59x_thermal_data, work_alert);
+static irqreturn_t sc59x_thermal_irq_alert_thread(int irq, void *irqdata) {
+	struct sc59x_thermal_data *data = irqdata;
 	u32 imask;
 	int trip_temp;
 	int tmu_temp;
@@ -227,6 +225,8 @@ static void sc59x_alert_handler(struct work_struct *work) {
 	imask = readl(data->ioaddr + SC59X_TMU_IMSK);
 	imask &= ~SC59X_TMU_IMSK_ALRTHI;
 	writel(imask, data->ioaddr + SC59X_TMU_IMSK);
+
+	return IRQ_HANDLED;
 }
 
 static irqreturn_t sc59x_thermal_irq_alert(int irq, void *irqdata) {
@@ -238,12 +238,11 @@ static irqreturn_t sc59x_thermal_irq_alert(int irq, void *irqdata) {
 	imask |= SC59X_TMU_IMSK_ALRTHI;
 	writel(imask, data->ioaddr + SC59X_TMU_IMSK);
 
-	schedule_work(&data->work_alert);
-	return IRQ_HANDLED;
+	return IRQ_WAKE_THREAD;
 }
 
-static void sc59x_fault_handler(struct work_struct *work) {
-	struct sc59x_thermal_data *data = container_of(work, struct sc59x_thermal_data, work_fault);
+static irqreturn_t sc59x_thermal_irq_fault_thread(int irq, void *irqdata) {
+	struct sc59x_thermal_data *data = irqdata;
 	u32 imask;
 	int trip_temp;
 	int tmu_temp;
@@ -276,6 +275,8 @@ static void sc59x_fault_handler(struct work_struct *work) {
 	imask = readl(data->ioaddr + SC59X_TMU_IMSK);
 	imask &= ~SC59X_TMU_IMSK_FLTHI;
 	writel(imask, data->ioaddr + SC59X_TMU_IMSK);
+
+	return IRQ_HANDLED;
 }
 
 static irqreturn_t sc59x_thermal_irq_fault(int irq, void *irqdata) {
@@ -287,8 +288,7 @@ static irqreturn_t sc59x_thermal_irq_fault(int irq, void *irqdata) {
 	imask |= SC59X_TMU_IMSK_FLTHI;
 	writel(imask, data->ioaddr + SC59X_TMU_IMSK);
 
-	schedule_work(&data->work_fault);
-	return IRQ_HANDLED;
+	return IRQ_WAKE_THREAD;
 }
 
 static int sc59x_thermal_probe(struct platform_device *pdev) {
@@ -314,16 +314,14 @@ static int sc59x_thermal_probe(struct platform_device *pdev) {
 		return PTR_ERR(data->ioaddr);
 	}
 
-	INIT_WORK(&data->work_alert, sc59x_alert_handler);
-	INIT_WORK(&data->work_fault, sc59x_fault_handler);
-
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0) {
 		dev_err(dev, "Failed to find fault IRQ: %d\n", irq);
 		return irq;
 	}
 
-	ret = devm_request_threaded_irq(dev, irq, sc59x_thermal_irq_fault, NULL, 0, "sc59x_thermal_fault", data);
+	ret = devm_request_threaded_irq(dev, irq, sc59x_thermal_irq_fault, 
+			sc59x_thermal_irq_fault_thread, 0, "sc59x_thermal_fault", data);
 	if (ret < 0) {
 		dev_err(dev, "Failed to request IRQ: %d\n", ret);
 		return ret;
@@ -335,7 +333,8 @@ static int sc59x_thermal_probe(struct platform_device *pdev) {
 		return irq;
 	}
 
-	ret = devm_request_threaded_irq(dev, irq, sc59x_thermal_irq_alert, NULL, 0, "sc59x_thermal_alert", data);
+	ret = devm_request_threaded_irq(dev, irq, sc59x_thermal_irq_alert,
+			sc59x_thermal_irq_alert_thread, 0, "sc59x_thermal_alert", data);
 	if (ret < 0) {
 		dev_err(dev, "Failed to request IRQ: %d\n", ret);
 		return ret;
