@@ -68,7 +68,8 @@ struct sc59x_thermal_data {
 	void __iomem *ioaddr;
 	struct thermal_zone_device *tzdev;
 	struct device *dev;
-	struct work_struct work;
+	struct work_struct work_alert;
+	struct work_struct work_fault;
 	int last_temp;
 	enum thermal_device_mode mode;
 };
@@ -192,19 +193,101 @@ static struct thermal_zone_device_ops sc59x_tmu_ops = {
 	.set_trip_temp = sc59x_set_trip_temp,
 };
 
-static void sc59x_work_handler(struct work_struct *work) {
-	struct sc59x_thermal_data *data = container_of(work, struct sc59x_thermal_data, work);
+static void sc59x_alert_handler(struct work_struct *work) {
+	struct sc59x_thermal_data *data = container_of(work, struct sc59x_thermal_data, work_alert);
+	u32 imask;
+	int trip_temp;
+	int tmu_temp;
+	u32 recoveryCount = 0;
 
-	thermal_zone_device_update(data->tzdev, THERMAL_EVENT_UNSPECIFIED);
+	sc59x_get_trip_temp(data->tzdev, SC59X_ALERT_TRIP, &trip_temp);
+	sc59x_get_temp(data->tzdev, &tmu_temp);
+
+	/* Wait until we have ten consecutive low readings
+	   (each spaced 1 second apart) -- this is debouncing the interrupts
+	   so that we don't get spammed with interrupts while the temperature
+	   recovers */
+	while(recoveryCount < 10){
+		msleep_interruptible(1000);
+		sc59x_get_temp(data->tzdev, &tmu_temp);
+		if(tmu_temp < trip_temp){
+			recoveryCount++;
+		}else{
+			thermal_zone_device_update(data->tzdev, THERMAL_EVENT_UNSPECIFIED);
+			recoveryCount=0;
+		}
+	}
 
 	/* clearing interrupts may reset temperature register contents */
 	writel(SC59X_TMU_STAT_ALRTHI | SC59X_TMU_STAT_FLTHI, data->ioaddr + SC59X_TMU_STATUS);
+
+	/* Unmask the interrupt --
+	   masking/unmasking via IMASK isn't 100% necessary
+	   as the interrupts won't hit again until TMU_STATUS is cleared anyways */
+	imask = readl(data->ioaddr + SC59X_TMU_IMSK);
+	imask &= ~SC59X_TMU_IMSK_ALRTHI;
+	writel(imask, data->ioaddr + SC59X_TMU_IMSK);
 }
 
-static irqreturn_t sc59x_thermal_irq(int irq, void *irqdata) {
+static irqreturn_t sc59x_thermal_irq_alert(int irq, void *irqdata) {
 	struct sc59x_thermal_data *data = irqdata;
+	u32 imask;
 
-	schedule_work(&data->work);
+	/* Mask the interrupt until we drop back below the threshold temperature */
+	imask = readl(data->ioaddr + SC59X_TMU_IMSK);
+	imask |= SC59X_TMU_IMSK_ALRTHI;
+	writel(imask, data->ioaddr + SC59X_TMU_IMSK);
+
+	schedule_work(&data->work_alert);
+	return IRQ_HANDLED;
+}
+
+static void sc59x_fault_handler(struct work_struct *work) {
+	struct sc59x_thermal_data *data = container_of(work, struct sc59x_thermal_data, work_fault);
+	u32 imask;
+	int trip_temp;
+	int tmu_temp;
+	u32 recoveryCount = 0;
+
+	sc59x_get_trip_temp(data->tzdev, SC59X_FAULT_TRIP, &trip_temp);
+	sc59x_get_temp(data->tzdev, &tmu_temp);
+
+	/* Wait until we have ten consecutive low readings
+	   (each spaced 1 second apart) -- this is debouncing the interrupts
+	   so that we don't get spammed with interrupts while the temperature
+	   recovers */
+	while(recoveryCount < 10){
+		msleep_interruptible(1000);
+		sc59x_get_temp(data->tzdev, &tmu_temp);
+		if(tmu_temp < trip_temp){
+			recoveryCount++;
+		}else{
+			thermal_zone_device_update(data->tzdev, THERMAL_EVENT_UNSPECIFIED);
+			recoveryCount=0;
+		}
+	}
+
+	/* clearing interrupts may reset temperature register contents */
+	writel(SC59X_TMU_STAT_FLTHI, data->ioaddr + SC59X_TMU_STATUS);
+
+	/* Unmask the interrupt --
+	   masking/unmasking via IMASK isn't 100% necessary
+	   as the interrupts won't hit again until TMU_STATUS is cleared anyways */
+	imask = readl(data->ioaddr + SC59X_TMU_IMSK);
+	imask &= ~SC59X_TMU_IMSK_FLTHI;
+	writel(imask, data->ioaddr + SC59X_TMU_IMSK);
+}
+
+static irqreturn_t sc59x_thermal_irq_fault(int irq, void *irqdata) {
+	struct sc59x_thermal_data *data = irqdata;
+	u32 imask;
+
+	/* Mask the interrupt until we drop back below the threshold temperature */
+	imask = readl(data->ioaddr + SC59X_TMU_IMSK);
+	imask |= SC59X_TMU_IMSK_FLTHI;
+	writel(imask, data->ioaddr + SC59X_TMU_IMSK);
+
+	schedule_work(&data->work_fault);
 	return IRQ_HANDLED;
 }
 
@@ -231,7 +314,8 @@ static int sc59x_thermal_probe(struct platform_device *pdev) {
 		return PTR_ERR(data->ioaddr);
 	}
 
-	INIT_WORK(&data->work, sc59x_work_handler);
+	INIT_WORK(&data->work_alert, sc59x_alert_handler);
+	INIT_WORK(&data->work_fault, sc59x_fault_handler);
 
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0) {
@@ -239,7 +323,7 @@ static int sc59x_thermal_probe(struct platform_device *pdev) {
 		return irq;
 	}
 
-	ret = devm_request_threaded_irq(dev, irq, sc59x_thermal_irq, NULL, 0, "sc59x_thermal", data);
+	ret = devm_request_threaded_irq(dev, irq, sc59x_thermal_irq_fault, NULL, 0, "sc59x_thermal_fault", data);
 	if (ret < 0) {
 		dev_err(dev, "Failed to request IRQ: %d\n", ret);
 		return ret;
@@ -251,7 +335,7 @@ static int sc59x_thermal_probe(struct platform_device *pdev) {
 		return irq;
 	}
 
-	ret = devm_request_threaded_irq(dev, irq, sc59x_thermal_irq, NULL, 0, "sc59x_thermal", data);
+	ret = devm_request_threaded_irq(dev, irq, sc59x_thermal_irq_alert, NULL, 0, "sc59x_thermal_alert", data);
 	if (ret < 0) {
 		dev_err(dev, "Failed to request IRQ: %d\n", ret);
 		return ret;
