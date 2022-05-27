@@ -433,6 +433,8 @@
 			compatible = "arm,adi-watchdog";
 			reg = <0x31008000 0x10>;
 			timeout-sec = <30>;
+			clocks = <&clk ADSP_SC59X_CLK_CGU0_SCLK0>;
+			clock-names = "adi-watchdog";
 		};
 
 		spi0: spi@0x3102e000 {
