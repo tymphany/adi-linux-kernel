@@ -126,15 +126,11 @@ static int adi_wdt_set_timeout(struct watchdog_device *wdd, unsigned int t)
 
 	cnt = t * wdt->rate;
 
-	spin_lock(&wdt->lock);
-	{
-		int run = adi_wdt_running(wdd);
-		adi_wdt_stop(wdd);
-		writel(cnt, wdt->base + WDOG_CNT);
-		if (run)
-			adi_wdt_start(wdd);
-	}
-	spin_unlock(&wdt->lock);
+	int run = adi_wdt_running(wdd);
+	adi_wdt_stop(wdd);
+	writel(cnt, wdt->base + WDOG_CNT);
+	if (run)
+		adi_wdt_start(wdd);
 
 	wdd->timeout = t;
 
