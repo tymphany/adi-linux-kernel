@@ -44,7 +44,7 @@
 #define TIMER_CLOCKSOURCE 1
 #define TIMER_CLOCKEVENT  0
 
-static struct sc59x_gptimer *timer_clock, *timer_event;
+static struct sc5xx_gptimer *timer_clock, *timer_event;
 
 void __init sc59x_init_irq(void)
 {
@@ -474,7 +474,7 @@ static int __init spu_init(void)
 }
 arch_initcall(spu_init);
 
-void __init setup_gptimer(struct sc59x_gptimer *timer)
+void __init setup_gptimer(struct sc5xx_gptimer *timer)
 {
 	int id = timer->id;
 
@@ -589,7 +589,7 @@ static struct irqaction gptmr_irq = {
 };
 
 static struct clock_event_device clockevent_gptmr = {
-	.name           = "sc59x_gptimer0",
+	.name           = "sc5xx_gptimer0",
 	.rating         = 300,
 	.shift          = 32,
 	.features       = CLOCK_EVT_FEAT_PERIODIC,
@@ -614,12 +614,12 @@ static void __init gptmr_clockevent_init(struct clock_event_device *evt)
 	clockevents_register_device(evt);
 }
 
-static struct sc59x_gptimer *sc59x_timer_of_init(struct device_node *node)
+static struct sc5xx_gptimer *sc59x_timer_of_init(struct device_node *node)
 {
 	void __iomem *base;
 	int irq;
 	int id;
-	struct sc59x_gptimer *timer = NULL;
+	struct sc5xx_gptimer *timer = NULL;
 
 	id = of_alias_get_id(node, "timer");
 	if (id < 0)
@@ -633,7 +633,7 @@ static struct sc59x_gptimer *sc59x_timer_of_init(struct device_node *node)
 	if (irq <= 0)
 		panic("Can't parse IRQ");
 
-	timer = kzalloc(sizeof(struct sc59x_gptimer), GFP_KERNEL);
+	timer = kzalloc(sizeof(struct sc5xx_gptimer), GFP_KERNEL);
 	if (!timer) {
 		pr_err("%s: no memory.\n", __func__);
 		return ERR_PTR(-ENOMEM);
