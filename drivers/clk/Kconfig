@@ -32,7 +32,7 @@ config COMMON_CLK_WM831X
 
 source "drivers/clk/versatile/Kconfig"
 
-config COMMON_CLK_ADI_SC59X
+config COMMON_CLK_ADI_SC598
 	bool "Clock driver for ADI SC59X SoCs"
 	depends on OF && (ARCH_SC59X_64 || ARCH_SC59X)
 	help
