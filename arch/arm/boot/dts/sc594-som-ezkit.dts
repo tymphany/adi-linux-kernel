@@ -56,38 +56,10 @@
 	};
 
 	scb {
-		softconfig_default {
-			boot-pins = <&ssw0 0 GPIO_ACTIVE_LOW>,	 /* LED */
-			            <&ssw0 1 GPIO_ACTIVE_LOW>,	 /* LED */
-			            <&ssw0 2 GPIO_ACTIVE_LOW>,	 /* LED */
-			            <&ssw0 3 GPIO_ACTIVE_HIGH>,	 /* SPI2FLASH_CS */
-			            <&ssw0 4 GPIO_ACTIVE_LOW>,	 /* SPI2D2_D3_EN */
-			            <&ssw0 5 GPIO_ACTIVE_LOW>,	 /* UART0_EN */
-			            <&ssw0 6 GPIO_ACTIVE_LOW>,	 /* UART0_FLOW_EN */
-			            <&ssw0 7 GPIO_ACTIVE_HIGH>,	 /* OSPIFLASH_CS */
-			            <&ssw1 0 GPIO_ACTIVE_LOW>,	 /* EEPROM_EN */
-			            <&ssw1 1 GPIO_ACTIVE_HIGH>,	 /* PB_EN */
-			            <&ssw1 2 GPIO_ACTIVE_LOW>,	 /* MICROSD_SPI */
-			            <&ssw1 5 GPIO_ACTIVE_LOW>,	 /* ADAU_RESET */
-			            <&ssw1 6 GPIO_ACTIVE_HIGH>,	 /* ADAU1962_EN */
-			            <&ssw1 7 GPIO_ACTIVE_HIGH>,	 /* ADAU1979_EN */
-			            <&ssw1 8 GPIO_ACTIVE_LOW>,	 /* OCTAL_SPI_CS_EN */
-			            <&ssw1 9 GPIO_ACTIVE_LOW>,	 /* SPDIF_DIGITAL_EN */
-			            <&ssw1 10 GPIO_ACTIVE_LOW>,	 /* SPDIF_OPTICAL_EN */
-			            <&ssw1 11 GPIO_ACTIVE_LOW>,	 /* AUDIO_JACK_SEL */
-			            <&ssw1 12 GPIO_ACTIVE_LOW>,	 /* MLB_EN */
-			            <&ssw1 13 GPIO_ACTIVE_LOW>,  /* ETH1_EN */
-			            <&ssw1 14 GPIO_ACTIVE_HIGH>, /* ETH1_RESET */
-			            <&ssw1 15 GPIO_ACTIVE_LOW>;  /* GIGE_RESET */
-
-			reboot-pins = <&ssw0 3 GPIO_ACTIVE_LOW>,	/* SP2IFLASH_CS */
-			              <&ssw0 4 GPIO_ACTIVE_LOW>;	/* SPI2D2_D3_EN */
-		};
 
 /* The button GPIO conflicts with OSPI0_D4 for this
 		button0: button@0 {
 			compatible = "adi,button-led";
-			en-pins = <&ssw1 1 GPIO_ACTIVE_LOW>;	/* PUSHBUTTON_EN
 			button_gpio = <48>; /* PD_00
 			led_gpio = <35>; /* PC_03 / LED9 / LED1_KIT
 		};
@@ -97,7 +69,6 @@
    possible trace noise/interference?
 		button1: button@1 {
 			compatible = "adi,button-led";
-			en-pins = <&ssw1 1 GPIO_ACTIVE_HIGH>; /* PUSHBUTTON_EN
 			button_gpio = <112>; /* PH_00
 			led_gpio = <34>; /* PC_02 / LED8 / LED2_KIT
 		};
@@ -324,6 +295,62 @@
 		gpio-controller;
 		#gpio-cells = <2>;
 		reg = <0x21>;
+
+		led1 {
+			gpio-hog;
+			gpios = <0 0x0>;
+			output-high;
+			line-name = "led1-en";
+		};
+
+		led2 {
+			gpio-hog;
+			gpios = <1 0x0>;
+			output-high;
+			line-name = "led2-en";
+		};
+
+		led3 {
+			gpio-hog;
+			gpios = <2 0x0>;
+			output-high;
+			line-name = "led3-en";
+		};
+
+		spi2d2-d3 {
+			gpio-hog;
+			gpios = <3 0x0>;
+			output-low;
+			line-name = "~spi2d2-d3-en";
+		};
+
+		spi2flash-cs {
+			gpio-hog;
+			gpios = <4 0x0>;
+			output-low;
+			line-name = "~spi2flash-cs";
+		};
+
+		uart0 {
+			gpio-hog;
+			gpios = <5 0x0>;
+			output-low;
+			line-name = "~uart0-en";
+		};
+
+		uart0-flow-en {
+			gpio-hog;
+			gpios = <6 0x0>;
+			output-high;
+			line-name = "~uart0-flow-en";
+		};
+
+		ospiflash-cs {
+			gpio-hog;
+			gpios = <7 0x0>;
+			output-low;
+			line-name = "~ospiflash-cs";
+		};
 	};
 
 	ssw1: gpio@0x22 {
@@ -331,20 +358,117 @@
 		gpio-controller;
 		#gpio-cells = <2>;
 		reg = <0x22>;
+
+		eeprom {
+			gpio-hog;
+			gpios = <0 0x0>;
+			output-low;
+			line-name = "eeprom-en";
+		};
+
+		pushbutton {
+			gpio-hog;
+			gpios = <1 0x0>;
+			output-low;
+			line-name = "pushbutton-en";
+		};
+
+		microsd {
+			gpio-hog;
+			gpios = <2 0x0>;
+			output-high;
+			line-name = "~microsd-spi";
+		};
+
+		adau-reset {
+			gpio-hog;
+			gpios = <5 0x0>;
+			output-low;
+			line-name = "adau1962-reset";
+		};
+
+		adau1962 {
+			gpio-hog;
+			gpios = <6 0x0>;
+			output-low;
+			line-name = "adau1962-en";
+		};
+
+		adau1979 {
+			gpio-hog;
+			gpios = <7 0x0>;
+			output-low;
+			line-name = "adau1979-en";
+		};
+
+		octal {
+			gpio-hog;
+			gpios = <8 0x0>;
+			output-low;
+			line-name = "octal-spi-cs-en";
+		};
+
+		spdif-dig {
+			gpio-hog;
+			gpios = <9 0x0>;
+			output-high;
+			line-name = "~spdif-digital-en";
+		};
+
+		spdif-opt {
+			gpio-hog;
+			gpios = <10 0x0>;
+			output-high;
+			line-name = "~spdif-optical-en";
+		};
+
+		audio-jack {
+			gpio-hog;
+			gpios = <11 0x0>;
+			output-high;
+			line-name = "audio-jack-sel";
+		};
+
+		mlb {
+			gpio-hog;
+			gpios = <12 0x0>;
+			output-high;
+			line-name = "~mlb-en";
+		};
+
+		eth1 {
+			gpio-hog;
+			gpios = <13 0x0>;
+			output-low;
+			line-name = "~eth1-en";
+		};
+
+		eth1-reset {
+			gpio-hog;
+			gpios = <14 0x0>;
+/* USB0 lines are shared with Eth1 so  Eth PHY must be held in reset
+   when using the USB */
+			output-low;
+			line-name = "~eth1-reset";
+		};
+
+		gige-reset {
+			gpio-hog;
+			gpios = <15 0x0>;
+			output-high;
+			line-name = "~gige-reset";
+		};
+
 	};
 
 	adau1979: adau1979@0x11 {
 		compatible = "adi,adau1977";
 		reg = <0x11>;
-		enable-pin = <&ssw1 7 GPIO_ACTIVE_LOW>; /* ADAU1979_EN */
-		/* reset-gpio = <&ssw1 5 GPIO_ACTIVE_LOW>;  ADAU_RESET */
 	};
 
 	adau1962: adau1962@0x4 {
 		compatible = "adi,adau1962";
 		reg = <0x4>;
-		enable-pin = <&ssw1 6 GPIO_ACTIVE_LOW>; /* ADAU1962_EN */
-		/* reset-gpio = <&ssw1 5 GPIO_ACTIVE_LOW>;  ADAU_RESET */
 	};
 };
 
@@ -363,7 +487,6 @@
 };
 
 &can0 {
-	/* enable-pin = <&ssw0 ? GPIO_ACTIVE_LOW>; CAN0_EN */
 	pinctrl-names = "default";
 	/*pinctrl-0 = <&can0_default>;*/
 	phy-name = "tja1055";
@@ -373,7 +496,6 @@
 };
 
 &can1 {
-	/* enable-pin = <&ssw0 ? GPIO_ACTIVE_LOW>; CAN1_EN */
 	pinctrl-names = "default";
 	/*pinctrl-0 = <&can1_default>;*/
 	phy-name = "tja1145";
