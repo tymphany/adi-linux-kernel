@@ -80,9 +80,13 @@ static int dwmac_adi_probe(struct platform_device *pdev)
 			regmap_write(regmap, ADI_SYSTEM_REG_EMAC0_EMACRESET, 0);
 			regmap_write(regmap, ADI_SYSTEM_REG_EMAC0_PHYISEL, val);
 			regmap_write(regmap, ADI_SYSTEM_REG_EMAC0_EMACRESET, 1);
+#ifdef CONFIG_ARCH_SC59X_64
 			regmap_write(regmap, ADI_SYSTEM_REG_EMAC0_ENDIANNESS, 0);
+#endif
 		}else if(emac_alias == 1){
+#ifdef CONFIG_ARCH_SC59X_64
 			regmap_write(regmap, ADI_SYSTEM_REG_EMAC1_ENDIANNESS, 0);
+#endif
 		}
 	}
 
