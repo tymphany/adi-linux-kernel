@@ -156,29 +156,6 @@ restart_out:
 	sc59x_restart(mode, cmd);
 }
 
-/**
- * Inactive all boot-pins from softconfig as listed in the board dts file
- */
-static int __init sc59x_softconfig_init(void)
-{
-	int ret = 0;
-	struct device_node *np;
-
-	if (!of_machine_is_compatible(sc59x_dt_board_compat[0]))
-		return -ENODEV;
-
-	np = of_find_node_by_name(NULL, "softconfig_default");
-	if (!np)
-		return -ENODEV;
-	printk("%s %p\n", __func__, np);
-	ret = softconfig_of_set_group_active_pins_output(
-						NULL, np, "boot-pins", false);
-	of_node_put(np);
-
-	return ret;
-}
-subsys_initcall_sync(sc59x_softconfig_init);
-
 DT_MACHINE_START(SC59X_DT, "SC59x-EZKIT (Device Tree Support)")
 	.map_io		= sc59x_map_io,
 	.init_early	= sc59x_init_early,

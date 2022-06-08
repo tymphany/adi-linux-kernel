@@ -10,6 +10,8 @@
 /dts-v1/;
 
 #include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pinctrl/adi-adsp.h>
+#include <dt-bindings/pinctrl/adi-adsp-sru.h>
 #include <dt-bindings/net/ti-dp83867.h>
 #include "sc59x.dtsi"
 
@@ -132,6 +134,7 @@
 			iram = <&sram1>;
 		};
 
+/*
 		lcd@0 {
 			compatible = "sc58x,lcd";
 			reg = <0x31040000 0xFF>;
@@ -144,15 +147,13 @@
 			pinctrl-1 = <&ppi0_16b>;
 			pinctrl-2 = <&ppi0_24b>;
 		};
+*/
 	};
 };
 
 &uart0 {
-	enable-pin = <&ssw0 5 GPIO_ACTIVE_LOW>;	/* UART0_EN */
-	hwflow-en-pin = <&ssw0 6 GPIO_ACTIVE_LOW>; /* UART0_FLOW_EN */
-	pinctrl-names = "default", "hwflow";
+	pinctrl-names = "default";
 	pinctrl-0 = <&uart0_default>;
-	pinctrl-1 = <&uart0_hwflow>;
 	status = "okay";
 };
 
@@ -364,7 +365,7 @@
 &can0 {
 	/* enable-pin = <&ssw0 ? GPIO_ACTIVE_LOW>; CAN0_EN */
 	pinctrl-names = "default";
-	pinctrl-0 = <&can0_default>;
+	/*pinctrl-0 = <&can0_default>;*/
 	phy-name = "tja1055";
 	phy-gpios = <&gpb 8 0>,		/* en PB8 */
 		    <&gpb 2 0x1>;	/* stb PB2, GPIO_ACTIVE_LOW */
@@ -374,13 +375,14 @@
 &can1 {
 	/* enable-pin = <&ssw0 ? GPIO_ACTIVE_LOW>; CAN1_EN */
 	pinctrl-names = "default";
-	pinctrl-0 = <&can1_default>;
+	/*pinctrl-0 = <&can1_default>;*/
 	phy-name = "tja1145";
 	phy-spibus = /bits/ 16 <0>;
 	phy-spiclk = <1000000>;
 	phy-spics = /bits/ 16 <44>;	/* GPIO_PC12 */
 	status = "disabled";
 };
+
 
 &emac0 {
 	snps,reset-active-low;
@@ -471,6 +473,7 @@
 	status = "okay";
 };
 
+/*
 &video_decoder {
 	pinctrl-names = "8bit", "16bit", "24bit";
 	pinctrl-0 = <&ppi0_8b>;
@@ -486,7 +489,10 @@
 	pinctrl-2 = <&ppi0_24b>;
 	status = "disabled";
 };
+*/
 
+
+/*
 &lp0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&lp0_default>;
@@ -498,20 +504,141 @@
 	pinctrl-0 = <&lp1_default>;
 	status = "okay";
 };
+*/
 
 &sram_mmap {
 	status = "disabled";
 };
 
+&pinctrl0 {
+	uart0_default: uart0_default_pins {
+		pins {
+			pinmux = <ADI_ADSP_PINMUX('A', 6, ADI_ADSP_PINFUNC_ALT1)>,
+					 <ADI_ADSP_PINMUX('A', 7, ADI_ADSP_PINFUNC_ALT1)>;
+		};
+	};
+	uart0_hwflow: uart0_hwflow_pins {
+		pins {
+			pinmux = <ADI_ADSP_PINMUX('A', 6, ADI_ADSP_PINFUNC_ALT1)>,
+					 <ADI_ADSP_PINMUX('A', 7, ADI_ADSP_PINFUNC_ALT1)>,
+					 <ADI_ADSP_PINMUX('A', 8, ADI_ADSP_PINFUNC_ALT1)>,
+					 <ADI_ADSP_PINMUX('A', 9, ADI_ADSP_PINFUNC_ALT1)>;
+		};
+	};
+	spi0_default: spi0_default_pins {
+		pins {
+			pinmux = <ADI_ADSP_PINMUX('A', 6, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('A', 7, ADI_ADSP_PINFUNC_ALT0)>,
+					 <ADI_ADSP_PINMUX('A', 8, ADI_ADSP_PINFUNC_ALT0)>;
+		};
+	};
+	spi1_default: spi1_default_pins {
+		pins {
+			pinmux = <ADI_ADSP_PINMUX('A', 10, ADI_ADSP_PINFUNC_ALT1)>,
+			         <ADI_ADSP_PINMUX('A', 11, ADI_ADSP_PINFUNC_ALT1)>,
+					 <ADI_ADSP_PINMUX('A', 12, ADI_ADSP_PINFUNC_ALT1)>;
+		};
+	};
+	spi2_quad: spi2_quad_pins {
+		pins {
+			pinmux = <ADI_ADSP_PINMUX('A', 0, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('A', 1, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('A', 2, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('A', 3, ADI_ADSP_PINFUNC_ALT0)>,
+					 <ADI_ADSP_PINMUX('A', 4, ADI_ADSP_PINFUNC_ALT0)>;
+		};
+	};
+	ospi_default: ospi_default_pins {
+		pins {
+			pinmux = <ADI_ADSP_PINMUX('C', 8, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('C', 9, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('C', 10, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('C', 11, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('C', 12, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('C', 13, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('C', 14, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('C', 15, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('D', 0, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('D', 1, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('D', 4, ADI_ADSP_PINFUNC_ALT2)>;
+		};
+	};
+	i2c2_pins: i2c2_default_pins {
+		pins {
+			pinmux = <ADI_ADSP_PINMUX('A', 14, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('A', 15, ADI_ADSP_PINFUNC_ALT0)>;
+		};
+	};
+	eth0_default: eth0_default_pins {
+		pins {
+			pinmux = <ADI_ADSP_PINMUX('H', 3, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('H', 4, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('H', 5, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('H', 6, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('H', 7, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('H', 8, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('H', 9, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('H', 10, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('H', 11, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('H', 12, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('H', 13, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('H', 14, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('H', 15, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('I', 0, ADI_ADSP_PINFUNC_ALT0)>;
+		};
+	};
+	eth1_default: eth1_default_pins {
+		pins {
+			pinmux = <ADI_ADSP_PINMUX('E', 11, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('E', 12, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('E', 13, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('E', 14, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('E', 15, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('F', 0, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('F', 1, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('F', 2, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('F', 3, ADI_ADSP_PINFUNC_ALT0)>;
+		};
+	};
+	mmc0_8bgrp: mmc0_8bgrp_pins {
+		pins {
+			pinmux = <ADI_ADSP_PINMUX('F', 2, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('F', 3, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('F', 4, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('F', 5, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('F', 6, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('F', 7, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('F', 8, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('F', 9, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('F', 10, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('F', 11, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('F', 12, ADI_ADSP_PINFUNC_ALT0)>;
+		};
+	};
+	usbc0_default: usbc0_default_pins {
+		pins {
+			pinmux = <ADI_ADSP_PINMUX('F', 3, ADI_ADSP_PINFUNC_ALT2)>,
+			         <ADI_ADSP_PINMUX('F', 4, ADI_ADSP_PINFUNC_ALT2)>,
+			         <ADI_ADSP_PINMUX('F', 5, ADI_ADSP_PINFUNC_ALT2)>,
+			         <ADI_ADSP_PINMUX('F', 6, ADI_ADSP_PINFUNC_ALT2)>,
+			         <ADI_ADSP_PINMUX('F', 7, ADI_ADSP_PINFUNC_ALT2)>,
+			         <ADI_ADSP_PINMUX('F', 8, ADI_ADSP_PINFUNC_ALT2)>,
+			         <ADI_ADSP_PINMUX('F', 9, ADI_ADSP_PINFUNC_ALT2)>,
+			         <ADI_ADSP_PINMUX('F', 10, ADI_ADSP_PINFUNC_ALT2)>,
+			         <ADI_ADSP_PINMUX('F', 11, ADI_ADSP_PINFUNC_ALT2)>,
+			         <ADI_ADSP_PINMUX('F', 12, ADI_ADSP_PINFUNC_ALT2)>,
+			         <ADI_ADSP_PINMUX('F', 13, ADI_ADSP_PINFUNC_ALT2)>,
+			         <ADI_ADSP_PINMUX('F', 14, ADI_ADSP_PINFUNC_ALT2)>;
+		};
+	};
+};
 
 &sru_ctrl_dai0 {
 	status = "okay";
-	has-extended;
 };
 
 &sru_ctrl_dai1 {
 	status = "okay";
-	has-extended;
 
 	sru_dai1: sru_dai1_mux {
 		route {

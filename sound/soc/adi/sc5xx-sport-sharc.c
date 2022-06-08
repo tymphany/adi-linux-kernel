@@ -26,7 +26,8 @@
 #include <linux/atomic.h>
 
 #include <linux/soc/adi/cpu.h>
-#include <linux/soc/adi/portmux.h>
+#include <linux/pinctrl/pinctrl.h>
+#include <linux/gpio.h>
 #include <sound/sc5xx-dai.h>
 #include <sound/pcm.h>
 #include <linux/rpmsg.h>

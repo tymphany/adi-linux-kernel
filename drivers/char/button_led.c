@@ -23,8 +23,8 @@
 #include <linux/miscdevice.h>
 #include <linux/types.h>
 
-#include <mach/portmux.h>
-#include <mach/gpio.h>
+#include <linux/pinctrl/pinctrl.h>
+#include <linux/gpio.h>
 
 #define DRIVER_NAME "button-led"
 
@@ -92,10 +92,12 @@ static int button_led_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "No led_gpio specified\n");
 			return -ENOENT;
 		}
+/*		
 		ret = softconfig_of_set_group_active_pins_output(&pdev->dev, node,
 						"en-pins", true);
 		if (ret)
 			return ret;
+*/
 	}
 #else
 	dev_err(&pdev->dev, "No button-led driver specified\n");
@@ -152,8 +154,10 @@ static int button_led_remove(struct platform_device *pdev)
 {
 	struct button_led *gpio_dev = platform_get_drvdata(pdev);
 
+/*
 	softconfig_of_set_group_active_pins_output(&pdev->dev,
 						        pdev->dev.of_node, "en-pins", false);
+*/
 	misc_deregister(&gpio_dev->mdev);
 	return 0;
 }
