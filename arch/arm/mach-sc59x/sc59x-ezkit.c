@@ -28,7 +28,6 @@ void pads_init(void)
 }
 EXPORT_SYMBOL(pads_init);
 
-#ifdef CONFIG_MACH_SC59X_DT
 static const char * const sc59x_dt_board_compat[] __initconst = {
 	"adi,sc59x",
 	NULL
@@ -156,23 +155,13 @@ restart_out:
 	sc59x_restart(mode, cmd);
 }
 
+extern void __init adsp_sc5xx_timer_core_init(void);
+
 DT_MACHINE_START(SC59X_DT, "SC59x-EZKIT (Device Tree Support)")
 	.map_io		= sc59x_map_io,
 	.init_early	= sc59x_init_early,
-	.init_time	= sc59x_timer_init,
+	.init_time	= adsp_sc5xx_timer_core_init,
 	.init_machine	= sc59x_init,
 	.dt_compat	= sc59x_dt_board_compat,
 	.restart        = sc59x_ezkit_restart,
 MACHINE_END
-
-#else
-MACHINE_START(SC59X, "SC59x-EZKIT")
-	.atag_offset	= 0x100,
-	.map_io		= sc59x_map_io,
-	.init_early	= sc59x_init_early,
-	.init_irq	= sc59x_init_irq,
-	.init_time	= sc59x_timer_init,
-	.init_machine	= sc59x_init,
-	.restart        = sc59x_restart,
-MACHINE_END
-#endif

@@ -28,10 +28,11 @@ static const struct of_device_id sc5xx_fixed_dt_ids[] = {
 	{}
 };
 
+//Manually calculate sclk0_0 as the clock framework is not yet alive
 static unsigned long get_sclk(void){
 	unsigned long sclk_rate;
 	struct device_node *np;
-	u32 sys_clkin0, df_div, vco_mult, sysclk0_div;
+	u32 sys_clkin0, df_div, vco_mult, sysclk0_div, sclk0_div;
 
 	for_each_matching_node(np, sc5xx_fixed_dt_ids){
 		if(strcmp(np->name, "sys-clkin0") == 0){
@@ -43,8 +44,9 @@ static unsigned long get_sclk(void){
 	df_div = (ioread32(timer_clock->cgu0_ctl) & 0x1) == 0x1 ? 2 : 1;
 	vco_mult = ioread32(timer_clock->cgu0_ctl) >> 8 & 0x7F;
 	sysclk0_div = ioread32(timer_clock->cgu0_ctl + CGU_DIV) >> 8 & 0x1F;
+	sclk0_div = ioread32(timer_clock->cgu0_ctl + CGU_DIV) >> 5 & 0x7;
 
-	sclk_rate = (sys_clkin0 / df_div) * vco_mult / sysclk0_div;
+	sclk_rate = ((sys_clkin0 / df_div) * vco_mult / sysclk0_div) / sclk0_div;
 
 	return sclk_rate;
 }
@@ -158,7 +160,7 @@ irqreturn_t gptmr_interrupt(int irq, void *dev_id)
 }
 
 static struct irqaction gptmr_irq = {
-	.name           = "SC58x GPTimer0",
+	.name           = "SC5xx GPTimer0",
 	.flags          = IRQF_TIMER | IRQF_IRQPOLL,
 	.handler        = gptmr_interrupt,
 };

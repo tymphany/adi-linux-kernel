@@ -207,15 +207,15 @@
 		};
 
 		gptimer0: gptimer@0x31018060 {
-			compatible = "adi,sc59x-timer-core";
-			reg = <0x31018060 0x20>;
+			compatible = "adi,sc5xx-timer-core";
+			reg = <0x31018060 0x20>, <0x3108d000 0x10>;
 			interrupt-parent = <&gic>;
 			interrupts = <GIC_SPI 48 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
 		gptimer1: gptimer@0x31018080 {
-			compatible = "adi,sc59x-timer-core";
-			reg = <0x31018080 0x20>;
+			compatible = "adi,sc5xx-timer-core";
+			reg = <0x31018080 0x20>, <0x3108d000 0x10>;
 			interrupt-parent = <&gic>;
 			interrupts = <GIC_SPI 49 IRQ_TYPE_LEVEL_HIGH>;
 		};
@@ -439,14 +439,14 @@
 			status = "disabled";
 		};
 
-		sys_clkin0: oscillator@1 {
+		sys_clkin0: sys-clkin0@1 {
 			compatible = "fixed-clock";
 			#clock-cells = <0>;
 			clock-frequency = <25000000>;
 			clock-output-names = "sys_clkin0";
 		};
 
-		sys_clkin1: oscillator@2 {
+		sys_clkin1: sys-clkin1@2 {
 			compatible = "fixed-clock";
 			#clock-cells = <0>;
 			clock-frequency = <25000000>;

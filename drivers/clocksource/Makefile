@@ -88,4 +88,5 @@ obj-$(CONFIG_RISCV_TIMER)		+= timer-riscv.o
 obj-$(CONFIG_CSKY_MP_TIMER)		+= timer-mp-csky.o
 obj-$(CONFIG_GX6605S_TIMER)		+= timer-gx6605s.o
 obj-$(CONFIG_HYPERV_TIMER)		+= hyperv_timer.o
-obj-$(CONFIG_ARCH_SC58X)		+= timer-adi-adsp-sc5xx.o    
+obj-$(CONFIG_ARCH_SC58X)		+= timer-adi-adsp-sc5xx.o
+obj-$(CONFIG_ARCH_SC59X)		+= timer-adi-adsp-sc5xx.o
