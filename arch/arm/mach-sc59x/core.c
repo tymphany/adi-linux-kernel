@@ -46,6 +46,11 @@
 
 static struct sc5xx_gptimer *timer_clock, *timer_event;
 
+unsigned long get_sclk(void)
+{
+	return ((25000000 * 80) / 4) / 4;
+}
+
 void __init sc59x_init_irq(void)
 {
 	gic_init(__io_address(SC59X_GIC_PORT0), __io_address(SC59X_GIC_PORT1));
@@ -118,7 +123,7 @@ void __init sc59x_init_early(void)
 	/* Install our hook */
 	hook_fault_code(16 + 6, sc59x_abort_handler, SIGBUS, BUS_OBJERR,
 			"imprecise external abort");
-	sc59x_clock_init();
+	//sc59x_clock_init();
 }
 
 #if IS_ENABLED(CONFIG_VIDEO_ADI_CAPTURE)

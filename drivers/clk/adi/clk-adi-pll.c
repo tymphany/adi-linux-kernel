@@ -58,7 +58,7 @@ static long sc5xx_cgu_pll_round_rate(struct clk_hw *hw, unsigned long rate,
 
 	parent_hw = clk_hw_get_parent(hw);
 
-#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC59X_64)
+#if defined(CONFIG_ARCH_SC59X_64)
 	m = rate / prate / 2;
 #else
 	m = rate / prate;
@@ -105,7 +105,7 @@ static unsigned long sc5xx_cgu_pll_recalc_rate(struct clk_hw *hw,
 	if (m == 0)
 		m = pll->max;
 
-#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC59X_64)
+#if defined(CONFIG_ARCH_SC59X_64)
 	return parent_rate * m * 2;
 #else
 	return parent_rate * m;
@@ -119,7 +119,7 @@ static int sc5xx_cgu_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	struct clk_sc5xx_cgu_pll *pll = to_clk_sc5xx_cgu_pll(hw);
 	u32 m;
 
-#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC59X_64)
+#if defined(CONFIG_ARCH_SC59X_64)
 	m = (rate / parent_rate / 2) - pll->m_offset;
 #else
 	m = (rate / parent_rate) - pll->m_offset;

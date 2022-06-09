@@ -1779,7 +1779,7 @@ MODULE_AUTHOR("Graham Moore <grmoore@opensource.altera.com>");
 
 #if defined(CONFIG_ARCH_SC59X) || defined (CONFIG_ARCH_SC59X_64)
 
-static char * ospi_mode;
+static char * ospi_mode = "str"; //default to single if not specified
 static int ospi_id;
 
 module_param(ospi_mode, charp, 0644);
