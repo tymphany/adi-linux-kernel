@@ -389,7 +389,7 @@
 		adau-reset {
 			gpio-hog;
 			gpios = <5 0x0>;
-			output-low;
+			output-high;
 			line-name = "adau1962-reset";
 		};
 
@@ -476,6 +476,7 @@
 		compatible = "adi,adau1962";
 		reg = <0x4>;
 	};
+
 };
 
 &i2s4 {
