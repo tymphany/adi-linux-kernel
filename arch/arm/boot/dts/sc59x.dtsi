@@ -44,6 +44,8 @@
 		rtc0 = &rtc0;
 		i2s4 = &i2s4;
 		mmc0 = &mmc0;
+		sru0 = &sru_ctrl_dai0;
+		sru1 = &sru_ctrl_dai1;
 	};
 
 	cpus {
