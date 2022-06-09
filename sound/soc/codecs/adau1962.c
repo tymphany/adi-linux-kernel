@@ -780,6 +780,7 @@ int adau1962_probe(struct device *dev, struct regmap *regmap,
 	adau1962->constraints.list = adau1962_rates;
 	adau1962->constraints.count = ARRAY_SIZE(adau1962_rates);
 
+#ifndef CONFIG_ARCH_SC59X //Reset currently controlled by gpio hog
 	adau1962->reset_gpio = devm_gpiod_get(dev, "reset", GPIOD_OUT_HIGH);
 	if (IS_ERR(adau1962->reset_gpio)) {
 		if(PTR_ERR(adau1962->reset_gpio) == -EPROBE_DEFER) {
@@ -787,9 +788,11 @@ int adau1962_probe(struct device *dev, struct regmap *regmap,
 		}
 		dev_info(dev, "invalid or missing reset-gpios: %ld\n", PTR_ERR(adau1962->reset_gpio));
 	}
+#endif
 
 	dev_set_drvdata(dev, adau1962);
 
+#ifndef CONFIG_ARCH_SC59X //Reset currently controlled by gpio hog
 	if (!IS_ERR(adau1962->reset_gpio)) {
 		/* Hardware power-on reset */
 		gpiod_set_value_cansleep(adau1962->reset_gpio, 1);
@@ -799,6 +802,7 @@ int adau1962_probe(struct device *dev, struct regmap *regmap,
 			* requires 300ms to stabilize */
 		msleep(300);
 	}
+#endif
 
 	ret = regmap_update_bits(adau1962->regmap, ADAU1962_REG_PLL_CLK_CTRL0,
 				ADAU1962_PLL_CLK_PUP, ADAU1962_PLL_CLK_PUP);
