@@ -80,43 +80,6 @@ void sc59x_restart(enum reboot_mode mode, const char *cmd)
 	writel(1, __io_address(REG_RCU0_CTL));
 }
 
-
-#include <asm/siginfo.h>
-#include <asm/signal.h>
-
-
-static bool first_fault = true;
-
-static int sc59x_abort_handler(unsigned long addr, unsigned int fsr,
-		struct pt_regs *regs)
-{
-	if (fsr == 0x1c06 && first_fault) {
-		first_fault = false;
-
-		/*
-		 * These faults with code 0x1c06 happens for no good reason,
-		 * possibly left over from the CFE boot loader.
-		 */
-		pr_warn("External imprecise Data abort at addr=%#lx, fsr=%#x ignored.\n",
-				addr, fsr);
-
-		/* Returning non-zero causes fault display and panic */
-		return 0;
-	}
-
-	/* Others should cause a fault */
-	return 1;
-}
-
-/* Early initializations */
-void __init sc59x_init_early(void)
-{
-	/* Install our hook */
-	hook_fault_code(16 + 6, sc59x_abort_handler, SIGBUS, BUS_OBJERR,
-			"imprecise external abort");
-	//sc59x_clock_init();
-}
-
 #if IS_ENABLED(CONFIG_VIDEO_ADI_CAPTURE)
 #include <linux/videodev2.h>
 #include <media/adi/adi_capture.h>
@@ -414,18 +377,6 @@ static void sc59x_init_ethernet(void)
 	}
 }
 
-#if IS_ENABLED(CONFIG_SND_SC5XX_PCM)
-static struct platform_device sc59x_pcm = {
-	.name = "sc5xx-pcm-audio",
-	.id = -1,
-};
-#endif
-
-static struct platform_device *ezkit_devices[] __initdata = {
-#if IS_ENABLED(CONFIG_SND_SC5XX_PCM)
-	&sc59x_pcm,
-#endif
-};
 void __init sc59x_init(void)
 {
 #ifdef CONFIG_CACHE_L2X0
@@ -439,7 +390,6 @@ void __init sc59x_init(void)
 				sc59x_auxdata_lookup, NULL);
 #endif
 	sc59x_init_ethernet();
-	platform_add_devices(ezkit_devices, ARRAY_SIZE(ezkit_devices));
 }
 
 static void __iomem *spu_base;
