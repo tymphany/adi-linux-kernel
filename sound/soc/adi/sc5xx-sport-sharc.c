@@ -20,14 +20,13 @@
 #include <linux/dma-mapping.h>
 #include <linux/interrupt.h>
 #include <linux/module.h>
+#include <linux/of.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/kobject.h>
 #include <linux/atomic.h>
 
 #include <linux/soc/adi/cpu.h>
-#include <linux/pinctrl/pinctrl.h>
-#include <linux/gpio.h>
 #include <sound/sc5xx-dai.h>
 #include <sound/pcm.h>
 #include <linux/rpmsg.h>
