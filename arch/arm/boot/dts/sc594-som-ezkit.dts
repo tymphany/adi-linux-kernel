@@ -27,6 +27,7 @@
 		reg = <0xC3000000 0xF000000>;
 	};
 
+#ifdef IGNORE_FOR_NOW
 	reserved-memory {
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -55,6 +56,33 @@
 		};
 	};
 
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		rsc_tbl0: rsc_tbl0@20000000 {
+			reg = <0x20000000 0x400>; /*1KiB*/
+			no-map;
+		};
+
+		rsc_tbl1: rsc_tbl0@20000400 {
+			reg = <0x20000400 0x400>; /*1KiB*/
+			no-map;
+		};
+
+		sram_B1_unused@20000800 {
+			reg = <0x20000800 0x4800>; /*18KiB*/
+			no-map;
+		};
+
+		sharc_internal_icc@20005000 {
+			reg = <0x20005000 0x20000>; /*128KiB*/
+			no-map;
+		};
+	};
+#endif
+
 	scb {
 
 /* The button GPIO conflicts with OSPI0_D4 for this
@@ -74,28 +102,40 @@
 		};
 */
 
-		core1-rproc@0x3108c000 {
+		sharc0: core1-rproc@0x28240000 {
 			compatible = "adi,remoteproc";
-			reg = <0x3108c000 0x70>;
+			reg = <0x28240000 0x160000>,
+					<0x20000000 0x200000>;
 			core-id = <1>;
-			core-irq = <74>; /* was 77 */
+			core-irq = <74>; /* SOFT1 */
 			firmware-name = "adi_adsp_core1_fw.ldr";
-			interrupts = <GIC_SPI 165 IRQ_TYPE_EDGE_RISING>;
-
-			vdev-vring = <&vdev0vrings>;
-			memory-region = <&vdev0buffer>;
+			interrupts = <GIC_SPI 165 IRQ_TYPE_EDGE_RISING>; /* TRU0_SLV3 */
+			adi,rcu = <&rcu>;
+			adi,l1-da = <0x240000 0x3a0000>;
+			adi,l2-da = <0x20000000 0x20200000>;
+			/*adi,rsc-table = <&rsc_tbl0>;*/
+			adi,verify = <1>;
+			adi,tru = <&tru>;
+			adi,tru-master-id = <140>; /* trigger master SOFT4 */
+			status = "okay";
 		};
 
-		core2-rproc@0x3108c000 {
+		sharc1: core2-rproc@0x28a40000 {
 			compatible = "adi,remoteproc";
-			reg = <0x3108c000 0x70>;
+			reg = <0x28a40000 0x160000>,
+					<0x20000000 0x200000>;
 			core-id = <2>;
-			core-irq = <75>; /* was 78 */
+			core-irq = <75>; /* SOFT2 */
 			firmware-name = "adi_adsp_core2_fw.ldr";
-			interrupts = <GIC_SPI 165 IRQ_TYPE_EDGE_RISING>;
-
-			vdev-vring = <&vdev1vrings>;
-			memory-region = <&vdev1buffer>;
+			interrupts = <GIC_SPI 165 IRQ_TYPE_EDGE_RISING>; /* TRU0_SLV3 */
+			adi,rcu = <&rcu>;
+			adi,l1-da = <0x240000 0x3a0000>;
+			adi,l2-da = <0x20000000 0x20200000>;
+			/*adi,rsc-table = <&rsc_tbl1>;*/
+			adi,verify = <1>;
+			adi,tru = <&tru>;
+			adi,tru-master-id = <141>; /* trigger master SOFT5 */
+			status = "okay";
 		};
 
 		sound {
@@ -609,6 +649,7 @@
 };
 
 &icc0 {
+	adi,tru = <&tru>;
 	status = "okay";
 };
 
@@ -795,5 +836,20 @@
 				<DAI1_LOW_F          DAI1_PBEN06_I>,  /* set DAI1_PIN06 to input */
 				<DAI1_PB06_O_ABCDE   SPT4_BD0_I>;     /* route DAI1_PIN06 to SPT4_BD0 */
 		};
+	};
+};
+
+&tru {
+	rpmsg_to_a55: channel@0 {
+		adi,tru-master-id = <139>; /* trigger master SOFT3 */
+		adi,tru-slave-id = <160>; /* TRU0_IRQ3 */
+	};
+	rpmsg_to_sharc0: channel@1 {
+		adi,tru-master-id = <140>; /* trigger master SOFT4 */
+		adi,tru-slave-id = <164>; /* TRU0_IRQ7 */
+	};
+	rpmsg_to_sharc1: channel@2 {
+		adi,tru-master-id = <141>; /* trigger master SOFT5 */
+		adi,tru-slave-id = <168>; /* TRU0_IRQ11 */
 	};
 };

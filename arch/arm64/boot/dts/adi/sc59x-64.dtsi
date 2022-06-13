@@ -1227,7 +1227,7 @@
 			};
 		};
 
-		mdma: dma@0x310a7000 {
+		mdma: dma@0x3109a000 {
 			compatible = "adi,mdma-controller";
 			reg = <0x3109a000 0x1000>;
 			status = "okay";

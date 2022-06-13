@@ -1163,9 +1163,9 @@
 				adi,id = <40>;
 				// The destination interrupts are used for primary complete detection
 				interrupts = <GIC_SPI 169 IRQ_TYPE_LEVEL_HIGH>,
-					<GIC_SPI 221 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 222 IRQ_TYPE_LEVEL_HIGH>,
 					<GIC_SPI 168 IRQ_TYPE_LEVEL_HIGH>,
-					<GIC_SPI 222 IRQ_TYPE_LEVEL_HIGH>;
+					<GIC_SPI 221 IRQ_TYPE_LEVEL_HIGH>;
 				interrupt-names = "complete", "error", "complete2", "error2";
 				adi,src-offset = <0>;
 				adi,dest-offset = <0x80>;
