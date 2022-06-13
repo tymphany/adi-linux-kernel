@@ -38,7 +38,7 @@ static int dwmac_adi_probe(struct platform_device *pdev)
 		emac_alias = of_alias_get_id(np, "ethernet");
 		if (emac_alias < 0) {
 			dev_err(&pdev->dev, "Failed to get EMAC alias id\n");
-			return NULL;
+			return -ENODEV;
 		}
 
 		regmap = system_config_regmap_lookup_by_phandle(np, "adi,system-config");
