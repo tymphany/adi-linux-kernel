@@ -37,13 +37,6 @@
 
 #include "core.h"
 
-void __init sc57x_init_irq(void)
-{
-	gic_init(0, 32,
-		__io_address(SC57X_GIC_PORT0),
-		__io_address(SC57X_GIC_PORT1));
-}
-
 static struct map_desc sc57x_io_desc[] __initdata __maybe_unused = {
 	{
 		.virtual	=  IO_ADDRESS(SYS_MMR_BASE),
@@ -80,7 +73,6 @@ void sc57x_restart(enum reboot_mode mode, const char *cmd)
 
 #include <asm/siginfo.h>
 #include <asm/signal.h>
-
 
 static bool first_fault = true;
 

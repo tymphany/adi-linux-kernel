@@ -234,7 +234,7 @@ static const struct of_device_id sc5xx_timer_core_dt_ids[] = {
 int __init adsp_sc5xx_timer_core_init(void)
 {
 	struct device_node *np, *clocksrc_np = NULL, *clockevent_np = NULL;
-	int ret;
+	int ret = 0;
 
 	for_each_matching_node(np, sc5xx_timer_core_dt_ids){
 		if (!clocksrc_np && (of_alias_get_id(np, "timer") == TIMER_CLOCKSOURCE)) {
