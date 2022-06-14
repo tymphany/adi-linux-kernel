@@ -5,6 +5,8 @@
  *
  * Licensed under the GPL-2 or later.
  *
+ * todo list:
+ * - bushbutton GPIOs are all incorrect and commented out for now
  */
 
 /dts-v1/;
@@ -12,6 +14,8 @@
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/net/ti-dp83867.h>
+#include <dt-bindings/pinctrl/adi-adsp.h>
+#include <dt-bindings/pinctrl/adi-adsp-sru.h>
 #include "sc57x.dtsi"
 
 / {
@@ -28,56 +32,26 @@
 	};
 
 	scb {
-		softconfig_default {
-			boot-pins = <&ssw0 0 GPIO_ACTIVE_LOW>,	/* EEPROM_EN */
-			            <&ssw0 1 GPIO_ACTIVE_LOW>,	/* UART0_FLOW_EN */
-			            /* should enable UART0_EN by default in bootloader */
-			            <&ssw0 5 GPIO_ACTIVE_LOW>,	/* MLB3_EN */
-			            <&ssw0 6 GPIO_ACTIVE_LOW>,	/* CAN0_EN */
-			            <&ssw0 7 GPIO_ACTIVE_LOW>,	/* CAN1_EN */
-			            <&ssw0 8 GPIO_ACTIVE_LOW>,	/* ADAU1962_EN */
-			            <&ssw0 9 GPIO_ACTIVE_LOW>,	/* ADAU1979_EN */
-			            <&ssw0 11 GPIO_ACTIVE_LOW>,	/* SD_WP_EN */
-			            <&ssw0 12 GPIO_ACTIVE_LOW>,	/* SP2IFLASH_CS_EN */
-			            <&ssw0 13 GPIO_ACTIVE_LOW>,	/* SPI2D2_D3_EN */
-			            <&ssw0 14 GPIO_ACTIVE_LOW>,	/* SPDIF_OPTICAL_EN */
-			            <&ssw0 15 GPIO_ACTIVE_LOW>,	/* SPDIF_DIGITAL_EN */
-			            <&ssw1 0 GPIO_ACTIVE_LOW>,	/* PUSHBUTTON3_EN */
-			            <&ssw1 1 GPIO_ACTIVE_LOW>,	/* PUSHBUTTON2_EN */
-			            <&ssw1 2 GPIO_ACTIVE_LOW>,	/* PUSHBUTTON1_EN */
-			            <&ssw1 3 GPIO_ACTIVE_LOW>,	/* LEDS_EN */
-			            <&ssw1 4 GPIO_ACTIVE_LOW>,	/* FLG0_LOOP */
-			            <&ssw1 5 GPIO_ACTIVE_LOW>,	/* FLG1_LOOP */
-			            <&ssw1 6 GPIO_ACTIVE_LOW>,	/* FLG2_LOOP */
-			            <&ssw1 7 GPIO_ACTIVE_LOW>,	/* FLG3_LOOP */
-			            <&ssw1 8 GPIO_ACTIVE_LOW>,	/* AUAU1977_EN */
-			            <&ssw1 9 GPIO_ACTIVE_LOW>,	/* ADAU1977_FAULT_RST_EN */
-			            <&ssw1 10 GPIO_ACTIVE_LOW>,	/* THUMBWHEEL_OE */
-			            <&ssw1 11 GPIO_ACTIVE_LOW>;	/* ENGINE_RPM_OE */
-			reboot-pins = <&ssw0 12 GPIO_ACTIVE_LOW>, /* SP2IFLASH_CS_EN */
-			              <&ssw0 13 GPIO_ACTIVE_LOW>; /* SPI2D2_D3_EN */
-		};
-
 		button0: button@0 {
 			compatible = "adi,button-led";
-			en-pins = <&ssw1 2 GPIO_ACTIVE_LOW>,	/* PUSHBUTTON1_EN */
-			          <&ssw1 3 GPIO_ACTIVE_LOW>;	/* LEDS_EN */
-			button_gpio = <40>;
-			led_gpio = <77>;
+//			en-pins = <&ssw1 2 GPIO_ACTIVE_LOW>,	/* PUSHBUTTON1_EN */
+//			          <&ssw1 3 GPIO_ACTIVE_LOW>;	/* LEDS_EN */
+//			button_gpio = <40>;
+//			led_gpio = <77>;
 		};
 		button1: button@1 {
 			compatible = "adi,button-led";
-			en-pins = <&ssw1 1 GPIO_ACTIVE_LOW>,	/* PUSHBUTTON2_EN */
-			          <&ssw1 3 GPIO_ACTIVE_LOW>;	/* LEDS_EN */
-			button_gpio = <41>;
-			led_gpio = <9>;
+//			en-pins = <&ssw1 1 GPIO_ACTIVE_LOW>,	/* PUSHBUTTON2_EN */
+//			          <&ssw1 3 GPIO_ACTIVE_LOW>;	/* LEDS_EN */
+//			button_gpio = <41>;
+//			led_gpio = <9>;
 		};
 		button2: button@2 {
 			compatible = "adi,button-led";
-			en-pins = <&ssw1 0 GPIO_ACTIVE_LOW>,	/* PUSHBUTTON3_EN */
-			          <&ssw1 3 GPIO_ACTIVE_LOW>;	/* LEDS_EN */
-			button_gpio = <42>;
-			led_gpio = <65>;
+//			en-pins = <&ssw1 0 GPIO_ACTIVE_LOW>,	/* PUSHBUTTON3_EN */
+//			          <&ssw1 3 GPIO_ACTIVE_LOW>;	/* LEDS_EN */
+//			button_gpio = <42>;
+//			led_gpio = <65>;
 		};
 
 		core1-rproc@0x3108C000 {
@@ -105,11 +79,8 @@
 };
 
 &uart0 {
-	pinctrl-names = "default", "hwflow";
-	enable-pin = <&ssw0 2 GPIO_ACTIVE_LOW>;		/* UART0_EN */
-	hwflow-en-pin = <&ssw0 1 GPIO_ACTIVE_LOW>;	/* UART0_FLOW_EN */
+	pinctrl-names = "default";
 	pinctrl-0 = <&uart0_default>;
-	pinctrl-1 = <&uart0_hwflow>;
 	status = "okay";
 };
 
@@ -117,13 +88,14 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&spi0_default>;
 	status = "okay";
+	cs-gpios = <&gpc 6 GPIO_ACTIVE_LOW>;
 
-	spidev {
+	spidev@0 {
 		#address-cells = <1>;
 		size-cells = <1>;
 		compatible = "rohm,dh2228fv";
 		spi-max-frequency = <5000000>;
-		reg = <38>;
+		reg = <0>;
 	};
 };
 
@@ -131,20 +103,19 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&spi2_quad>;
 	status = "okay";
+	cs-gpios = <&gpb 15 GPIO_ACTIVE_LOW>;
 
 	flash: w25q128@0 {
 		#address-cells = <1>;
 		#size-cells = <1>;
 		compatible = "winbond,w25q128";
-		en-pins = <&ssw0 12 GPIO_ACTIVE_LOW>,	/* SP2IFLASH_CS_EN */
-		          <&ssw0 13 GPIO_ACTIVE_LOW>;	/* SPI2D2_D3_EN */
 		spi-max-frequency = <50000000>;
-		reg = <31>;
+		reg = <0>;
 		spi-cpol;
 		spi-cpha;
 		spi-tx-bus-width = <4>;
 		spi-rx-bus-width = <4>;
-		dma-mode;
+
 		partition@0 {
 			label = "uboot (spi)";
 			reg = <0x0 0x80000>;
@@ -162,29 +133,200 @@
 
 &i2c0 {
 	status = "okay";
+
 	ssw0: gpio@0x21 {
 		compatible = "microchip,mcp23017";
 		gpio-controller;
 		#gpio-cells = <2>;
 		reg = <0x21>;
+
+		eeprom-en {
+			gpio-hog;
+			gpios = <0 0>;
+			output-high;
+			line-name = "~eeprom_en";
+		};
+
+		uart0-flow-en {
+			gpio-hog;
+			gpios = <1 0>;
+			output-high;
+			line-name = "~uart0-flow-en";
+		};
+
+		mlb3-en {
+			gpio-hog;
+			gpios = <5 0>;
+			output-high;
+			line-name = "~mlb3-en";
+		};
+
+		can0-en {
+			gpio-hog;
+			gpios = <6 0>;
+			output-high;
+			line-name = "~can0-en";
+		};
+
+		can1-en {
+			gpio-hog;
+			gpios = <7 0>;
+			output-high;
+			line-name = "~can1-en";
+		};
+
+		adau1962-en {
+			gpio-hog;
+			gpios = <8 0>;
+			output-high;
+			line-name = "adau1962-en";
+		};
+
+		adau1979-en {
+			gpio-hog;
+			gpios = <9 0>;
+			output-high;
+			line-name = "adau1979-en";
+		};
+
+		sd-wp-en {
+			gpio-hog;
+			gpios = <11 0>;
+			output-high;
+			line-name = "~sd-wp-en";
+		};
+
+		spi2flash-cs-en {
+			gpio-hog;
+			gpios = <12 0>;
+			output-low;
+			line-name = "~spi2flash-cs-en";
+		};
+
+		spi2d2-d3-en {
+			gpio-hog;
+			gpios = <13 0>;
+			output-low;
+			line-name = "~spi2-d2-d3-en";
+		};
+
+		spdif-optical-en {
+			gpio-hog;
+			gpios = <14 0>;
+			output-high;
+			line-name = "~spdif-optical-en";
+		};
+
+		spdif-digital-en {
+			gpio-hog;
+			gpios = <15 0>;
+			output-high;
+			line-name = "~spdif-digital-en";
+		};
+
 	};
+
 	ssw1: gpio@0x22 {
 		compatible = "microchip,mcp23017";
 		gpio-controller;
 		#gpio-cells = <2>;
 		reg = <0x22>;
+
+		pushbutton3-en {
+			gpio-hog;
+			gpios = <0 0>;
+			output-high;
+			line-name = "~pushbutton3-en";
+		};
+
+		pushbutton2-en {
+			gpio-hog;
+			gpios = <1 0>;
+			output-high;
+			line-name = "~pushbutton2-en";
+		};
+
+		pushbutton1-en {
+			gpio-hog;
+			gpios = <2 0>;
+			output-high;
+			line-name = "~pushbutton1-en";
+		};
+
+		leds-en {
+			gpio-hog;
+			gpios = <3 0>;
+			output-high;
+			line-name = "~leds-en";
+		};
+
+		flag0-loop {
+			gpio-hog;
+			gpios = <4 0>;
+			output-high;
+			line-name = "~flag0-loop";
+		};
+
+		flag1-loop {
+			gpio-hog;
+			gpios = <5 0>;
+			output-high;
+			line-name = "~flag1-loop";
+		};
+
+		flag2-loop {
+			gpio-hog;
+			gpios = <6 0>;
+			output-high;
+			line-name = "~flag2-loop";
+		};
+
+		flag3-loop {
+			gpio-hog;
+			gpios = <7 0>;
+			output-high;
+			line-name = "~flag3-loop";
+		};
+
+		adau1977-en {
+			gpio-hog;
+			gpios = <8 0>;
+			output-high;
+			line-name = "adau1977-en";
+		};
+
+		adau1977-fault-rst-en {
+			gpio-hog;
+			gpios = <9 0>;
+			output-high;
+			line-name = "~adau1977-fault-rst-en";
+		};
+
+		thumbwheel-oe {
+			gpio-hog;
+			gpios = <10 0>;
+			output-high;
+			line-name = "~thumbwheel-oe";
+		};
+
+		engine-rpm-oe {
+			gpio-hog;
+			gpios = <11 0>;
+			output-high;
+			line-name = "~engine-rpm-oe";
+		};
+
 	};
+
 	adau1979: adau1979@0x11 {
 		compatible = "adi,adau1977";
 		reg = <0x11>;
-		enable-pin = <&ssw0 9 GPIO_ACTIVE_LOW>;	/* ADAU1979_EN */
-		reset-gpio = <&gpa 7 0>;
 	};
+
 	adau1962: adau1962@0x4 {
 		compatible = "adi,adau1962";
 		reg = <0x4>;
-		enable-pin = <&ssw0 8 GPIO_ACTIVE_LOW>;	/* ADAU1962_EN */
-		reset-gpio = <&gpa 6 0>;
+		reset-gpios = <&gpa 6 0>;
 	};
 };
 
@@ -211,7 +353,6 @@
 };
 
 &can0 {
-	enable-pin = <&ssw0 6 GPIO_ACTIVE_LOW>; /* CAN0_EN */
 	pinctrl-names = "default";
 	pinctrl-0 = <&can0_default>;
 	phy-name = "tja1055";
@@ -221,7 +362,6 @@
 };
 
 &can1 {
-	enable-pin = <&ssw0 7 GPIO_ACTIVE_LOW>;	/* CAN1_EN */
 	pinctrl-names = "default";
 	pinctrl-0 = <&can1_default>;
 	phy-name = "tja1145";
