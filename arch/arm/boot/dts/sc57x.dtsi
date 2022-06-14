@@ -191,15 +191,15 @@
 		};
 
 		gptimer0: gptimer@0x31018060 {
-			compatible = "adi,sc57x-timer-core";
-			reg = <0x31018060 0x20>;
+			compatible = "adi,sc5xx-timer-core";
+			reg = <0x31018060 0x20> <0x3108d000 0x10>;
 			interrupt-parent = <&gic>;
 			interrupts = <GIC_SPI 41 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
 		gptimer1: gptimer@0x31018080 {
-			compatible = "adi,sc57x-timer-core";
-			reg = <0x31018080 0x20>;
+			compatible = "adi,sc5xx-timer-core";
+			reg = <0x31018080 0x20> <0x3108d000 0x10>;
 			interrupt-parent = <&gic>;
 			interrupts = <GIC_SPI 42 IRQ_TYPE_LEVEL_HIGH>;
 		};

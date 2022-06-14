@@ -8,7 +8,6 @@
 
 #include <linux/init.h>
 #include <linux/device.h>
-#include <linux/dma-mapping.h>
 #include <linux/delay.h>
 #include <linux/interrupt.h>
 #include <linux/irqdomain.h>
@@ -18,8 +17,6 @@
 #include <linux/gfp.h>
 #include <linux/bitops.h>
 #include <linux/irqchip/arm-gic.h>
-#include <linux/clocksource.h>
-#include <linux/clockchips.h>
 #include <linux/of.h>
 #include <linux/of_irq.h>
 #include <linux/phy.h>
@@ -35,17 +32,10 @@
 #include <asm/mach/irq.h>
 #include <linux/soc/adi/hardware.h>
 #include <linux/soc/adi/cpu.h>
-#include <mach/dma.h>
 #include <mach/sc57x.h>
 #include <mach/irqs.h>
-#include <mach/clkdev.h>
 
 #include "core.h"
-
-#define TIMER_CLOCKSOURCE 1
-#define TIMER_CLOCKEVENT  0
-
-static struct sc57x_gptimer *timer_clock, *timer_event;
 
 void __init sc57x_init_irq(void)
 {
@@ -121,7 +111,6 @@ void __init sc57x_init_early(void)
 	/* Install our hook */
 	hook_fault_code(16 + 6, sc57x_abort_handler, SIGBUS, BUS_OBJERR,
 			"imprecise external abort");
-	sc57x_clock_init();
 }
 
 #if IS_ENABLED(CONFIG_VIDEO_ADI_CAPTURE)
@@ -462,208 +451,3 @@ static int __init spu_init(void)
 	return 0;
 }
 arch_initcall(spu_init);
-
-void __init setup_gptimer(struct sc57x_gptimer *timer)
-{
-	int id = timer->id;
-
-	disable_gptimers(1 << id);
-	set_gptimer_config(timer, TIMER_OUT_DIS
-			| TIMER_MODE_PWM_CONT | TIMER_PULSE_HI | TIMER_IRQ_PER);
-	set_gptimer_period(timer, 0xFFFFFFFF);
-	set_gptimer_pwidth(timer, 0xFFFFFFFE);
-
-	enable_gptimers(1 << id);
-}
-
-static u64 read_gptimer(struct clocksource *cs)
-{
-	return (u64)get_gptimer_count(timer_clock);
-}
-
-static struct clocksource cs_gptimer = {
-	.name           = "cs_gptimer",
-	.rating         = 350,
-	.read           = read_gptimer,
-	.mask           = CLOCKSOURCE_MASK(32),
-	.flags          = CLOCK_SOURCE_IS_CONTINUOUS,
-};
-
-static int __init cs_gptimer_init(void)
-{
-	setup_gptimer(timer_clock);
-
-	if (clocksource_register_hz(&cs_gptimer, get_sclk()))
-		panic("failed to register clocksource");
-
-	return 0;
-}
-
-static int gptmr_set_next_event(unsigned long cycles,
-		struct clock_event_device *evt)
-{
-	int id = timer_event->id;
-
-	disable_gptimers(1 << id);
-
-	/* it starts counting three SCLK cycles after the TIMENx bit is set */
-	set_gptimer_pwidth(timer_event, cycles - 3);
-	enable_gptimers(1 << id);
-	return 0;
-}
-
-static int gptmr_set_state_periodic(struct clock_event_device *evt)
-{
-	int id = timer_event->id;
-	disable_gptimers(1 << id);
-	set_gptimer_config(timer_event, TIMER_OUT_DIS
-			| TIMER_MODE_PWM_CONT | TIMER_PULSE_HI |
-			TIMER_IRQ_PER);
-
-	set_gptimer_period(timer_event, get_sclk() / HZ);
-	set_gptimer_pwidth(timer_event, get_sclk() / HZ - 1);
-	enable_gptimers(1 << id);
-	return 0;
-}
-
-static int gptmr_set_state_oneshot(struct clock_event_device *evt)
-{
-	int id = timer_event->id;
-
-	while(1);
-	disable_gptimers(1 << id);
-	set_gptimer_config(timer_event, TIMER_OUT_DIS | TIMER_MODE_PWM
-			| TIMER_PULSE_HI | TIMER_IRQ_WID_DLY);
-	set_gptimer_period(timer_event, 0);
-	return 0;
-}
-
-static int gptmr_set_state_shutdown(struct clock_event_device *evt)
-{
-	int id = timer_event->id;
-
-	disable_gptimers(1 << id);
-	return 0;
-}
-
-static void gptmr_ack(int id)
-{
-	set_gptimer_status(1 << id);
-}
-
-static u64 notrace gptmr_read_sched(void)
-{
-	return (u32)get_gptimer_count(timer_clock);
-}
-
-irqreturn_t gptmr_interrupt(int irq, void *dev_id)
-{
-	struct clock_event_device *evt = dev_id;
-	/*
-	 * We want to ACK before we handle so that we can handle smaller timer
-	 * intervals.  This way if the timer expires again while we're handling
-	 * things, we're more likely to see that 2nd int rather than swallowing
-	 * it by ACKing the int at the end of this handler.
-	 */
-	gptmr_ack(TIMER_CLOCKEVENT);
-	evt->event_handler(evt);
-	return IRQ_HANDLED;
-}
-
-static struct irqaction gptmr_irq = {
-	.name           = "SC57x GPTimer0",
-	.flags          = IRQF_TIMER | IRQF_IRQPOLL,
-	.handler        = gptmr_interrupt,
-};
-
-static struct clock_event_device clockevent_gptmr = {
-	.name           = "sc57x_gptimer0",
-	.rating         = 300,
-	.shift          = 32,
-	.features       = CLOCK_EVT_FEAT_PERIODIC,
-	.set_next_event = gptmr_set_next_event,
-	.set_state_periodic  = gptmr_set_state_periodic,
-	.set_state_oneshot = gptmr_set_state_oneshot,
-	.set_state_shutdown= gptmr_set_state_shutdown,
-};
-
-
-static void __init gptmr_clockevent_init(struct clock_event_device *evt)
-{
-	unsigned long clock_tick;
-
-	clock_tick = get_sclk();
-	evt->mult = div_sc(clock_tick, NSEC_PER_SEC, evt->shift);
-	evt->max_delta_ns = clockevent_delta2ns(-1, evt);
-	evt->min_delta_ns = clockevent_delta2ns(100, evt);
-
-	evt->cpumask = cpumask_of(0);
-
-	clockevents_register_device(evt);
-}
-
-static struct sc57x_gptimer *sc57x_timer_of_init(struct device_node *node)
-{
-	void __iomem *base;
-	int irq;
-	int id;
-	struct sc57x_gptimer *timer = NULL;
-
-	id = of_alias_get_id(node, "timer");
-	if (id < 0)
-		panic("Can't timer id");
-
-	base = of_iomap(node, 0);
-	if (!base)
-		panic("Can't remap registers");
-
-	irq = irq_of_parse_and_map(node, 0);
-	if (irq <= 0)
-		panic("Can't parse IRQ");
-
-	timer = kzalloc(sizeof(struct sc57x_gptimer), GFP_KERNEL);
-	if (!timer) {
-		pr_err("%s: no memory.\n", __func__);
-		return ERR_PTR(-ENOMEM);
-	}
-	timer->id = id;
-	timer->io_base = base;
-	timer->irq = irq;
-
-	return timer;
-}
-
-/*
- * Set up timer interrupt, and return the current time in seconds.
- */
-void __init sc57x_timer_init(void)
-{
-	struct device_node *np, *clocksrc_np = NULL, *clockevent_np = NULL;
-
-	for_each_compatible_node(np, NULL, "adi,sc57x-timer-core") {
-		if (!clocksrc_np &&
-			(of_alias_get_id(np, "timer") == TIMER_CLOCKSOURCE)) {
-			clocksrc_np = np;
-		}
-
-		if (!clockevent_np &&
-			(of_alias_get_id(np, "timer") == TIMER_CLOCKEVENT)) {
-			clockevent_np = np;
-		}
-
-	}
-
-	timer_clock = sc57x_timer_of_init(clocksrc_np);
-	timer_event = sc57x_timer_of_init(clockevent_np);
-
-	clockevent_gptmr.irq = timer_event->irq;
-
-	cs_gptimer_init();
-
-	sched_clock_register(gptmr_read_sched, 32, get_sclk());
-
-	setup_irq(timer_event->irq, &gptmr_irq);
-	gptmr_irq.dev_id = &clockevent_gptmr;
-	gptmr_clockevent_init(&clockevent_gptmr);
-
-}
