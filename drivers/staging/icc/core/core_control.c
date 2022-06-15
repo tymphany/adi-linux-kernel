@@ -20,7 +20,7 @@
 #include <linux/delay.h>
 #include <linux/soc/adi/hardware.h>
 
-#include <include/icc.h>
+#include "../include/icc.h"
 #include <linux/soc/adi/icc.h>
 
 #include <asm/io.h>

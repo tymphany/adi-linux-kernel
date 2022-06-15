@@ -22,7 +22,7 @@
 #include <linux/interrupt.h>
 #include <linux/of_irq.h>
 #include <asm/dma.h>
-#include <include/icc.h>
+#include "../include/icc.h"
 #include <linux/soc/adi/icc.h>
 #include <linux/soc/adi/hardware.h>
 #include <linux/soc/adi/cpu.h>
