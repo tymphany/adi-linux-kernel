@@ -593,6 +593,8 @@ config ARCH_SC57X
 	select SPARSE_IRQ
 	select ARCH_REQUIRE_GPIOLIB
 	select PINCTRL
+	select OF
+	select COMMON_CLK
 	help
 		This enables support for ADI Ltd sc57x board.
 

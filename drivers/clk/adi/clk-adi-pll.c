@@ -21,6 +21,7 @@ struct clk_sc5xx_cgu_pll {
 	u32 max;
 	u32 m_offset;
 	u8 shift;
+	bool half_m;
 };
 
 struct clk_sc5xx_cgu_pll *to_clk_sc5xx_cgu_pll(struct clk_hw *hw) {
@@ -58,11 +59,10 @@ static long sc5xx_cgu_pll_round_rate(struct clk_hw *hw, unsigned long rate,
 
 	parent_hw = clk_hw_get_parent(hw);
 
-#if defined(CONFIG_ARCH_SC59X_64)
-	m = rate / prate / 2;
-#else
-	m = rate / prate;
-#endif
+	if (pll->half_m)
+		m = rate / prate / 2;
+	else
+		m = rate / prate;
 
 	if (m > pll->max) {
 		// cannot scale this far, need bigger input
@@ -105,11 +105,10 @@ static unsigned long sc5xx_cgu_pll_recalc_rate(struct clk_hw *hw,
 	if (m == 0)
 		m = pll->max;
 
-#if defined(CONFIG_ARCH_SC59X_64)
-	return parent_rate * m * 2;
-#else
-	return parent_rate * m;
-#endif
+	if (pll->half_m)
+		return parent_rate * m * 2;
+	else
+		return parent_rate * m;
 
 }
 
@@ -119,11 +118,10 @@ static int sc5xx_cgu_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	struct clk_sc5xx_cgu_pll *pll = to_clk_sc5xx_cgu_pll(hw);
 	u32 m;
 
-#if defined(CONFIG_ARCH_SC59X_64)
-	m = (rate / parent_rate / 2) - pll->m_offset;
-#else
-	m = (rate / parent_rate) - pll->m_offset;
-#endif
+	if (pll->half_m)
+		m = (rate / parent_rate / 2) - pll->m_offset;
+	else
+		m = (rate / parent_rate) - pll->m_offset;
 
 	if (m >= pll->max)
 		m = 0;
@@ -144,7 +142,7 @@ static const struct clk_ops clk_sc5xx_cgu_pll_ops = {
 
 struct clk *sc5xx_cgu_pll(struct device *dev, const char *name,
 	const char *parent_name, void __iomem *base, u8 shift, u8 width,
-	u32 m_offset, spinlock_t *lock)
+	u32 m_offset, bool half_m, spinlock_t *lock)
 {
 	struct clk_sc5xx_cgu_pll *pll;
 	struct clk *clk;
@@ -168,6 +166,7 @@ struct clk *sc5xx_cgu_pll(struct device *dev, const char *name,
 	pll->mask = GENMASK(width-1, 0) << shift;
 	pll->max = pll->mask + 1;
 	pll->m_offset = m_offset;
+	pll->half_m = half_m;
 
 	clk = clk_register(dev, &pll->hw);
 	if (IS_ERR(clk)) {

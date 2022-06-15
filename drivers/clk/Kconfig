@@ -59,6 +59,15 @@ config COMMON_CLK_ADI_SC58X
 	  Modifying PLL configuration is not supported; that must be done prior
 	  to booting the kernel. Clock dividers after the PLLs may be configured.
 
+config COMMON_CLK_ADI_SC57X
+	bool "Clock driver for ADI SC57X SoCs"
+	depends on OF && ARCH_SC57X
+	help
+	  This driver supports the system clocks on Analog Devices SC57x-series
+	  SoCs. It includes CGU and CDU clocks and supports gating unused clocks.
+	  Modifying PLL configuration is not supported; that must be done prior
+	  to booting the kernel. Clock dividers after the PLLs may be configured.
+
 config CLK_HSDK
 	bool "PLL Driver for HSDK platform"
 	depends on OF || COMPILE_TEST

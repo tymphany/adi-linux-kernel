@@ -10,6 +10,7 @@
 #include <dt-bindings/input/adi_gp_counter.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/clock/adi-sc5xx-clock.h>
 
 / {
 	model = "ADI sc57x";
@@ -53,6 +54,7 @@
 			device_type = "cpu";
 			compatible = "arm,cortex-a5";
 			reg = <0x0>;
+			clocks = <&clk ADSP_SC57X_CLK_ARM>;
 		};
 	};
 
@@ -126,6 +128,8 @@
 			interrupts = <GIC_SPI 106 IRQ_TYPE_LEVEL_HIGH>,
 			             <GIC_SPI 107 IRQ_TYPE_LEVEL_HIGH>,
 			             <GIC_SPI 108 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&clk ADSP_SC57X_CLK_CGU0_SCLK0>;
+			clock-names = "sclk0";
 			status = "disabled";
 		};
 
@@ -137,6 +141,8 @@
 			interrupts = <GIC_SPI 109 IRQ_TYPE_LEVEL_HIGH>,
 			             <GIC_SPI 110 IRQ_TYPE_LEVEL_HIGH>,
 			             <GIC_SPI 111 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&clk ADSP_SC57X_CLK_CGU0_SCLK0>;
+			clock-names = "sclk0";
 			status = "disabled";
 		};
 
@@ -148,6 +154,8 @@
 			interrupts = <GIC_SPI 112 IRQ_TYPE_LEVEL_HIGH>,
 			             <GIC_SPI 113 IRQ_TYPE_LEVEL_HIGH>,
 			             <GIC_SPI 114 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&clk ADSP_SC57X_CLK_CGU0_SCLK0>;
+			clock-names = "sclk0";
 			status = "disabled";
 		};
 
@@ -158,6 +166,8 @@
 			reg = <0x31001400 0xFF>;
 			interrupts = <GIC_SPI 115 IRQ_TYPE_LEVEL_HIGH>;
 			clock-khz = <100>;
+			clocks = <&clk ADSP_SC57X_CLK_CGU0_SCLK0>;
+			clock-names = "sclk0";
 			status = "disabled";
 		};
 
@@ -168,6 +178,8 @@
 			reg = <0x31001500 0xFF>;
 			interrupts = <GIC_SPI 116 IRQ_TYPE_LEVEL_HIGH>;
 			clock-khz = <100>;
+			clocks = <&clk ADSP_SC57X_CLK_CGU0_SCLK0>;
+			clock-names = "sclk0";
 			status = "disabled";
 		};
 
@@ -178,6 +190,8 @@
 			reg = <0x31001600 0xFF>;
 			interrupts = <GIC_SPI 117 IRQ_TYPE_LEVEL_HIGH>;
 			clock-khz = <100>;
+			clocks = <&clk ADSP_SC57X_CLK_CGU0_SCLK0>;
+			clock-names = "sclk0";
 			status = "disabled";
 		};
 
@@ -186,20 +200,22 @@
 			reg = <0x31002000 0x80>, <0x31002080 0x80>;
 			interrupts = <GIC_SPI 61 IRQ_TYPE_LEVEL_HIGH>,
 					   <GIC_SPI 63 IRQ_TYPE_LEVEL_HIGH>;/* SPORT0 */
+			clocks = <&clk ADSP_SC57X_CLK_CGU0_SCLK0>;
+			clock-names = "sclk";
 			dma-channel = <0>, <1>;
 			status = "disabled";
 		};
 
 		gptimer0: gptimer@0x31018060 {
 			compatible = "adi,sc5xx-timer-core";
-			reg = <0x31018060 0x20> <0x3108d000 0x10>;
+			reg = <0x31018060 0x20>, <0x3108d000 0x10>;
 			interrupt-parent = <&gic>;
 			interrupts = <GIC_SPI 41 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
 		gptimer1: gptimer@0x31018080 {
 			compatible = "adi,sc5xx-timer-core";
-			reg = <0x31018080 0x20> <0x3108d000 0x10>;
+			reg = <0x31018080 0x20>, <0x3108d000 0x10>;
 			interrupt-parent = <&gic>;
 			interrupts = <GIC_SPI 42 IRQ_TYPE_LEVEL_HIGH>;
 		};
@@ -250,6 +266,8 @@
 			compatible = "arm,adi-watchdog";
 			reg = <0x31008000 0x10>;
 			timeout-sec = <30>;
+			clocks = <&clk ADSP_SC57X_CLK_CGU0_SCLK0>;
+			clock-names = "adi-watchdog";
 		};
 
 		emac0: ethernet@0x3100C000 {
@@ -262,6 +280,7 @@
 			snps,pbl = <8>;
 			snps,force_sf_dma_mode;
 			snps,perfect-filter-entries = <32>;
+			clocks = <&clk ADSP_SC57X_CLK_GIGE>;
 			clock-names = "stmmaceth";
 			status = "disabled";
 		};
@@ -291,6 +310,8 @@
 			interrupts = <GIC_SPI 101 IRQ_TYPE_LEVEL_HIGH>;
 			num-cs = <128>;
 			dma-channel = <22>, <23>;
+			clocks = <&clk ADSP_SC57X_CLK_CGU0_SCLK1>;
+			clock-names = "spi";
 			status = "disabled";
 		};
 
@@ -302,6 +323,8 @@
 			interrupts = <GIC_SPI 105 IRQ_TYPE_LEVEL_HIGH>;
 			num-cs = <128>;
 			dma-channel = <24>, <25>;
+			clocks = <&clk ADSP_SC57X_CLK_CGU0_SCLK1>;
+			clock-names = "spi";
 			status = "disabled";
 		};
 
@@ -313,6 +336,8 @@
 			interrupts = <GIC_SPI 71 IRQ_TYPE_LEVEL_HIGH>;
 			num-cs = <128>;
 			dma-channel = <26>, <27>;
+			clocks = <&clk ADSP_SC57X_CLK_CGU0_SCLK1>;
+			clock-names = "spi";
 			status = "disabled";
 		};
 
@@ -352,6 +377,31 @@
 				     <GIC_SPI 88 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 89 IRQ_TYPE_LEVEL_HIGH>;
 			status = "disabled";
+		};
+
+		sys_clkin0: sys-clkin0@1 {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <25000000>;
+			clock-output-names = "sys_clkin0";
+		};
+
+		sys_clkin1: sys-clkin1@2 {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <25000000>;
+			clock-output-names = "sys_clkin1";
+		};
+
+		clk: clocks@0x3108d000 {
+			compatible = "adi,sc57x-clocks";
+			reg = <0x3108d000 0x1000>,
+				<0x3108e000 0x1000>,
+				<0x3108f000 0x1000>;
+			#clock-cells = <1>;
+			clocks = <&sys_clkin0>, <&sys_clkin1>;
+			clock-names = "sys_clkin0", "sys_clkin1";
+			status = "okay";
 		};
 
 		pinctrl0: pinctrl@0 {

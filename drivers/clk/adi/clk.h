@@ -9,6 +9,6 @@
 
 struct clk *sc5xx_cgu_pll(struct device *dev, const char *name,
 	const char *parent_name, void __iomem *base, u8 shift, u8 width,
-	u32 m_offset, spinlock_t *lock);
+	u32 m_offset, bool half_m, spinlock_t *lock);
 
 #endif

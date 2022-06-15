@@ -169,9 +169,9 @@ static int sc594_clock_probe(struct platform_device *pdev) {
 
 	// VCO output inside PLL
 	clks[ADSP_SC594_CLK_CGU0_VCO_OUT] = sc5xx_cgu_pll(dev, "cgu0_vco", "cgu0_df",
-		cgu0 + CGU_CTL, CGU_MSEL_SHIFT, CGU_MSEL_WIDTH, 0, &cdu_lock);
+		cgu0 + CGU_CTL, CGU_MSEL_SHIFT, CGU_MSEL_WIDTH, 0, false, &cdu_lock);
 	clks[ADSP_SC594_CLK_CGU1_VCO_OUT] = sc5xx_cgu_pll(dev, "cgu1_vco", "cgu1_df",
-		cgu1 + CGU_CTL, CGU_MSEL_SHIFT, CGU_MSEL_WIDTH, 0, &cdu_lock);
+		cgu1 + CGU_CTL, CGU_MSEL_SHIFT, CGU_MSEL_WIDTH, 0, false, &cdu_lock);
 
 	// Final PLL output
 	clks[ADSP_SC594_CLK_CGU0_PLLCLK] = clk_register_fixed_factor(dev,
