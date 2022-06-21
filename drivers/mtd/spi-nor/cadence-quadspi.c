@@ -30,7 +30,15 @@
 #include <linux/timer.h>
 
 #if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC59X_64)
-	#include "adi-sc594-quadspi.h"
+#include "adi-sc594-quadspi.h"
+
+static char * ospi_mode = "str"; //default to single if not specified
+static int ospi_id;
+
+module_param(ospi_mode, charp, 0644);
+MODULE_PARM_DESC(ospi_mode, "OSPI State/Mode coming from bootloader");
+module_param(ospi_id, int, 0644);
+MODULE_PARM_DESC(ospi_id, "OSPI ID coming from bootloader");
 #endif
 
 #define CQSPI_NAME			"cadence-qspi"
@@ -428,17 +436,21 @@ static int cqspi_command_read(struct spi_nor *nor,
 			rxbuf = tempBuf;
 		}
 
-		// Set read instruction type to OPI
-		curVal = readl(reg_base + CQSPI_REG_RD_INSTR);
-		curVal |= (3UL << BITP_OSPI_DRICTL_INSTRTYP);
-		curVal &= ~(3UL << BITP_OSPI_DRICTL_ADDRTRNSFR);
-		curVal &= ~(3UL << BITP_OSPI_DRICTL_DATATRNSFR);
-		writel(curVal, reg_base + CQSPI_REG_RD_INSTR);
+		if(ospi_id != 0x195a9d){ //SC594, IS25LX256
+			//Octal read/write instructions are not currently working on the IS25LX256
 
-		// Enable 4 address bytes
-		reg |= (0x1 << CQSPI_REG_CMDCTRL_ADDR_EN_LSB);
-		reg |= ((3) << CQSPI_REG_CMDCTRL_ADD_BYTES_LSB);
-		//writel(op->addr.val, reg_base + CQSPI_REG_CMDADDRESS);
+			// Set read instruction type to OPI
+			curVal = readl(reg_base + CQSPI_REG_RD_INSTR);
+			curVal |= (3UL << BITP_OSPI_DRICTL_INSTRTYP);
+			curVal &= ~(3UL << BITP_OSPI_DRICTL_ADDRTRNSFR);
+			curVal &= ~(3UL << BITP_OSPI_DRICTL_DATATRNSFR);
+			writel(curVal, reg_base + CQSPI_REG_RD_INSTR);
+
+			// Enable 4 address bytes
+			reg |= (0x1 << CQSPI_REG_CMDCTRL_ADDR_EN_LSB);
+			reg |= ((3) << CQSPI_REG_CMDCTRL_ADD_BYTES_LSB);
+			//writel(op->addr.val, reg_base + CQSPI_REG_CMDADDRESS);
+		}
 
 		// Configure the dual opcode
 		curVal = readl(reg_base + CQSPI_REG_OE_LOWER);
@@ -511,18 +523,23 @@ static int cqspi_command_write(struct spi_nor *nor, const u8 opcode,
 	}
 
 	if(f_pdata->cadenceMode == CADENCE_OSPI_MODE){
-		// Set read instruction type to OPI
-		curVal = readl(reg_base + CQSPI_REG_RD_INSTR);
-		curVal |= (3UL << BITP_OSPI_DRICTL_INSTRTYP);
-		curVal &= ~(3UL << BITP_OSPI_DRICTL_ADDRTRNSFR);
-		curVal &= ~(3UL << BITP_OSPI_DRICTL_DATATRNSFR);
-		writel(curVal, reg_base + CQSPI_REG_RD_INSTR);
 
-		// Set write instruction type to OPI
-		curVal = readl(reg_base + CQSPI_REG_WR_INSTR);
-		curVal |= (3UL << BITP_OSPI_DWICTL_ADDRTRNSFR) |
-				  (3UL << BITP_OSPI_DWICTL_DATATRNSFR);
-		writel(curVal, reg_base + CQSPI_REG_WR_INSTR);
+		if(ospi_id != 0x195a9d){ //SC594, IS25LX256
+			//Octal read/write instructions are not currently working on the IS25LX256
+
+			// Set read instruction type to OPI
+			curVal = readl(reg_base + CQSPI_REG_RD_INSTR);
+			curVal |= (3UL << BITP_OSPI_DRICTL_INSTRTYP);
+			curVal &= ~(3UL << BITP_OSPI_DRICTL_ADDRTRNSFR);
+			curVal &= ~(3UL << BITP_OSPI_DRICTL_DATATRNSFR);
+			writel(curVal, reg_base + CQSPI_REG_RD_INSTR);
+
+			// Set write instruction type to OPI
+			curVal = readl(reg_base + CQSPI_REG_WR_INSTR);
+			curVal |= (3UL << BITP_OSPI_DWICTL_ADDRTRNSFR) |
+					  (3UL << BITP_OSPI_DWICTL_DATATRNSFR);
+			writel(curVal, reg_base + CQSPI_REG_WR_INSTR);
+		}
 
 		// Configure the dual opcode
 		curVal = readl(reg_base + CQSPI_REG_OE_LOWER);
@@ -586,21 +603,28 @@ static int cqspi_command_write_addr(struct spi_nor *nor,
 
 	if(f_pdata->cadenceMode == CADENCE_OSPI_MODE){
 
-		reg |= ((4 - 1) & CQSPI_REG_CMDCTRL_ADD_BYTES_MASK)
+		if(ospi_id == 0x195a9d){ //SC594, IS25LX256
+			reg |= ((nor->addr_width - 1) & CQSPI_REG_CMDCTRL_ADD_BYTES_MASK)
 				<< CQSPI_REG_CMDCTRL_ADD_BYTES_LSB;
+		}else{
+			//Octal read/write instructions are not currently working on the IS25LX256
 
-		// Set read instruction type to OPI
-		curVal = readl(reg_base + CQSPI_REG_RD_INSTR);
-		curVal |= (3UL << BITP_OSPI_DRICTL_INSTRTYP);
-		curVal &= ~(3UL << BITP_OSPI_DRICTL_ADDRTRNSFR);
-		curVal &= ~(3UL << BITP_OSPI_DRICTL_DATATRNSFR);
-		writel(curVal, reg_base + CQSPI_REG_RD_INSTR);
+			reg |= ((4 - 1) & CQSPI_REG_CMDCTRL_ADD_BYTES_MASK)
+					<< CQSPI_REG_CMDCTRL_ADD_BYTES_LSB;
 
-		// Set write instruction type to OPI
-		curVal = readl(reg_base + CQSPI_REG_WR_INSTR);
-		curVal |= (3UL << BITP_OSPI_DWICTL_ADDRTRNSFR) |
-				  (3UL << BITP_OSPI_DWICTL_DATATRNSFR);
-		writel(curVal, reg_base + CQSPI_REG_WR_INSTR);
+			// Set read instruction type to OPI
+			curVal = readl(reg_base + CQSPI_REG_RD_INSTR);
+			curVal |= (3UL << BITP_OSPI_DRICTL_INSTRTYP);
+			curVal &= ~(3UL << BITP_OSPI_DRICTL_ADDRTRNSFR);
+			curVal &= ~(3UL << BITP_OSPI_DRICTL_DATATRNSFR);
+			writel(curVal, reg_base + CQSPI_REG_RD_INSTR);
+
+			// Set write instruction type to OPI
+			curVal = readl(reg_base + CQSPI_REG_WR_INSTR);
+			curVal |= (3UL << BITP_OSPI_DWICTL_ADDRTRNSFR) |
+					  (3UL << BITP_OSPI_DWICTL_DATATRNSFR);
+			writel(curVal, reg_base + CQSPI_REG_WR_INSTR);
+		}
 
 		// Configure the dual opcode
 		curVal = readl(reg_base + CQSPI_REG_OE_LOWER);
@@ -1779,14 +1803,6 @@ MODULE_AUTHOR("Graham Moore <grmoore@opensource.altera.com>");
 
 #if defined(CONFIG_ARCH_SC59X) || defined (CONFIG_ARCH_SC59X_64)
 
-static char * ospi_mode = "str"; //default to single if not specified
-static int ospi_id;
-
-module_param(ospi_mode, charp, 0644);
-MODULE_PARM_DESC(ospi_mode, "OSPI State/Mode coming from bootloader");
-module_param(ospi_id, int, 0644);
-MODULE_PARM_DESC(ospi_id, "OSPI ID coming from bootloader");
-
 #define SCB5_SPI2_OSPI_REMAP 0x30400000
 
 void cadence_qspi_setup_octal_read(struct cqspi_flash_pdata *f_pdata){
@@ -1919,6 +1935,7 @@ void cadence_configure_opi_mode(struct spi_nor *nor, struct cqspi_flash_pdata *f
 
 			break;
 		case 0x195a9d: //IS25LX256
+			f_pdata->cadenceMode = CADENCE_OSPI_MODE;
 			f_pdata->use_opcode2 = 0;
 			f_pdata->use_opcode2_invert = 0;
 			f_pdata->stig_read_dummy = 0;
@@ -2006,12 +2023,12 @@ static void cqspi_adi_direct_read_execute(struct spi_nor *nor) {
 	}
 	writel(curVal, reg_base + CQSPI_REG_RD_INSTR);
 
-	if(f_pdata->cadenceMode == CADENCE_OSPI_MODE){ 
-		/* Update the DRIR register here to support Octal IO Read mode - Not supported by existing driver */
-		//curVal = readl(reg_base + CQSPI_REG_RD_INSTR);
-		//curVal &= ~(3UL << BITP_OSPI_DRICTL_INSTRTYP);
-		//curVal &= ~(3UL << BITP_OSPI_DRICTL_ADDRTRNSFR);
-		//writel(curVal, reg_base + CQSPI_REG_RD_INSTR);
+	if(f_pdata->cadenceMode == CADENCE_OSPI_MODE && ospi_id == 0x195a9d){ //SC594, IS25LX256
+		//Octal address and instruction are broken on IS25LX256 at the moment
+		curVal = readl(reg_base + CQSPI_REG_RD_INSTR);
+		curVal &= ~(3UL << BITP_OSPI_DRICTL_INSTRTYP);
+		curVal &= ~(3UL << BITP_OSPI_DRICTL_ADDRTRNSFR);
+		writel(curVal, reg_base + CQSPI_REG_RD_INSTR);
 	}
 }
 
@@ -2066,11 +2083,11 @@ static void cqspi_adi_direct_write_execute(struct spi_nor *nor) {
 	}
 	writel(curVal, reg_base + CQSPI_REG_WR_INSTR);
 
-	if(f_pdata->cadenceMode == CADENCE_OSPI_MODE){ 
-		/* Update the DRIR register here to support Octal IO Read mode - Not supported by existing driver */
-		//curVal = readl(reg_base + CQSPI_REG_WR_INSTR);
-		//curVal &= ~((3UL << BITP_OSPI_DRICTL_ADDRTRNSFR));
-		//writel(curVal, reg_base + CQSPI_REG_WR_INSTR);
+	if(f_pdata->cadenceMode == CADENCE_OSPI_MODE && ospi_id == 0x195a9d){ //SC594, IS25LX256
+		//Octal address is broken on IS25LX256 at the moment
+		curVal = readl(reg_base + CQSPI_REG_WR_INSTR);
+		curVal &= ~((3UL << BITP_OSPI_DRICTL_ADDRTRNSFR));
+		writel(curVal, reg_base + CQSPI_REG_WR_INSTR);
 	}
 }
 

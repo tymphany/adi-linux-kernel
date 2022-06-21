@@ -384,14 +384,14 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0x31027000 0x1000>,
-				  <0x30400000 0x1000>;
-			interrupts = <0 151 4>;
+				  <0x60000000 0x10000000>;
+			interrupts = <GIC_SPI 151 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&clk ADSP_SC594_CLK_OSPI>;
+			clock-names = "ospi";
 			cdns,is-decoded-cs;
 			cdns,fifo-depth = <128>;
 			cdns,fifo-width = <4>;
 			cdns,trigger-address = <0x00000000>;
-			clocks = <&clk ADSP_SC594_CLK_OSPI>;
-			clock-names = "ospi";
 			status = "disabled";
 		};
 
