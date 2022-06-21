@@ -342,10 +342,6 @@ static struct adi_display_config adi_display_data = {
 
 #ifdef CONFIG_OF
 static const struct of_dev_auxdata sc57x_auxdata_lookup[] __initconst = {
-	OF_DEV_AUXDATA("adi,adi2-pinctrl", 0, "pinctrl-adi2.0", NULL),
-	OF_DEV_AUXDATA("arm,adi-uart4", UART0_REVID, "adi-uart4.0", NULL),
-	OF_DEV_AUXDATA("arm,adi-watchdog", REG_WDOG0_CTL, "adi-watchdog.0", NULL),
-	OF_DEV_AUXDATA("adi,spi3", 0, "adi-spi3.2", NULL),
 #if IS_ENABLED(CONFIG_VIDEO_ADI_DISPLAY)
 	OF_DEV_AUXDATA("adi,disp", 0x3102D000, "adi_display.0", &adi_display_data),
 #endif
