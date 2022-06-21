@@ -93,6 +93,7 @@
 	spidev@0 {
 		#address-cells = <1>;
 		size-cells = <1>;
+		/* this is actually being used to control a tja1145 can transceiver */
 		compatible = "rohm,dh2228fv";
 		spi-max-frequency = <5000000>;
 		reg = <0>;
@@ -461,6 +462,160 @@
 
 &sram_mmap {
 	status = "okay";
+};
+
+&pinctrl0 {
+	uart0_default: uart0_default_pins {
+		pins {
+			pinmux = <ADI_ADSP_PINMUX('F', 8, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('F', 9, ADI_ADSP_PINFUNC_ALT0)>;
+		};
+	};
+	uart0_hwflow: uart0_hwflow_pins {
+		pins {
+			pinmux = <ADI_ADSP_PINMUX('F', 8, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('F', 9, ADI_ADSP_PINFUNC_ALT0)>,
+					 <ADI_ADSP_PINMUX('D', 5, ADI_ADSP_PINFUNC_ALT2)>,
+					 <ADI_ADSP_PINMUX('D', 6, ADI_ADSP_PINFUNC_ALT2)>;
+		};
+	};
+	eth0_default: eth0_default_pins {
+		pins {
+			pinmux = <ADI_ADSP_PINMUX('B', 7, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('B', 8, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('B', 6, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('B', 5, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('A', 13, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('A', 12, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('A', 14, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('A', 15, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('B', 9, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('B', 4, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('B', 0, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('B', 2, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('A', 10, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('A', 11, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('B', 0, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('B', 2, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('B', 9, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('B', 4, ADI_ADSP_PINFUNC_ALT0)>;
+		};
+	};
+	spi0_default: spi0_default_pins {
+		pins {
+			pinmux = <ADI_ADSP_PINMUX('C', 1, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('C', 2, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('C', 3, ADI_ADSP_PINFUNC_ALT0)>,
+					 <ADI_ADSP_PINMUX('C', 6, ADI_ADSP_PINFUNC_GPIO)>;
+		};
+	};
+	spi2_quad: spi2_quad_pins {
+		pins {
+			pinmux = <ADI_ADSP_PINMUX('B', 14, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('B', 10, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('B', 11, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('B', 12, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('B', 13, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('B', 15, ADI_ADSP_PINFUNC_GPIO)>;
+		};
+	};
+	can0_default: can0_default_pins {
+		pins {
+			pinmux = <ADI_ADSP_PINMUX('C', 12, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('C', 13, ADI_ADSP_PINFUNC_ALT0)>;
+
+		};
+	};
+	can1_default: can1_default_pins {
+		pins {
+			pinmux = <ADI_ADSP_PINMUX('C', 14, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('C', 15, ADI_ADSP_PINFUNC_ALT0)>;
+		};
+	};
+	mmc0_default: mmc0_default_pins {
+		pins {
+			pinmux = <ADI_ADSP_PINMUX('E', 12, ADI_ADSP_PINFUNC_ALT0)>,
+                     <ADI_ADSP_PINMUX('E', 13, ADI_ADSP_PINFUNC_ALT0)>,
+                     <ADI_ADSP_PINMUX('E', 14, ADI_ADSP_PINFUNC_ALT0)>,
+                     <ADI_ADSP_PINMUX('E', 15, ADI_ADSP_PINFUNC_ALT0)>,
+                     <ADI_ADSP_PINMUX('F', 0, ADI_ADSP_PINFUNC_ALT0)>,
+                     <ADI_ADSP_PINMUX('F', 1, ADI_ADSP_PINFUNC_ALT0)>,
+                     <ADI_ADSP_PINMUX('F', 2, ADI_ADSP_PINFUNC_ALT0)>,
+                     <ADI_ADSP_PINMUX('F', 3, ADI_ADSP_PINFUNC_ALT0)>,
+                     <ADI_ADSP_PINMUX('F', 4, ADI_ADSP_PINFUNC_ALT0)>,
+                     <ADI_ADSP_PINMUX('F', 7, ADI_ADSP_PINFUNC_ALT2)>,
+                     <ADI_ADSP_PINMUX('C', 12, ADI_ADSP_PINFUNC_ALT1)>;
+		};
+	};
+	ppi0_8b: ppi0_8b_pins {
+		pins {
+			pinmux = <ADI_ADSP_PINMUX('D', 10, ADI_ADSP_PINFUNC_ALT1)>,
+                     <ADI_ADSP_PINMUX('D', 11, ADI_ADSP_PINFUNC_ALT1)>,
+                     <ADI_ADSP_PINMUX('D', 12, ADI_ADSP_PINFUNC_ALT1)>,
+                     <ADI_ADSP_PINMUX('D', 13, ADI_ADSP_PINFUNC_ALT1)>,
+                     <ADI_ADSP_PINMUX('D', 14, ADI_ADSP_PINFUNC_ALT1)>,
+                     <ADI_ADSP_PINMUX('D', 15, ADI_ADSP_PINFUNC_ALT1)>,
+                     <ADI_ADSP_PINMUX('C', 5, ADI_ADSP_PINFUNC_ALT1)>,
+                     <ADI_ADSP_PINMUX('D', 9, ADI_ADSP_PINFUNC_ALT1)>,
+                     <ADI_ADSP_PINMUX('C', 11, ADI_ADSP_PINFUNC_ALT1)>,
+                     <ADI_ADSP_PINMUX('C', 14, ADI_ADSP_PINFUNC_ALT1)>,
+                     <ADI_ADSP_PINMUX('C', 15, ADI_ADSP_PINFUNC_ALT1)>,
+                     <ADI_ADSP_PINMUX('C', 6, ADI_ADSP_PINFUNC_ALT2)>;
+		};
+	};
+	ppi0_16b: ppi0_16b_pins {
+		pins {
+			pinmux = <ADI_ADSP_PINMUX('D', 10, ADI_ADSP_PINFUNC_ALT1)>,
+                     <ADI_ADSP_PINMUX('D', 11, ADI_ADSP_PINFUNC_ALT1)>,
+                     <ADI_ADSP_PINMUX('D', 12, ADI_ADSP_PINFUNC_ALT1)>,
+                     <ADI_ADSP_PINMUX('D', 13, ADI_ADSP_PINFUNC_ALT1)>,
+                     <ADI_ADSP_PINMUX('D', 14, ADI_ADSP_PINFUNC_ALT1)>,
+                     <ADI_ADSP_PINMUX('D', 15, ADI_ADSP_PINFUNC_ALT1)>,
+                     <ADI_ADSP_PINMUX('C', 5, ADI_ADSP_PINFUNC_ALT1)>,
+                     <ADI_ADSP_PINMUX('D', 9, ADI_ADSP_PINFUNC_ALT1)>,
+                     <ADI_ADSP_PINMUX('C', 1, ADI_ADSP_PINFUNC_ALT1)>,
+                     <ADI_ADSP_PINMUX('C', 2, ADI_ADSP_PINFUNC_ALT1)>,
+                     <ADI_ADSP_PINMUX('C', 3, ADI_ADSP_PINFUNC_ALT1)>,
+                     <ADI_ADSP_PINMUX('C', 4, ADI_ADSP_PINFUNC_ALT1)>,
+                     <ADI_ADSP_PINMUX('E', 0, ADI_ADSP_PINFUNC_ALT1)>,
+                     <ADI_ADSP_PINMUX('C', 7, ADI_ADSP_PINFUNC_ALT1)>,
+                     <ADI_ADSP_PINMUX('C', 8, ADI_ADSP_PINFUNC_ALT1)>,
+                     <ADI_ADSP_PINMUX('E', 1, ADI_ADSP_PINFUNC_ALT1)>,
+                     <ADI_ADSP_PINMUX('C', 11, ADI_ADSP_PINFUNC_ALT1)>,
+                     <ADI_ADSP_PINMUX('C', 14, ADI_ADSP_PINFUNC_ALT1)>,
+                     <ADI_ADSP_PINMUX('C', 15, ADI_ADSP_PINFUNC_ALT1)>,
+                     <ADI_ADSP_PINMUX('C', 6, ADI_ADSP_PINFUNC_ALT2)>;
+		};
+	};
+	cnt0_default: cnt0_default_pins {
+		pinmux = <ADI_ADSP_PINMUX('D', 7, ADI_ADSP_PINFUNC_ALT1)>,
+		         <ADI_ADSP_PINMUX('E', 13, ADI_ADSP_PINFUNC_ALT2)>,
+		         <ADI_ADSP_PINMUX('D', 8, ADI_ADSP_PINFUNC_ALT1)>;
+	};
+	lp0_default: lp0_default_pins {
+		pinmux = <ADI_ADSP_PINMUX('E', 4, ADI_ADSP_PINFUNC_ALT0)>,
+		         <ADI_ADSP_PINMUX('E', 5, ADI_ADSP_PINFUNC_ALT0)>,
+		         <ADI_ADSP_PINMUX('E', 6, ADI_ADSP_PINFUNC_ALT0)>,
+		         <ADI_ADSP_PINMUX('E', 7, ADI_ADSP_PINFUNC_ALT0)>,
+		         <ADI_ADSP_PINMUX('E', 8, ADI_ADSP_PINFUNC_ALT0)>,
+		         <ADI_ADSP_PINMUX('E', 9, ADI_ADSP_PINFUNC_ALT0)>,
+		         <ADI_ADSP_PINMUX('E', 10, ADI_ADSP_PINFUNC_ALT0)>,
+		         <ADI_ADSP_PINMUX('E', 11, ADI_ADSP_PINFUNC_ALT0)>,
+		         <ADI_ADSP_PINMUX('E', 2, ADI_ADSP_PINFUNC_ALT0)>,
+		         <ADI_ADSP_PINMUX('E', 3, ADI_ADSP_PINFUNC_ALT0)>;
+	};
+	lp1_default: lp1_default_pins {
+		pinmux = <ADI_ADSP_PINMUX('D', 10, ADI_ADSP_PINFUNC_ALT0)>,
+		         <ADI_ADSP_PINMUX('D', 11, ADI_ADSP_PINFUNC_ALT0)>,
+		         <ADI_ADSP_PINMUX('D', 12, ADI_ADSP_PINFUNC_ALT0)>,
+		         <ADI_ADSP_PINMUX('D', 13, ADI_ADSP_PINFUNC_ALT0)>,
+		         <ADI_ADSP_PINMUX('D', 14, ADI_ADSP_PINFUNC_ALT0)>,
+		         <ADI_ADSP_PINMUX('D', 15, ADI_ADSP_PINFUNC_ALT0)>,
+		         <ADI_ADSP_PINMUX('A', 9, ADI_ADSP_PINFUNC_ALT1)>,
+		         <ADI_ADSP_PINMUX('D', 9, ADI_ADSP_PINFUNC_ALT0)>,
+		         <ADI_ADSP_PINMUX('B', 3, ADI_ADSP_PINFUNC_ALT2)>,
+		         <ADI_ADSP_PINMUX('B', 1, ADI_ADSP_PINFUNC_ALT2)>;
+	};
 };
 
 &sru_ctrl_dai0 {

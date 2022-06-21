@@ -23,7 +23,7 @@
 #include <linux/spi/flash.h>
 #include <linux/mtd/spi-nor.h>
 
-#if defined (CONFIG_ARCH_SC58X) || defined (CONFIG_ARCH_SC57X)
+#if defined (CONFIG_ARCH_SC58X)
 #include <mach/gpio.h>
 #endif
 

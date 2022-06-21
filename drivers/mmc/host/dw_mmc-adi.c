@@ -20,7 +20,8 @@
 #include <linux/of.h>
 #include <linux/pm.h>
 #include <linux/soc/adi/cpu.h>
-#include <mach/gpio.h>
+#include <linux/pinctrl/consumer.h>
+#include <linux/pinctrl/pinctrl.h>
 
 #include "dw_mmc.h"
 #include "dw_mmc-pltfm.h"
