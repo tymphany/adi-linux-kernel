@@ -33,7 +33,6 @@
 #include <linux/soc/adi/hardware.h>
 #include <linux/soc/adi/cpu.h>
 #include <mach/sc57x.h>
-#include <mach/irqs.h>
 
 #include "core.h"
 
