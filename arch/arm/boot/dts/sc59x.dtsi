@@ -346,9 +346,9 @@
 			#size-cells = <0>;
 			compatible = "adi,spi3";
 			reg = <0x3102e000 0xFF>;
-			interrupts = <GIC_SPI 109 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 124 IRQ_TYPE_LEVEL_HIGH>;
 			dma-channel = <22>, <23>;
-			clocks = <&clk ADSP_SC594_CLK_CGU0_SCLK1>;
+			clocks = <&clk ADSP_SC594_CLK_SPI>;
 			clock-names = "spi";
 			status = "disabled";
 		};
@@ -358,10 +358,10 @@
 			#size-cells = <0>;
 			compatible = "adi,spi3";
 			reg = <0x3102f000 0xFF>;
-			interrupts = <GIC_SPI 113 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 128 IRQ_TYPE_LEVEL_HIGH>;
 			dma-channel = <24>, <25>;
 			dmas = <&spi_cluster 24>, <&spi_cluster 25>;
-			clocks = <&clk ADSP_SC594_CLK_CGU0_SCLK1>;
+			clocks = <&clk ADSP_SC594_CLK_SPI>;
 			clock-names = "spi";
 			status = "disabled";
 		};
@@ -374,7 +374,7 @@
 			interrupts = <GIC_SPI 132 IRQ_TYPE_LEVEL_HIGH>;
 			dmas = <&spi_cluster 26>, <&spi_cluster 27>;
 			dma-names = "tx", "rx";
-			clocks = <&clk ADSP_SC594_CLK_CGU0_SCLK1>;
+			clocks = <&clk ADSP_SC594_CLK_SPI>;
 			clock-names = "spi";
 			status = "disabled";
 		};

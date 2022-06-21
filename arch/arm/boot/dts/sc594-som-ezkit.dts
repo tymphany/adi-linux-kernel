@@ -259,6 +259,7 @@
 		spi-cpol;
 		spi-cpha;
 		spi-rx-bus-width = <4>;
+		/*adi,enable-dma;*/
 
 		partition@0 {
 			label = "unallocated (is25lp512)";
@@ -363,18 +364,18 @@
 			line-name = "led3-en";
 		};
 
-		spi2d2-d3 {
+		spi2flash-cs {
 			gpio-hog;
 			gpios = <3 0x0>;
 			output-low;
-			line-name = "~spi2d2-d3-en";
+			line-name = "~spi2flash-cs";
 		};
 
-		spi2flash-cs {
+		spi2d2-d3 {
 			gpio-hog;
 			gpios = <4 0x0>;
 			output-low;
-			line-name = "~spi2flash-cs";
+			line-name = "~spi2d2-d3-en";
 		};
 
 		uart0 {
