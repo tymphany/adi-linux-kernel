@@ -281,7 +281,10 @@
 		#size-cells = <1>;
 		compatible = "is25lx256";
 		reg = <0>;
-		spi-max-frequency = <112000000>;
+
+		/* Adjust as needed, depends on board signal integrity
+		    -- I was seeing issues with data writes at faster speeds */
+		spi-max-frequency = <36000000>;
 
 		/*m25p,fast-read;*/
 
