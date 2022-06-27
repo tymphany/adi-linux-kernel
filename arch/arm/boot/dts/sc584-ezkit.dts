@@ -27,37 +27,6 @@
 	};
 
 	scb {
-		softconfig_default {
-			boot-pins = <&ssw0 0 GPIO_ACTIVE_LOW>,	/* EEPROM_EN */
-			            <&ssw0 1 GPIO_ACTIVE_LOW>,	/* UART0_FLOW_EN */
-			            /* should enable UART0_EN by default in bootloader */
-			            <&ssw0 3 GPIO_ACTIVE_LOW>,	/* ETH0_EN */
-			            <&ssw0 4 GPIO_ACTIVE_LOW>,	/* ETH1_EN */
-			            <&ssw0 5 GPIO_ACTIVE_LOW>,	/* MLB3_EN */
-			            <&ssw0 6 GPIO_ACTIVE_LOW>,	/* CAN0_EN */
-			            <&ssw0 7 GPIO_ACTIVE_LOW>,	/* CAN1_EN */
-			            <&ssw0 8 GPIO_ACTIVE_LOW>,	/* ADAU1962_EN */
-			            <&ssw0 9 GPIO_ACTIVE_LOW>,	/* ADAU1979_EN */
-			            <&ssw0 12 GPIO_ACTIVE_LOW>,	/* SP2IFLASH_CS_EN */
-			            <&ssw0 13 GPIO_ACTIVE_LOW>,	/* SPI2D2_D3_EN */
-			            <&ssw0 14 GPIO_ACTIVE_LOW>,	/* SPDIF_OPTICAL_EN */
-			            <&ssw0 15 GPIO_ACTIVE_LOW>,	/* SPDIF_DIGITAL_EN */
-			            <&ssw1 0 GPIO_ACTIVE_LOW>,	/* PUSHBUTTON3_EN */
-			            <&ssw1 1 GPIO_ACTIVE_LOW>,	/* PUSHBUTTON2_EN */
-			            <&ssw1 2 GPIO_ACTIVE_LOW>,	/* PUSHBUTTON1_EN */
-			            <&ssw1 3 GPIO_ACTIVE_LOW>,	/* LEDS_EN */
-			            <&ssw1 4 GPIO_ACTIVE_LOW>,	/* FLG0_LOOP */
-			            <&ssw1 5 GPIO_ACTIVE_LOW>,	/* FLG1_LOOP */
-			            <&ssw1 6 GPIO_ACTIVE_LOW>,	/* FLG2_LOOP */
-			            <&ssw1 7 GPIO_ACTIVE_LOW>,	/* FLG3_LOOP */
-			            <&ssw1 8 GPIO_ACTIVE_LOW>,	/* AUAU1977_EN */
-			            <&ssw1 9 GPIO_ACTIVE_LOW>,	/* ADAU1977_FAULT_RST_EN */
-			            <&ssw1 10 GPIO_ACTIVE_LOW>,	/* THUMBWHEEL_OE */
-			            <&ssw1 11 GPIO_ACTIVE_LOW>;	/* ENGINE_RPM_OE */
-			reboot-pins = <&ssw0 12 GPIO_ACTIVE_LOW>, /* SP2IFLASH_CS_EN */
-			              <&ssw0 13 GPIO_ACTIVE_LOW>; /* SPI2D2_D3_EN */
-		};
-
 		button0: button@0 {
 			compatible = "adi,button-led";
 			en-pins = <&ssw1 2 GPIO_ACTIVE_LOW>,	/* PUSHBUTTON1_EN */
@@ -194,7 +163,6 @@
 	};
 };
 
-
 &i2c0 {
 	status = "okay";
 	ssw0: gpio@0x21 {
@@ -202,24 +170,207 @@
 		gpio-controller;
 		#gpio-cells = <2>;
 		reg = <0x21>;
+
+		eeprom {
+			gpio-hog;
+			gpios = <0 0x0>;
+			output-high;
+			line-name = "~eeprom-en";
+		};
+
+		uart0-flow-en {
+			gpio-hog;
+			gpios = <1 0x0>;
+			output-high;
+			line-name = "~uart0-flow-en";
+		};
+
+		uart0-en {
+			gpio-hog;
+			gpios = <2 0x0>;
+			output-low;
+			line-name = "~uart0-en";
+		};
+
+		eth0 {
+			gpio-hog;
+			gpios = <3 0x0>;
+			output-low;
+			line-name = "~eth0-en";
+		};
+
+		eth1 {
+			gpio-hog;
+			gpios = <4 0x0>;
+			output-low;
+			line-name = "~eth1-en";
+		};
+
+		mlb {
+			gpio-hog;
+			gpios = <5 0x0>;
+			output-high;
+			line-name = "~mlb-en";
+		};
+
+		can0 {
+			gpio-hog;
+			gpios = <6 0x0>;
+			output-high;
+			line-name = "~can0-en";
+		};
+
+		can1 {
+			gpio-hog;
+			gpios = <7 0x0>;
+			output-high;
+			line-name = "~can1-en";
+		};
+
+		adau1962 {
+			gpio-hog;
+			gpios = <8 0x0>;
+			output-low;
+			line-name = "~adau1962-en";
+		};
+
+		adau1979 {
+			gpio-hog;
+			gpios = <9 0x0>;
+			output-low;
+			line-name = "~adau1979-en";
+		};
+
+		spi2d2-d3 {
+			gpio-hog;
+			gpios = <12 0x0>;
+			output-low;
+			line-name = "~spi2d2-d3-en";
+		};
+
+		spi2flash-cs {
+			gpio-hog;
+			gpios = <13 0x0>;
+			output-low;
+			line-name = "~spi2flash-cs";
+		};
+
+		spdif-opt {
+			gpio-hog;
+			gpios = <14 0x0>;
+			output-high;
+			line-name = "~spdif-optical-en";
+		};
+
+		spdif-dig {
+			gpio-hog;
+			gpios = <15 0x0>;
+			output-high;
+			line-name = "~spdif-digital-en";
+		};
 	};
+
 	ssw1: gpio@0x22 {
 		compatible = "microchip,mcp23017";
 		gpio-controller;
 		#gpio-cells = <2>;
 		reg = <0x22>;
+
+		pushbutton3 {
+			gpio-hog;
+			gpios = <0 0x0>;
+			output-low;
+			line-name = "~pushbutton3-en";
+		};
+
+		pushbutton2 {
+			gpio-hog;
+			gpios = <1 0x0>;
+			output-low;
+			line-name = "~pushbutton2-en";
+		};
+
+		pushbutton1 {
+			gpio-hog;
+			gpios = <2 0x0>;
+			output-low;
+			line-name = "~pushbutton1-en";
+		};
+
+		leds {
+			gpio-hog;
+			gpios = <3 0x0>;
+			output-low;
+			line-name = "~leds-en";
+		};
+
+		flg0 {
+			gpio-hog;
+			gpios = <4 0x0>;
+			output-low;
+			line-name = "~flg0_loop";
+		};
+
+		flg1 {
+			gpio-hog;
+			gpios = <5 0x0>;
+			output-low;
+			line-name = "~flg1_loop";
+		};
+
+		flg2 {
+			gpio-hog;
+			gpios = <6 0x0>;
+			output-low;
+			line-name = "~flg2_loop";
+		};
+
+		flg3 {
+			gpio-hog;
+			gpios = <7 0x0>;
+			output-low;
+			line-name = "~flg3_loop";
+		};
+
+		adau1977 {
+			gpio-hog;
+			gpios = <8 0x0>;
+			output-low;
+			line-name = "~adau1977_en";
+		};
+
+		adau1977_fault_rst {
+			gpio-hog;
+			gpios = <9 0x0>;
+			output-low;
+			line-name = "~adau1977_fault_rst_en";
+		};
+
+		thumbwheel {
+			gpio-hog;
+			gpios = <10 0x0>;
+			output-low;
+			line-name = "~thumbwheel_oe";
+		};
+
+
+		engine_rpm {
+			gpio-hog;
+			gpios = <11 0x0>;
+			output-low;
+			line-name = "~engine_rpm_oe";
+		};
 	};
-	adau1979: adau1979@0x11 {
-		compatible = "adi,adau1977";
-		reg = <0x11>;
-		enable-pin = <&ssw0 9 GPIO_ACTIVE_LOW>;	/* ADAU1979_EN */
-		reset-gpio = <&gpa 14 0>;
-	};
+
 	adau1962: adau1962@0x4 {
 		compatible = "adi,adau1962";
 		reg = <0x4>;
-		enable-pin = <&ssw0 8 GPIO_ACTIVE_LOW>;	/* ADAU1962_EN */
-		reset-gpio = <&gpa 14 0>;
+		reset-gpios = <&gpa 14 1>;
+	};
+
+	adau1979: adau1979@0x11 {
+		compatible = "adi,adau1977";
+		reg = <0x11>;
 	};
 };
 
