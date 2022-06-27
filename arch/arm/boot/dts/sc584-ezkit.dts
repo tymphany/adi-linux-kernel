@@ -101,6 +101,7 @@
 			adi,codec = <&adau1962>, <&adau1979>;
 		};
 
+/*
 		lcd@0 {
 			compatible = "sc58x,lcd";
 			reg = <0x31040000 0xFF>;
@@ -113,6 +114,7 @@
 			pinctrl-1 = <&ppi0_16b>;
 			pinctrl-2 = <&ppi0_24b>;
 		};
+*/
 	};
 };
 
@@ -120,14 +122,14 @@
 	enable-pin = <&ssw0 2 GPIO_ACTIVE_LOW>;		/* UART0_EN */
 	hwflow-en-pin = <&ssw0 1 GPIO_ACTIVE_LOW>;	/* UART0_FLOW_EN */
 	pinctrl-names = "default", "hwflow";
-	pinctrl-0 = <&uart0_default>;
-	pinctrl-1 = <&uart0_hwflow>;
+	/*pinctrl-0 = <&uart0_default>;
+	pinctrl-1 = <&uart0_hwflow>;*/
 	status = "okay";
 };
 
 &spi0 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&spi0_default>;
+	/*pinctrl-names = "default";
+	pinctrl-0 = <&spi0_default>;*/
 	status = "okay";
 
 	spidev {
@@ -159,8 +161,8 @@
 };
 
 &spi2 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&spi2_quad>;
+	/*pinctrl-names = "default";
+	pinctrl-0 = <&spi2_quad>;*/
 	status = "okay";
 
 	flash: w25q32@0 {
@@ -190,6 +192,7 @@
 		};
 	};
 };
+
 
 &i2c0 {
 	status = "okay";
@@ -243,29 +246,32 @@
 	status = "okay";
 };
 
+/*
 &can0 {
-	enable-pin = <&ssw0 6 GPIO_ACTIVE_LOW>;	/* CAN0_EN */
+	enable-pin = <&ssw0 6 GPIO_ACTIVE_LOW>;	//CAN0_EN
 	pinctrl-names = "default";
 	pinctrl-0 = <&can0_default>;
 	phy-name = "tja1055";
-	phy-gpios = <&gpb 8 0>,		/* en PB8 */
-		    <&gpb 2 0x1>;	/* stb PB2, GPIO_ACTIVE_LOW */
+	phy-gpios = <&gpb 8 0>, //en PB8
+		    <&gpb 2 0x1>; //stb PB2, GPIO_ACTIVE_LOW
 	status = "okay";
 };
 
 &can1 {
-	enable-pin = <&ssw0 7 GPIO_ACTIVE_LOW>;	/* CAN1_EN */
+	enable-pin = <&ssw0 7 GPIO_ACTIVE_LOW>;	//CAN1_EN
 	pinctrl-names = "default";
 	pinctrl-0 = <&can1_default>;
 	phy-name = "tja1145";
 	phy-spibus = /bits/ 16 <0>;
 	phy-spiclk = <1000000>;
-	phy-spics = /bits/ 16 <44>;	/* GPIO_PC12 */
+	phy-spics = /bits/ 16 <44>;	//GPIO_PC12
 	status = "okay";
 };
+*/
 
+/*
 &emac0 {
-	enable-pin = <&ssw0 3 GPIO_ACTIVE_LOW>;	/* ETH0_EN */
+	enable-pin = <&ssw0 3 GPIO_ACTIVE_LOW>;	// ETH0_EN
 	snps,reset-gpio = <&gpb 14 0>;
 	snps,reset-active-low;
 	snps,reset-delays-us = <0 200 500>;
@@ -274,6 +280,7 @@
 	pinctrl-0 = <&eth0_default>;
 	status = "okay";
 };
+*/
 
 &usb0_phy {
 	status = "okay";
@@ -288,24 +295,27 @@
 	status = "okay";
 };
 
+/*
 &gp_counter {
 	pinctrl-names = "default";
 	pinctrl-0 = <&cnt0_default>;
 	enable-pin = <&ssw1 10 GPIO_ACTIVE_LOW>;
 	status = "okay";
-	rotary_abs_code = <ABS_WHEEL>;		/* ABS_WHEEL */
-	rotary_button_key = <KEY_ENTER>;	/* KEY_ENTER */
-	debounce = /bits/ 16 <10>;			/* Debounce Prescale 0-17 */
-	debounce_en = /bits/ 16 <1>;		/* Debounce Enable */
-	cnt_mode = /bits/ 16 <QUAD_ENC>;	/* Counter Operating Mode: QUADENC */
-	boundary_mode = /bits/ 16 <BD_COMP>;/* Boundary Register Mod: COMP */
-	boundary_ranges =  <(-256) 256>;	/* Boundary upper/lower ranges */
-	czm_zero_cnt_en = /bits/ 16 <1>;	/* CZM Pin Zeroes Counter Enable */
-	invert_czm = /bits/ 16 <1>;			/* Default value of CZM Pin Polarity */
-	invert_cud = /bits/ 16 <0>;			/* Default value of CUD Pin Polarity */
-	invert_cdg = /bits/ 16 <0>;			/* Default value of CDG Pin Polarity */
+	rotary_abs_code = <ABS_WHEEL>;		// ABS_WHEEL
+	rotary_button_key = <KEY_ENTER>;	// KEY_ENTER
+	debounce = /bits/ 16 <10>;			// Debounce Prescale 0-17
+	debounce_en = /bits/ 16 <1>;		// Debounce Enable
+	cnt_mode = /bits/ 16 <QUAD_ENC>;	// Counter Operating Mode: QUADENC
+	boundary_mode = /bits/ 16 <BD_COMP>;// Boundary Register Mod: COMP
+	boundary_ranges =  <(-256) 256>;	// Boundary upper/lower ranges
+	czm_zero_cnt_en = /bits/ 16 <1>;	// CZM Pin Zeroes Counter Enable
+	invert_czm = /bits/ 16 <1>;			// Default value of CZM Pin Polarity
+	invert_cud = /bits/ 16 <0>;			// Default value of CUD Pin Polarity
+	invert_cdg = /bits/ 16 <0>;			// Default value of CDG Pin Polarity
 };
+*/
 
+/*
 &lp0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&lp0_default>;
@@ -317,6 +327,7 @@
 	pinctrl-0 = <&lp1_default>;
 	status = "okay";
 };
+*/
 
 &sram_mmap {
 	status = "okay";
