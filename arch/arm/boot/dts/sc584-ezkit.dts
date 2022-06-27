@@ -11,6 +11,7 @@
 
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/net/ti-dp83867.h>
 #include <dt-bindings/pinctrl/adi-adsp.h>
 #include "sc58x.dtsi"
 
@@ -421,18 +422,28 @@
 };
 */
 
-/*
 &emac0 {
-	enable-pin = <&ssw0 3 GPIO_ACTIVE_LOW>;	// ETH0_EN
 	snps,reset-gpio = <&gpb 14 0>;
 	snps,reset-active-low;
 	snps,reset-delays-us = <0 200 500>;
-	phy-mode = "rgmii";
+	phy-handle = <&dp83867>;
+	phy-mode = "rgmii-id";
 	pinctrl-names = "default";
 	pinctrl-0 = <&eth0_default>;
 	status = "okay";
+	mdio0 {
+		compatible = "snps,dwmac-mdio";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		dp83867: ethernet-phy@0 {
+			reg = <0>;
+			ti,rx-internal-delay = <DP83867_RGMIIDCTL_2_00_NS>;
+			ti,tx-internal-delay = <DP83867_RGMIIDCTL_2_00_NS>;
+			ti,fifo-depth = <DP83867_PHYCR_FIFO_DEPTH_8_B_NIB>;
+			ti,dp83867-rxctrl-strap-quirk;
+		};
+	};
 };
-*/
 
 &usb0_phy {
 	status = "okay";
@@ -521,6 +532,24 @@
 			         <ADI_ADSP_PINMUX('C', 3, ADI_ADSP_PINFUNC_ALT0)>,
 			         <ADI_ADSP_PINMUX('C', 4, ADI_ADSP_PINFUNC_ALT0)>,
 			         <ADI_ADSP_PINMUX('C', 5, ADI_ADSP_PINFUNC_ALT0)>;
+		};
+	};
+	eth0_default: eth0_default_pins {
+		pins {
+			pinmux = <ADI_ADSP_PINMUX('A', 0, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('A', 1, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('A', 2, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('A', 3, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('A', 4, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('A', 5, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('A', 6, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('A', 7, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('A', 8, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('A', 9, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('A', 10, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('A', 11, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('A', 12, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('A', 13, ADI_ADSP_PINFUNC_ALT0)>;
 		};
 	};
 };
