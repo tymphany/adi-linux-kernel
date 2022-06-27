@@ -11,6 +11,7 @@
 
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pinctrl/adi-adsp.h>
 #include "sc58x.dtsi"
 
 / {
@@ -119,18 +120,15 @@
 };
 
 &uart0 {
-	enable-pin = <&ssw0 2 GPIO_ACTIVE_LOW>;		/* UART0_EN */
-	hwflow-en-pin = <&ssw0 1 GPIO_ACTIVE_LOW>;	/* UART0_FLOW_EN */
-	pinctrl-names = "default", "hwflow";
-	/*pinctrl-0 = <&uart0_default>;
-	pinctrl-1 = <&uart0_hwflow>;*/
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart0_default>;
 	status = "okay";
 };
 
 &spi0 {
 	/*pinctrl-names = "default";
 	pinctrl-0 = <&spi0_default>;*/
-	status = "okay";
+	status = "disabled";
 
 	spidev {
 		#address-cells = <1>;
@@ -163,7 +161,7 @@
 &spi2 {
 	/*pinctrl-names = "default";
 	pinctrl-0 = <&spi2_quad>;*/
-	status = "okay";
+	status = "disabled";
 
 	flash: w25q32@0 {
 		#address-cells = <1>;
@@ -331,4 +329,21 @@
 
 &sram_mmap {
 	status = "okay";
+};
+
+&pinctrl0 {
+	uart0_default: uart0_default_pins {
+		pins {
+			pinmux = <ADI_ADSP_PINMUX('C', 13, ADI_ADSP_PINFUNC_ALT0)>,
+					 <ADI_ADSP_PINMUX('C', 14, ADI_ADSP_PINFUNC_ALT0)>;
+		};
+	};
+	uart0_hwflow: uart0_hwflow_pins {
+		pins {
+			pinmux = <ADI_ADSP_PINMUX('C', 13, ADI_ADSP_PINFUNC_ALT0)>,
+					 <ADI_ADSP_PINMUX('C', 14, ADI_ADSP_PINFUNC_ALT0)>,
+					 <ADI_ADSP_PINMUX('C', 15, ADI_ADSP_PINFUNC_ALT0)>,
+					 <ADI_ADSP_PINMUX('D', 0, ADI_ADSP_PINFUNC_ALT0)>;
+		};
+	};
 };
