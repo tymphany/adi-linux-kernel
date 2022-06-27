@@ -126,16 +126,19 @@
 };
 
 &spi0 {
-	/*pinctrl-names = "default";
-	pinctrl-0 = <&spi0_default>;*/
-	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi0_default>;
+	status = "okay";
+
+	cs-gpios = <&gpc 12 GPIO_ACTIVE_LOW>,
+				<&gpc 0 GPIO_ACTIVE_LOW>;
 
 	spidev {
 		#address-cells = <1>;
 		#size-cells = <1>;
 		compatible = "rohm,dh2228fv";
 		spi-max-frequency = <5000000>;
-		reg = <44>;
+		reg = <0>;
 	};
 
 	ad7879_touchscreen {
@@ -143,7 +146,7 @@
 		#size-cells = <1>;
 		compatible = "adi,ad7879";
 		spi-max-frequency = <5000000>;
-		reg = <32>;
+		reg = <1>;
 		gpio = <49>;
 		gpio-controller;
 		spi-cpha;
@@ -159,22 +162,22 @@
 };
 
 &spi2 {
-	/*pinctrl-names = "default";
-	pinctrl-0 = <&spi2_quad>;*/
-	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi2_quad>;
+	status = "okay";
+
+	cs-gpios = <&gpc 6 GPIO_ACTIVE_LOW>;
 
 	flash: w25q32@0 {
 		#address-cells = <1>;
 		#size-cells = <1>;
-		compatible = "winbond,w25q32";
-		en-pins = <&ssw0 12 GPIO_ACTIVE_LOW>,	/* SP2IFLASH_CS_EN */
-		          <&ssw0 13 GPIO_ACTIVE_LOW>;	/* SPI2D2_D3_EN */
-		spi-max-frequency = <5000000>;
-		reg = <38>;
+		compatible = "winbond,w25q32", "jedec,spi-nor";
+		reg = <0>;
 		spi-cpol;
 		spi-cpha;
+		spi-max-frequency = <5000000>;
 		spi-rx-bus-width = <4>;
-		dma-mode;
+		adi,enable-dma;
 
 		partition@0 {
 			label = "uboot (spi)";
@@ -344,6 +347,29 @@
 					 <ADI_ADSP_PINMUX('C', 14, ADI_ADSP_PINFUNC_ALT0)>,
 					 <ADI_ADSP_PINMUX('C', 15, ADI_ADSP_PINFUNC_ALT0)>,
 					 <ADI_ADSP_PINMUX('D', 0, ADI_ADSP_PINFUNC_ALT0)>;
+		};
+	};
+	spi0_default: spi0_default_pins {
+		pins {
+			pinmux = <ADI_ADSP_PINMUX('C', 9, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('C', 10, ADI_ADSP_PINFUNC_ALT0)>,
+					 <ADI_ADSP_PINMUX('C', 11, ADI_ADSP_PINFUNC_ALT0)>;
+		};
+	};
+	spi1_default: spi1_default_pins {
+		pins {
+			pinmux = <ADI_ADSP_PINMUX('E', 13, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('E', 14, ADI_ADSP_PINFUNC_ALT0)>,
+					 <ADI_ADSP_PINMUX('E', 15, ADI_ADSP_PINFUNC_ALT0)>;
+		};
+	};
+	spi2_quad: spi2_quad_pins {
+		pins {
+			pinmux = <ADI_ADSP_PINMUX('C', 1, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('C', 2, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('C', 3, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('C', 4, ADI_ADSP_PINFUNC_ALT0)>,
+			         <ADI_ADSP_PINMUX('C', 5, ADI_ADSP_PINFUNC_ALT0)>;
 		};
 	};
 };
