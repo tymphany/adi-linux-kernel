@@ -7,19 +7,9 @@
  */
 
 #include <linux/init.h>
-#include <linux/device.h>
-#include <linux/io.h>
-
 #include <asm/mach/arch.h>
-#include <mach/sc57x.h>
 
 #include "core.h"
-
-void pads_init(void)
-{
-	/* nothing to be done here for dai in sc57x */
-}
-EXPORT_SYMBOL(pads_init);
 
 static const char * const sc57x_dt_board_compat[] __initconst = {
 	"adi,sc57x",
