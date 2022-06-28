@@ -76,13 +76,6 @@ void __init sc58x_map_io(void)
 	iotable_init(sc58x_io_desc, ARRAY_SIZE(sc58x_io_desc));
 }
 
-void sc58x_restart(enum reboot_mode mode, const char *cmd)
-{
-	writel(1, __io_address(REG_RCU0_CTL));
-}
-
-
-
 #if IS_ENABLED(CONFIG_VIDEO_ADI_CAPTURE)
 #include <linux/videodev2.h>
 #include <media/adi/adi_capture.h>

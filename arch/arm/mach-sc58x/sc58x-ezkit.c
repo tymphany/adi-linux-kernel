@@ -26,11 +26,6 @@ static const char * const sc58x_dt_board_compat[] __initconst = {
 	NULL
 };
 
-static void sc58x_ezkit_restart(enum reboot_mode mode, const char *cmd)
-{
-       sc58x_restart(mode, cmd);
-}
-
 extern void __init adsp_sc5xx_timer_core_init(void);
 
 DT_MACHINE_START(SC58X_DT, "SC58x-EZKIT (Device Tree Support)")
@@ -38,5 +33,4 @@ DT_MACHINE_START(SC58X_DT, "SC58x-EZKIT (Device Tree Support)")
 	.init_time	= adsp_sc5xx_timer_core_init,
 	.init_machine	= sc58x_init,
 	.dt_compat	= sc58x_dt_board_compat,
-	.restart        = sc58x_ezkit_restart
 MACHINE_END
