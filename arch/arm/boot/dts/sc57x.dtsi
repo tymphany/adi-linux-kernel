@@ -120,6 +120,14 @@
 			status = "disabled";
 		};
 
+		rcu: rcu@0x3108B000 {
+			compatible = "adi,reset-controller";
+			reg = <0x3108C000 0x1000>;
+			adi,sharc-min = <1>;
+			adi,sharc-max = <2>;
+			status = "okay";
+		};
+
 		uart0: uart@0x31003000 {
 			compatible = "adi,uart4";
 			reg = <0x31003000 0x40>;

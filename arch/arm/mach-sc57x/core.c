@@ -64,12 +64,6 @@ void __init sc57x_map_io(void)
 	iotable_init(sc57x_io_desc, ARRAY_SIZE(sc57x_io_desc));
 }
 
-void sc57x_restart(enum reboot_mode mode, const char *cmd)
-{
-	writel(1, __io_address(REG_RCU0_CTL));
-}
-
-
 #include <asm/siginfo.h>
 #include <asm/signal.h>
 
