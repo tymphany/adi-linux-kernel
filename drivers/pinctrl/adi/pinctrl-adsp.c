@@ -69,8 +69,15 @@
 #define ADSP_PADS_REG_DAI0_1_DS			0x7c
 #define ADSP_PADS_REG_DAI1_0_DS			0x80
 #define ADSP_PADS_REG_DAI1_1_DS			0x84
+
+#ifdef CONFIG_ARCH_SC58X
+#define ADSP_PADS_REG_DAI0_IE			0x60
+#define ADSP_PADS_REG_DAI1_IE			0x64
+#else
 #define ADSP_PADS_REG_DAI0_IE			0x90
 #define ADSP_PADS_REG_DAI1_IE			0x94
+#endif
+
 #define ADSP_PADS_REG_DAI0_PUE			0xbc
 #define ADSP_PADS_REG_DAI1_PUE			0xc0
 #define ADSP_PADS_REG_DAI0_PDE			0xfc

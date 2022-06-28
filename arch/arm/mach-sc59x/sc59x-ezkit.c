@@ -21,13 +21,6 @@
 
 #include "core.h"
 
-void pads_init(void)
-{
-	writel(0xffffffff, __io_address(REG_PADS0_DAI0_IE));
-	writel(0xffffffff, __io_address(REG_PADS0_DAI1_IE));
-}
-EXPORT_SYMBOL(pads_init);
-
 static const char * const sc59x_dt_board_compat[] __initconst = {
 	"adi,sc59x",
 	NULL
