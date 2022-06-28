@@ -74,6 +74,7 @@
 			compatible = "sc5xx,asoc-card";
 			adi,cpu-dai = <&i2s0>;
 			adi,codec = <&adau1962>, <&adau1979>;
+			status = "disabled";
 		};
 	};
 };
@@ -377,7 +378,7 @@
 	snps,reset-active-low;
 	snps,reset-delays-us = <0 10000 10000>;
 	phy-handle = <&dp83867>;
-	phy-mode = "rgmii";
+	phy-mode = "rgmii-id";
 	pinctrl-names = "default";
 	pinctrl-0 = <&eth0_default>;
 	status = "okay";
@@ -420,14 +421,14 @@
 	pinctrl-names = "8bit", "16bit";
 	pinctrl-0 = <&ppi0_8b>;
 	pinctrl-1 = <&ppi0_16b>;
-	status = "okay";
+	status = "disabled";
 };
 
 &video_encoder {
 	pinctrl-names = "8bit", "16bit";
 	pinctrl-0 = <&ppi0_8b>;
 	pinctrl-1 = <&ppi0_16b>;
-	status = "okay";
+	status = "disabled";
 };
 
 &gp_counter {
@@ -494,19 +495,14 @@
 			         <ADI_ADSP_PINMUX('B', 0, ADI_ADSP_PINFUNC_ALT0)>,
 			         <ADI_ADSP_PINMUX('B', 2, ADI_ADSP_PINFUNC_ALT0)>,
 			         <ADI_ADSP_PINMUX('A', 10, ADI_ADSP_PINFUNC_ALT0)>,
-			         <ADI_ADSP_PINMUX('A', 11, ADI_ADSP_PINFUNC_ALT0)>,
-			         <ADI_ADSP_PINMUX('B', 0, ADI_ADSP_PINFUNC_ALT0)>,
-			         <ADI_ADSP_PINMUX('B', 2, ADI_ADSP_PINFUNC_ALT0)>,
-			         <ADI_ADSP_PINMUX('B', 9, ADI_ADSP_PINFUNC_ALT0)>,
-			         <ADI_ADSP_PINMUX('B', 4, ADI_ADSP_PINFUNC_ALT0)>;
+			         <ADI_ADSP_PINMUX('A', 11, ADI_ADSP_PINFUNC_ALT0)>;
 		};
 	};
 	spi0_default: spi0_default_pins {
 		pins {
 			pinmux = <ADI_ADSP_PINMUX('C', 1, ADI_ADSP_PINFUNC_ALT0)>,
 			         <ADI_ADSP_PINMUX('C', 2, ADI_ADSP_PINFUNC_ALT0)>,
-			         <ADI_ADSP_PINMUX('C', 3, ADI_ADSP_PINFUNC_ALT0)>,
-					 <ADI_ADSP_PINMUX('C', 6, ADI_ADSP_PINFUNC_GPIO)>;
+			         <ADI_ADSP_PINMUX('C', 3, ADI_ADSP_PINFUNC_ALT0)>;
 		};
 	};
 	spi2_quad: spi2_quad_pins {
@@ -515,8 +511,7 @@
 			         <ADI_ADSP_PINMUX('B', 10, ADI_ADSP_PINFUNC_ALT0)>,
 			         <ADI_ADSP_PINMUX('B', 11, ADI_ADSP_PINFUNC_ALT0)>,
 			         <ADI_ADSP_PINMUX('B', 12, ADI_ADSP_PINFUNC_ALT0)>,
-			         <ADI_ADSP_PINMUX('B', 13, ADI_ADSP_PINFUNC_ALT0)>,
-			         <ADI_ADSP_PINMUX('B', 15, ADI_ADSP_PINFUNC_GPIO)>;
+			         <ADI_ADSP_PINMUX('B', 13, ADI_ADSP_PINFUNC_ALT0)>;
 		};
 	};
 	can0_default: can0_default_pins {
@@ -619,7 +614,7 @@
 };
 
 &sru_ctrl_dai0 {
-	status = "okay";
+	status = "disabled";
 
 	sru_dai0: sru_dai0_mux {
 		route {
@@ -641,6 +636,6 @@
 };
 
 &sru_ctrl_dai1 {
-	status = "okay";
+	status = "disabled";
 };
 
