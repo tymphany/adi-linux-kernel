@@ -333,7 +333,6 @@ static struct adi_display_config adi_display_data = {
 #endif
 #endif
 
-#ifdef CONFIG_OF
 static const struct of_dev_auxdata sc57x_auxdata_lookup[] __initconst = {
 #if IS_ENABLED(CONFIG_VIDEO_ADI_DISPLAY)
 	OF_DEV_AUXDATA("adi,disp", 0x3102D000, "adi_display.0", &adi_display_data),
@@ -343,12 +342,6 @@ static const struct of_dev_auxdata sc57x_auxdata_lookup[] __initconst = {
 #endif
 	{},
 };
-
-static struct of_device_id sc57x_of_bus_ids[] __initdata = {
-	{ .compatible = "simple-bus", },
-	{},
-};
-#endif
 
 #define DP83865_PHY_ID          0x20005c7a
 #define REG_DP83865_AUX_CTRL    0x12
@@ -379,11 +372,7 @@ static void sc57x_init_ethernet(void)
 void __init sc57x_init(void)
 {
 	pr_info("%s: registering device resources\n", __func__);
-
-#ifdef CONFIG_OF
-	of_platform_populate(NULL, sc57x_of_bus_ids,
-				sc57x_auxdata_lookup, NULL);
-#endif
+	of_platform_default_populate(NULL, sc57x_auxdata_lookup, NULL);
 	sc57x_init_ethernet();
 }
 
