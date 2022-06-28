@@ -384,10 +384,6 @@ static void sc57x_init_ethernet(void)
 
 void __init sc57x_init(void)
 {
-#ifdef CONFIG_CACHE_L2X0
-	l2x0_of_init(0, ~0UL);
-#endif
-
 	pr_info("%s: registering device resources\n", __func__);
 
 #ifdef CONFIG_OF
