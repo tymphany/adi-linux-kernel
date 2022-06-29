@@ -13,6 +13,7 @@
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/net/ti-dp83867.h>
 #include <dt-bindings/pinctrl/adi-adsp.h>
+#include <dt-bindings/pinctrl/adi-adsp-sru.h>
 #include "sc58x.dtsi"
 
 / {
@@ -50,26 +51,40 @@
 			led_gpio = <67>;
 		};
 
-		core1-rproc@0x3108b000 {
+		core1-rproc@0x28240000 {
 			compatible = "adi,remoteproc";
-			reg = <0x3108b000 0x70>;
+			reg = <0x28240000 0x160000>,
+					<0x20080000 0x40000>;
 			core-id = <1>;
 			core-irq = <76>;
 			firmware-name = "adi_adsp_core1_fw.ldr";
+			interrupts = <GIC_SPI 251 IRQ_TYPE_EDGE_RISING>;
+			adi,rcu = <&rcu>;
+			adi,l1-da = <0x240000 0x3a0000>;
+			adi,l2-da = <0x20080000 0x200C0000>;
+			adi,tru = <&tru>;
+			adi,tru-master-id = <97>; /* trigger master SOFT4 */
 		};
 
-		core2-rproc@0x3108b000 {
+		core2-rproc@0x28a40000 {
 			compatible = "adi,remoteproc";
-			reg = <0x3108b000 0x70>;
+			reg = <0x28a40000 0x160000>,
+					<0x20080000 0x40000>;
 			core-id = <2>;
 			core-irq = <77>;
 			firmware-name = "adi_adsp_core2_fw.ldr";
+			interrupts = <GIC_SPI 251 IRQ_TYPE_EDGE_RISING>;
+			adi,rcu = <&rcu>;
+			adi,l1-da = <0x240000 0x3a0000>;
+			adi,l2-da = <0x20080000 0x200C0000>;
+			adi,tru = <&tru>;
+			adi,tru-master-id = <98>; /* trigger master SOFT5 */
 		};
 
 		sound {
 			compatible = "sc5xx,asoc-card";
 			adi,cpu-dai = <&i2s0>;
-			adi,codec = <&adau1962>, <&adau1979>;
+			adi,codec = <&adau1962>, /*<&adau1977>,*/ <&adau1979>;
 		};
 
 /*
@@ -193,20 +208,6 @@
 			line-name = "~uart0-en";
 		};
 
-		eth0 {
-			gpio-hog;
-			gpios = <3 0x0>;
-			output-low;
-			line-name = "~eth0-en";
-		};
-
-		eth1 {
-			gpio-hog;
-			gpios = <4 0x0>;
-			output-low;
-			line-name = "~eth1-en";
-		};
-
 		mlb {
 			gpio-hog;
 			gpios = <5 0x0>;
@@ -240,6 +241,13 @@
 			gpios = <9 0x0>;
 			output-low;
 			line-name = "~adau1979-en";
+		};
+
+		audio_jack_sel {
+			gpio-hog;
+			gpios = <10 0x0>;
+			output-low;
+			line-name = "audio_jack_sel";
 		};
 
 		spi2d2-d3 {
@@ -343,7 +351,7 @@
 		adau1977_fault_rst {
 			gpio-hog;
 			gpios = <9 0x0>;
-			output-low;
+			output-high;
 			line-name = "~adau1977_fault_rst_en";
 		};
 
@@ -368,9 +376,14 @@
 		reg = <0x4>;
 		reset-gpios = <&gpa 14 1>;
 	};
-
-	adau1979: adau1979@0x11 {
+/*
+	adau1977: adau1977@0x62 {
 		compatible = "adi,adau1977";
+		reg = <0x62>;
+	};
+*/
+	adau1979: adau1979@0x62 {
+		compatible = "adi,adau1979";
 		reg = <0x11>;
 	};
 };
@@ -384,10 +397,8 @@
 };
 
 &i2s0 {
-	reg = <0x31002400 0x80>, <0x31002480 0x80>;
-	interrupts = <GIC_SPI 61 IRQ_TYPE_LEVEL_HIGH>,
-			<GIC_SPI 63 IRQ_TYPE_LEVEL_HIGH>;
-	dma-channel = <10>, <11>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&sru_dai1>;
 	status = "okay";
 };
 
@@ -457,6 +468,7 @@
 };
 
 &icc0 {
+	adi,tru = <&tru>;
 	status = "okay";
 };
 
@@ -552,6 +564,36 @@
 			         <ADI_ADSP_PINMUX('A', 11, ADI_ADSP_PINFUNC_ALT0)>,
 			         <ADI_ADSP_PINMUX('A', 12, ADI_ADSP_PINFUNC_ALT0)>,
 			         <ADI_ADSP_PINMUX('A', 13, ADI_ADSP_PINFUNC_ALT0)>;
+		};
+	};
+};
+
+&sru_ctrl_dai0 {
+	status = "okay";
+};
+
+&sru_ctrl_dai1 {
+	status = "okay";
+
+	sru_dai1: sru_dai1_mux {
+		route {
+			sru-routing =
+				<DAI1_LOW_F          DAI1_PBEN02_I>,  /* set DAI1_PIN02 to input */
+				<DAI1_PB02_O_ABCDE   SPT4_ACLK_I>,    /* route DAI1_PIN02 to SPT4_ACLK */
+				<DAI1_LOW_F          DAI1_PBEN04_I>,  /* set DAI1_PIN04 to input */
+				<DAI1_PB04_O_ABCDE   SPT4_AFS_I>,     /* route DAI1_PIN04 to SPT4_AFS */
+				<DAI1_HIGH_F         DAI1_PBEN01_I>,  /* set DAI1_PIN01 to output */
+				<SPT4_AD0_O_BD       DAI1_PB01_I>,    /* route SPT4_AD0 to DAI1_PIN01 */
+				<DAI1_HIGH_F         DAI1_PBEN05_I>,  /* set DAI1_PIN05 to output */
+				<SPT4_AD1_O_BD       DAI1_PB05_I>,    /* route SPT4_AD1 to DAI1_PIN05 */
+				<DAI1_LOW_F          DAI1_PBEN12_I>,  /* set DAI1_PIN12 to input */
+				<DAI1_PB12_O_ABCDE   SPT4_BCLK_I>,    /* route DAI1_PIN12 to SPT4_BCLK */
+				<DAI1_LOW_F          DAI1_PBEN20_I>,  /* set DAI1_PIN20 to input */
+				<DAI1_PB20_O_ABCDE   SPT4_BFS_I>,     /* route DAI1_PIN20 to SPT4_BFS */
+				<DAI1_LOW_F          DAI1_PBEN06_I>,  /* set DAI1_PIN06 to input */
+				<DAI1_PB06_O_ABCDE   SPT4_BD0_I>,     /* route DAI1_PIN06 to SPT4_BD0 */
+				<DAI1_LOW_F          DAI1_PBEN07_I>,  /* set DAI1_PIN07 to input */
+				<DAI1_PB07_O_ABCDE   SPT4_BD1_I>;     /* route DAI1_PIN07 to SPT4_BD1 */
 		};
 	};
 };

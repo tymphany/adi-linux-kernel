@@ -312,7 +312,7 @@
 			compatible = "sc5xx,i2s-dai";
 			reg = <0x31002400 0x80>, <0x31002480 0x80>;
 			sport-channel = <4>;
-			interrupt-names = "tx_staus", "rx_staus";
+			interrupt-names = "tx_status", "rx_status";
 			interrupts = <GIC_SPI 61 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI 63 IRQ_TYPE_LEVEL_HIGH>;
 			dmas = <&sport_dma_cluster 10>, <&sport_dma_cluster 11>;
 			dma-names = "tx", "rx";
