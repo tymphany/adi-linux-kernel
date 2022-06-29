@@ -13,6 +13,5 @@
 
 extern void __init sc57x_init(void);
 extern void __init sc57x_init_early(void);
-extern void __init sc57x_map_io(void);
 
 #endif

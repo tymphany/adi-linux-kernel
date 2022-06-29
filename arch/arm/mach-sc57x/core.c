@@ -8,61 +8,15 @@
 
 #include <linux/init.h>
 #include <linux/device.h>
-#include <linux/delay.h>
-#include <linux/interrupt.h>
-#include <linux/irqdomain.h>
-#include <linux/of_address.h>
 #include <linux/of_platform.h>
 #include <linux/io.h>
-#include <linux/gfp.h>
-#include <linux/bitops.h>
-#include <linux/irqchip/arm-gic.h>
 #include <linux/of.h>
-#include <linux/of_irq.h>
 #include <linux/phy.h>
-#include <linux/sched_clock.h>
 
-#include <asm/irq.h>
-#include <asm/hardware/cache-l2x0.h>
 #include <asm/mach-types.h>
-
-#include <asm/mach/arch.h>
-#include <asm/mach/time.h>
-#include <asm/mach/map.h>
-#include <asm/mach/irq.h>
-#include <linux/soc/adi/hardware.h>
-#include <linux/soc/adi/cpu.h>
 #include <mach/sc57x.h>
 
 #include "core.h"
-
-static struct map_desc sc57x_io_desc[] __initdata __maybe_unused = {
-	{
-		.virtual	=  IO_ADDRESS(SYS_MMR_BASE),
-		.pfn		= __phys_to_pfn(SYS_MMR_BASE),
-		.length		= SYS_MMR_SIZE,
-		.type		= MT_DEVICE,
-	}, {
-		.virtual	=  IO_ADDRESS(SYS_L2_START),
-		.pfn		= __phys_to_pfn(SYS_L2_START),
-		.length		= SZ_16K,
-		.type		= MT_MEMORY_RWX_NONCACHED,
-	}, {
-		.virtual	=  IO_ADDRESS(SYS_SRAM_BASE),
-		.pfn		= __phys_to_pfn(SYS_SRAM_BASE),
-		.length		= SYS_SRAM_SIZE,
-#ifdef CONFIG_ICC
-		.type		= MT_MEMORY_RWX_NONCACHED,
-#else
-		.type		= MT_MEMORY_RWX,
-#endif
-	},
-};
-
-void __init sc57x_map_io(void)
-{
-	iotable_init(sc57x_io_desc, ARRAY_SIZE(sc57x_io_desc));
-}
 
 #include <asm/siginfo.h>
 #include <asm/signal.h>
