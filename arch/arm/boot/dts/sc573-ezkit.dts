@@ -624,7 +624,7 @@
 				<DAI0_LOW_F          DAI0_PBEN04_I>,  /* set DAI0_PIN04 to input */
 				<DAI0_PB04_O_ABCDE   SPT0_AFS_I>,     /* route DAI0_PIN04 to SPT0_AFS */
 				<DAI0_HIGH_F         DAI0_PBEN01_I>,  /* set DAI0_PIN01 to output */
-				<SPT4_AD0_O_BD       DAI0_PB01_I>,    /* route SPT4_AD0 to DAI0_PIN01 */
+				<SPT0_AD0_O_BD       DAI0_PB01_I>,    /* route SPT4_AD0 to DAI0_PIN01 */
 				<DAI0_LOW_F          DAI0_PBEN12_I>,  /* set DAI0_PIN12 to input */
 				<DAI0_PB12_O_ABCDE   SPT0_BCLK_I>,    /* route DAI0_PIN12 to SPT0_BCLK */
 				<DAI0_LOW_F          DAI0_PBEN20_I>,  /* set DAI0_PIN20 to input */
