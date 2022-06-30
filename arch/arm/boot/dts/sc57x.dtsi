@@ -219,7 +219,8 @@
 					   <GIC_SPI 63 IRQ_TYPE_LEVEL_HIGH>;/* SPORT0 */
 			clocks = <&clk ADSP_SC57X_CLK_CGU0_SCLK0>;
 			clock-names = "sclk";
-			dma-channel = <0>, <1>;
+			dmas = <&sport_cluster0 0>, <&sport_cluster0 1>;
+			dma-names = "tx", "rx";
 			status = "disabled";
 		};
 
@@ -608,6 +609,78 @@
 			mentor,power = <500>;
 			phys = <&usb0_phy>;
 			status = "disabled";
+		};
+
+		sport_cluster0: dma@0x31022000 {
+			compatible = "adi,dma-controller";
+			reg = <0x31022000 0x400>;
+			status = "okay";
+			#dma-cells = <1>;
+
+			sport0_a: channel@0 {
+				adi,id = <0>;
+				interrupts = <GIC_SPI 60 IRQ_TYPE_LEVEL_HIGH>,
+				             <GIC_SPI 158 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "complete", "error";
+				adi,src-offset = <0>;
+			};
+
+			sport0_b: channel@1 {
+				adi,id = <1>;
+				interrupts = <GIC_SPI 62 IRQ_TYPE_LEVEL_HIGH>,
+				             <GIC_SPI 159 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "complete", "error";
+				adi,src-offset = <0x80>;
+			};
+
+			sport1_a: channel@2 {
+				adi,id = <2>;
+				interrupts = <GIC_SPI 64 IRQ_TYPE_LEVEL_HIGH>,
+				             <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "complete", "error";
+				adi,src-offset = <0x100>;
+			};
+
+			sport1_b: channel@3 {
+				adi,id = <3>;
+				interrupts = <GIC_SPI 66 IRQ_TYPE_LEVEL_HIGH>,
+				             <GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "complete", "error";
+				adi,src-offset = <0x180>;
+			};
+
+			sport2_a: channel@4 {
+				adi,id = <4>;
+				interrupts = <GIC_SPI 90 IRQ_TYPE_LEVEL_HIGH>,
+				             <GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "complete", "error";
+				adi,src-offset = <0x200>;
+			};
+
+			sport2_b: channel@5 {
+				adi,id = <5>;
+				interrupts = <GIC_SPI 92 IRQ_TYPE_LEVEL_HIGH>,
+				             <GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "complete", "error";
+				adi,src-offset = <0x280>;
+			};
+
+			sport3_a: channel@6 {
+				adi,id = <6>;
+				interrupts = <GIC_SPI 94 IRQ_TYPE_LEVEL_HIGH>,
+				             <GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "complete", "error";
+				adi,src-offset = <0x300>;
+			};
+
+			sport3_b: channel@7 {
+				adi,id = <7>;
+				interrupts = <GIC_SPI 96 IRQ_TYPE_LEVEL_HIGH>,
+				             <GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "complete", "error";
+				adi,src-offset = <0x380>;
+			};
+
 		};
 
 		spi_cluster: dma@0x3102B000 {
