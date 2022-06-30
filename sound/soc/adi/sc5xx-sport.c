@@ -224,7 +224,6 @@ static int sport_get_resource(struct sport_device *sport)
 	struct platform_device *pdev = sport->pdev;
 	struct device *dev = &pdev->dev;
 	struct resource *res;
-	int ret;
 
 	if (!dev->of_node) {
 		dev_err(dev, "No device tree node\n");
@@ -251,13 +250,6 @@ static int sport_get_resource(struct sport_device *sport)
 	if (IS_ERR(sport->rx_regs)) {
 		dev_err(dev, "Failed to map rx registers\n");
 		return PTR_ERR(sport->rx_regs);
-	}
-
-	ret = of_property_read_u32(dev->of_node,
-			"sport-channel", &sport->sport_channel);
-	if (ret) {
-		dev_err(dev, "No sport-channel resource\n");
-		return -ENODEV;
 	}
 
 	return 0;

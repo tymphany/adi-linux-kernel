@@ -113,7 +113,6 @@ struct sport_device {
 	struct platform_device *pdev;
 	struct clk *clk;
 	const unsigned short *pin_req;
-	unsigned int sport_channel;
 	struct sport_register *tx_regs;
 	struct sport_register *rx_regs;
 	struct dma_chan *tx_dma_chan;
