@@ -238,6 +238,26 @@
 	status = "okay";
 };
 
+&icc0 {
+	adi,tru = <&tru>;
+	status = "okay";
+};
+
+&tru {
+	rpmsg_to_a55: channel@0 {
+		adi,tru-master-id = <96>; /* trigger master SOFT3 */
+		adi,tru-slave-id = <87>; /* TRU0_IRQ3 */
+	};
+	rpmsg_to_sharc0: channel@1 {
+		adi,tru-master-id = <97>; /* trigger master SOFT4 */
+		adi,tru-slave-id = <91>; /* TRU0_IRQ7 */
+	};
+	rpmsg_to_sharc1: channel@2 {
+		adi,tru-master-id = <98>; /* trigger master SOFT5 */
+		adi,tru-slave-id = <95>; /* TRU0_IRQ11 */
+	};
+};
+
 &pinctrl0 {
 	uart0_default: uart0_default_pins {
 		pins {
