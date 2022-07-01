@@ -29,12 +29,13 @@
 
 #define DRIVER_NAME "icc"
 
-#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC58X)
+#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC58X) || defined(CONFIG_ARCH_SC57X)
 void __iomem *core0_mcapi_sram_addr = NULL;
 #endif
 
 static struct adi_icc {
 	struct miscdevice mdev;
+	struct device *dev;
 	void __iomem *base;
 	unsigned int node;
 	int irq;
@@ -149,7 +150,7 @@ int sm_send_session_packet_ack(struct sm_session *session, uint32_t remote_ep,
 static int fill_user_buffer_from_message(struct sm_session *session,
 	struct sm_message *message, void *user_buf, uint32_t *buf_len)
 {
-#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC58X)
+#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC58X) || defined(CONFIG_ARCH_SC57X)
 	void __iomem *remap_addr = NULL;
 #endif
 
@@ -161,7 +162,7 @@ static int fill_user_buffer_from_message(struct sm_session *session,
 	if (message->msg.length < *buf_len)
 		*buf_len = message->msg.length;
 	if (message->msg.length && user_buf) {
-		#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC58X)
+		#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC58X) ||defined(CONFIG_ARCH_SC57X)
 			remap_addr = ioremap_nocache(message->msg.payload, *buf_len);
 			if (copy_to_user(user_buf, (void *)remap_addr, *buf_len))
 				return -EFAULT;
@@ -705,7 +706,7 @@ sm_send_packet(uint32_t session_idx, uint32_t dst_ep, uint32_t dst_cpu,
 
 	if (m->msg.length) {
 
-		#if defined(CONFIG_ARCH_SC59X)
+		#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC57X)
 			//On the SC59x
 			//dma_alloc_coherent appears to be allocating RAM
 			//which is cached on the SHARC cores
@@ -777,7 +778,7 @@ sm_send_packet(uint32_t session_idx, uint32_t dst_ep, uint32_t dst_cpu,
 		}
 		if (nonblock) {
 			ret = -EAGAIN;
-			#if defined(CONFIG_ARCH_SC59X)
+			#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC57X)
 				*payload = 0x20001000;
 			#elif defined(CONFIG_ARCH_SC58X)
 				*payload = 0x20081000;
@@ -808,7 +809,7 @@ fail3:
 fail2:
 	if (dma_handle)
 		dma_free_coherent(NULL, m->msg.length, payload_buf, dma_handle);
-#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC58X)
+#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC58X) || defined(CONFIG_ARCH_SC57X)
 	if (core0_mcapi_sram_addr){
 		iounmap(core0_mcapi_sram_addr);
 		core0_mcapi_sram_addr = NULL;
@@ -1018,7 +1019,7 @@ sm_wait_request_finish(uint32_t session_idx, void *user_buf, uint32_t dst_cpu,
 				mutex_lock(&adi_icc->sessions_table->lock);
 				list_del(&message->next);
 				if (payload)
-					#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC58X)
+					#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC58X) || defined(CONFIG_ARCH_SC57X)
 						if(core0_mcapi_sram_addr){
 							iounmap(core0_mcapi_sram_addr);
 							core0_mcapi_sram_addr = NULL;
@@ -1087,7 +1088,7 @@ sm_wait_request_finish(uint32_t session_idx, void *user_buf, uint32_t dst_cpu,
 			mutex_lock(&adi_icc->sessions_table->lock);
 			list_del(&message->next);
 			if (payload)
-				#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC58X)
+				#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC58X) || defined(CONFIG_ARCH_SC57X)
 					if(core0_mcapi_sram_addr){
 						iounmap(core0_mcapi_sram_addr);
 						core0_mcapi_sram_addr = NULL;
@@ -1522,14 +1523,14 @@ icc_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		ret = icc_get_session_status(pkt->param, pkt->param_len, session_idx);
 		break;
 	case CMD_SM_REQUEST_UNCACHED_BUF:
-		buf = dma_alloc_coherent(NULL, pkt->buf_len, &paddr, GFP_KERNEL);
+		buf = dma_alloc_coherent(adi_icc->dev, pkt->buf_len, &paddr, GFP_KERNEL);
 		if (!buf)
 			ret = -ENOMEM;
 		pkt->buf = buf;
 		pkt->paddr = paddr;
 		break;
 	case CMD_SM_RELEASE_UNCACHED_BUF:
-		dma_free_coherent(NULL, pkt->buf_len, pkt->buf, pkt->paddr);
+		dma_free_coherent(adi_icc->dev, pkt->buf_len, pkt->buf, pkt->paddr);
 		break;
 	case CMD_SM_QUERY_REMOTE_EP:
 		ret = sm_query_remote_ep(remote_ep, dst_cpu, timeout, nonblock);
@@ -2233,6 +2234,7 @@ static int adi_icc_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
+	icc->dev = dev;
 	icc->mdev.minor	= MISC_DYNAMIC_MINOR;
 	snprintf(icc->name, 20, "%s", DRIVER_NAME);
 	icc->mdev.name	= icc->name;
@@ -2335,16 +2337,12 @@ static int adi_icc_probe(struct platform_device *pdev)
 
 	}
 
-/* FIXME:
- * the TRU interrupt is used by sc5xx-sharc-sport.c, biring the interrupt back after
- * sc5xx-sharc-sport.c uses rpmsg or MCAPI protocol.
 	ret = devm_request_irq(dev, icc->irq, ipi_handler_int0, icc->irq_type,
 			"ICC receive IRQ", icc);
 	if (ret) {
 		dev_err(dev, "Fail to request ICC receive IRQ\n");
 		return -ENOENT;
 	}
-*/
 
 	icc->adi_tru = get_adi_tru_from_node(dev);
 	if (IS_ERR(icc->adi_tru)) {
