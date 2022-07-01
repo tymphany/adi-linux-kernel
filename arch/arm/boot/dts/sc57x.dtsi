@@ -228,6 +228,22 @@
 			status = "okay";
 		};
 
+		sec: sec@0x31089000 {
+			compatible = "adi,system-event-controller";
+			reg = <0x31089000 0x1000>;
+			adi,rcu = <&rcu>;
+			adi,sharc-cores = <2>;
+			status = "okay";
+		};
+
+		tru: tru@0x3108a000 {
+			compatible = "adi,trigger-routing-unit";
+			reg = <0x3108a000 0x1000>;
+			adi,max-master-id = <126>;
+			adi,max-slave-id = <123>;
+			status = "okay";
+		};
+
 		uart0: uart@0x31003000 {
 			compatible = "adi,uart4";
 			reg = <0x31003000 0x40>;
@@ -348,6 +364,7 @@
 			interrupt-parent = <&gic>;
 			interrupts = <GIC_SPI 206 IRQ_TYPE_EDGE_RISING>;
 			peerinfo = <1 71>, <2 72>;
+			adi,tru = <&tru>;
 			status = "disabled";
 		};
 
@@ -825,6 +842,24 @@
 					<GIC_SPI 177 IRQ_TYPE_LEVEL_HIGH>;
 				interrupt-names = "complete", "error";
 				adi,src-offset = <0x200>;
+			};
+		};
+
+		mdma: dma@0x3109b000 {
+			compatible = "adi,mdma-controller";
+			reg = <0x3109b000 0x1000>;
+			status = "okay";
+
+			mdma3: channel@43 {
+				adi,id = <43>;
+				// The destination interrupts are used for primary complete detection
+				interrupts = <GIC_SPI 144 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 188 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 145 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 189 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "complete", "error", "complete2", "error2";
+				adi,src-offset = <0>;
+				adi,dest-offset = <0x80>;
 			};
 		};
 	};

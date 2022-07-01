@@ -56,18 +56,32 @@
 
 		core1-rproc@0x3108C000 {
 			compatible = "adi,remoteproc";
-			reg = <0x3108C000 0x70>;
+			reg = <0x28240000 0x2000>,
+			      <0x20000000 0x200000>;
 			core-id = <1>;
 			core-irq = <84>;
 			firmware-name = "adi_adsp_core1_fw.ldr";
+			interrupts = <GIC_SPI 206 IRQ_TYPE_EDGE_RISING>;
+			adi,rcu = <&rcu>;
+			adi,l1-da = <0x240000 0x3a0000>;
+			adi,l2-da = <0x20080000 0x200C0000>;
+			adi,tru = <&tru>;
+			adi,tru-master-id = <71>; /* trigger master SOFT4 */
 		};
 
 		core2-rproc@0x3108C000 {
 			compatible = "adi,remoteproc";
-			reg = <0x3108C000 0x70>;
+			reg = <0x28A40000 0x2000>,
+			      <0x20000000 0x200000>;
 			core-id = <2>;
 			core-irq = <85>;
 			firmware-name = "adi_adsp_core2_fw.ldr";
+			interrupts = <GIC_SPI 206 IRQ_TYPE_EDGE_RISING>;
+			adi,rcu = <&rcu>;
+			adi,l1-da = <0x240000 0x3a0000>;
+			adi,l2-da = <0x20080000 0x200C0000>;
+			adi,tru = <&tru>;
+			adi,tru-master-id = <72>; /* trigger master SOFT5 */
 		};
 
 		sound {
@@ -76,6 +90,21 @@
 			adi,codec = <&adau1962>, <&adau1979>;
 			status = "okay";
 		};
+	};
+};
+
+&tru {
+	mcapi_to_a5: channel@0 {
+		adi,tru-master-id = <70>; /* trigger master SOFT3 */
+		adi,tru-slave-id = <71>; /* TRU0_IRQ3 */
+	};
+	mcapi_to_sharc0: channel@1 {
+		adi,tru-master-id = <71>; /* trigger master SOFT4 */
+		adi,tru-slave-id = <75>; /* TRU0_IRQ7 */
+	};
+	mcapi_to_sharc1: channel@2 {
+		adi,tru-master-id = <72>; /* trigger master SOFT5 */
+		adi,tru-slave-id = <79>; /* TRU0_IRQ11 */
 	};
 };
 
