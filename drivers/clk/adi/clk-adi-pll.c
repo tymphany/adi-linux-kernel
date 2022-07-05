@@ -8,12 +8,12 @@
 
 #include <asm/io.h>
 #include <linux/clk-provider.h>
+#include <linux/slab.h>
 
 #include "clk.h"
 
 struct clk_sc5xx_cgu_pll {
 	struct clk_hw hw;
-	struct device *dev;
 	void __iomem *base;
 	spinlock_t *lock;
 	int prepared;
@@ -70,8 +70,8 @@ static long sc5xx_cgu_pll_round_rate(struct clk_hw *hw, unsigned long rate,
 		prate = clk_hw_round_rate(parent_hw, prate * (parent_inc + 1));
 	}
 	else if (m == 0) {
-		dev_err(pll->dev, "Cannot use VCO to reduce parent clock rate, requested %lu, "
-			"clamping to %lu\n", rate, prate);
+		pr_err("%s: Cannot use VCO to reduce parent clock rate, requested %lu, "
+			"clamping to %lu\n", __func__, rate, prate);
 		return prate;
 	}
 
@@ -127,7 +127,8 @@ static int sc5xx_cgu_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 		m = 0;
 
 	// reminder for implementation: lock around read/modify to control reg
-	dev_err(pll->dev, "set_rate not permitted yet, but we would write %d to m\n", m);
+	pr_err("%s: set_rate not permitted yet, but we would write %d to m\n", __func__,
+		m);
 	return -ENOENT;
 }
 
@@ -140,15 +141,15 @@ static const struct clk_ops clk_sc5xx_cgu_pll_ops = {
 	.set_rate = sc5xx_cgu_pll_set_rate,
 };
 
-struct clk *sc5xx_cgu_pll(struct device *dev, const char *name,
-	const char *parent_name, void __iomem *base, u8 shift, u8 width,
-	u32 m_offset, bool half_m, spinlock_t *lock)
+struct clk *sc5xx_cgu_pll(const char *name, const char *parent_name,
+	void __iomem *base, u8 shift, u8 width, u32 m_offset, bool half_m,
+		spinlock_t *lock)
 {
 	struct clk_sc5xx_cgu_pll *pll;
 	struct clk *clk;
 	struct clk_init_data init;
 
-	pll = devm_kzalloc(dev, sizeof(*pll), GFP_KERNEL);
+	pll = kzalloc(sizeof(*pll), GFP_KERNEL);
 	if (!pll)
 		return ERR_PTR(-ENOMEM);
 
@@ -160,7 +161,6 @@ struct clk *sc5xx_cgu_pll(struct device *dev, const char *name,
 
 	pll->base = base;
 	pll->hw.init = &init;
-	pll->dev = dev;
 	pll->lock = lock;
 	pll->shift = shift;
 	pll->mask = GENMASK(width-1, 0) << shift;
@@ -168,9 +168,9 @@ struct clk *sc5xx_cgu_pll(struct device *dev, const char *name,
 	pll->m_offset = m_offset;
 	pll->half_m = half_m;
 
-	clk = clk_register(dev, &pll->hw);
+	clk = clk_register(NULL, &pll->hw);
 	if (IS_ERR(clk)) {
-		dev_err(dev, "Failed to register sc5xx_cgu_pll with code %lu\n",
+		pr_err("%s: Failed to register sc5xx_cgu_pll with code %lu\n", __func__,
 			PTR_ERR(clk));
 	}
 
