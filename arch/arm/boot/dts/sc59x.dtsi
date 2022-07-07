@@ -107,6 +107,100 @@
 		ranges = <0 0x20100000 0x100000>;
 	};
 
+	sys_clkin0: sys-clkin0@1 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <25000000>;
+		clock-output-names = "sys_clkin0";
+	};
+
+	sys_clkin1: sys-clkin1@2 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <25000000>;
+		clock-output-names = "sys_clkin1";
+	};
+
+	clk: clocks@0x3108d000 {
+		compatible = "adi,sc594-clocks";
+		reg = <0x3108d000 0x1000>,
+			<0x3108e000 0x1000>,
+			<0x3108f000 0x1000>;
+		#clock-cells = <1>;
+		clocks = <&sys_clkin0>, <&sys_clkin1>;
+		clock-names = "sys_clkin0", "sys_clkin1";
+		status = "okay";
+	};
+
+	gptimers: gptimers@0x31018000 {
+		compatible = "adi,sc5xx-gptimers";
+		reg = <0x31018000 0x200>;
+		clocks = <&clk ADSP_SC594_CLK_CGU0_SCLK0>;
+		status = "okay";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		gptimer0: gptimer@0 {
+			reg = <0>;
+			interrupt-parent = <&gic>;
+			interrupts = <GIC_SPI 48 IRQ_TYPE_LEVEL_HIGH>;
+			adi,offset = <0x60>;
+			adi,is-clocksource;
+			adi,reset-timer;
+		};
+
+		gptimer1: gptimer@1 {
+			reg = <1>;
+			interrupt-parent = <&gic>;
+			interrupts = <GIC_SPI 49 IRQ_TYPE_LEVEL_HIGH>;
+			adi,offset = <0x80>;
+			adi,is-clockevent;
+			adi,reset-timer;
+		};
+
+		gptimer2: gptimer@2 {
+			reg = <2>;
+			interrupt-parent = <&gic>;
+			interrupts = <GIC_SPI 50 IRQ_TYPE_LEVEL_HIGH>;
+			adi,offset = <0xa0>;
+		};
+
+		gptimer3: gptimer@3 {
+			reg = <3>;
+			interrupt-parent = <&gic>;
+			interrupts = <GIC_SPI 51 IRQ_TYPE_LEVEL_HIGH>;
+			adi,offset = <0xc0>;
+		};
+
+		gptimer4: gptimer@4 {
+			reg = <4>;
+			interrupt-parent = <&gic>;
+			interrupts = <GIC_SPI 52 IRQ_TYPE_LEVEL_HIGH>;
+			adi,offset = <0xe0>;
+		};
+
+		gptimer5: gptimer@5 {
+			reg = <5>;
+			interrupt-parent = <&gic>;
+			interrupts = <GIC_SPI 53 IRQ_TYPE_LEVEL_HIGH>;
+			adi,offset = <0x100>;
+		};
+
+		gptimer6: gptimer@6 {
+			reg = <6>;
+			interrupt-parent = <&gic>;
+			interrupts = <GIC_SPI 54 IRQ_TYPE_LEVEL_HIGH>;
+			adi,offset = <0x120>;
+		};
+
+		gptimer7: gptimer@7 {
+			reg = <7>;
+			interrupt-parent = <&gic>;
+			interrupts = <GIC_SPI 55 IRQ_TYPE_LEVEL_HIGH>;
+			adi,offset = <0x140>;
+		};
+	};
+
 	scb {
 		compatible = "simple-bus";
 		#address-cells = <1>;
@@ -225,62 +319,6 @@
 				     <GIC_SPI 88 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 89 IRQ_TYPE_LEVEL_HIGH>;
 			status = "disabled";
-		};
-
-		gptimer0: gptimer@0x31018060 {
-			compatible = "adi,sc5xx-timer-core";
-			reg = <0x31018060 0x20>, <0x3108d000 0x10>;
-			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI 48 IRQ_TYPE_LEVEL_HIGH>;
-		};
-
-		gptimer1: gptimer@0x31018080 {
-			compatible = "adi,sc5xx-timer-core";
-			reg = <0x31018080 0x20>, <0x3108d000 0x10>;
-			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI 49 IRQ_TYPE_LEVEL_HIGH>;
-		};
-
-		gptimer2: gptimer@0x310180A0 {
-			compatible = "adi,sc5xx-timer";
-			reg = <0x310180A0 0x20>;
-			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI 50 IRQ_TYPE_LEVEL_HIGH>;
-		};
-
-		gptimer3: gptimer@0x310180C0 {
-			compatible = "adi,sc5xx-timer";
-			reg = <0x310180C0 0x20>;
-			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI 51 IRQ_TYPE_LEVEL_HIGH>;
-		};
-
-		gptimer4: gptimer@0x310180E0 {
-			compatible = "adi,sc5xx-timer";
-			reg = <0x310180E0 0x20>;
-			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI 52 IRQ_TYPE_LEVEL_HIGH>;
-		};
-
-		gptimer5: gptimer@0x31018100 {
-			compatible = "adi,sc5xx-timer";
-			reg = <0x31018100 0x20>;
-			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI 53 IRQ_TYPE_LEVEL_HIGH>;
-		};
-
-		gptimer6: gptimer@0x31018120 {
-			compatible = "adi,sc5xx-timer";
-			reg = <0x31018120 0x20>;
-			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI 54 IRQ_TYPE_LEVEL_HIGH>;
-		};
-
-		gptimer7: gptimer@0x31018140 {
-			compatible = "adi,sc5xx-timer";
-			reg = <0x31018140 0x20>;
-			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI 55 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
 		i2c0: twi@0x31001400 {
@@ -459,31 +497,6 @@
 			dma_channel = <18>;
 			crypto_crc_poly = <0x5c5c5c5c>;
 			status = "disabled";
-		};
-
-		sys_clkin0: sys-clkin0@1 {
-			compatible = "fixed-clock";
-			#clock-cells = <0>;
-			clock-frequency = <25000000>;
-			clock-output-names = "sys_clkin0";
-		};
-
-		sys_clkin1: sys-clkin1@2 {
-			compatible = "fixed-clock";
-			#clock-cells = <0>;
-			clock-frequency = <25000000>;
-			clock-output-names = "sys_clkin1";
-		};
-
-		clk: clocks@0x3108d000 {
-			compatible = "adi,sc594-clocks";
-			reg = <0x3108d000 0x1000>,
-				<0x3108e000 0x1000>,
-				<0x3108f000 0x1000>;
-			#clock-cells = <1>;
-			clocks = <&sys_clkin0>, <&sys_clkin1>;
-			clock-names = "sys_clkin0", "sys_clkin1";
-			status = "okay";
 		};
 
 		pinctrl0: pinctrl@0x31004600 {

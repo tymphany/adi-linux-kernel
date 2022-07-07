@@ -30,7 +30,6 @@ extern void __init adsp_sc5xx_timer_core_init(void);
 
 DT_MACHINE_START(SC58X_DT, "SC58x-EZKIT (Device Tree Support)")
 	.map_io		= sc58x_map_io,
-	.init_time	= adsp_sc5xx_timer_core_init,
 	.init_machine	= sc58x_init,
 	.dt_compat	= sc58x_dt_board_compat,
 MACHINE_END

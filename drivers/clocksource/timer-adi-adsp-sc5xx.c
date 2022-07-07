@@ -1,265 +1,417 @@
-#include <linux/kernel.h>
+// SPDX-License-Identifier: GPL-2.0-or-later
+/**
+ * gptimer driver for providing system clock source, clock event source,
+ * and generic counters for use in userspace
+ *
+ * Copyright (c) 2022, Analog Devices, Inc.
+ * Greg Malysa <greg.malysa@timesys.com>
+ */
+
+#include <linux/clk.h>
 #include <linux/clocksource.h>
 #include <linux/clockchips.h>
 #include <linux/delay.h>
-#include <linux/irq.h>
 #include <linux/interrupt.h>
+#include <linux/io.h>
+#include <linux/irq.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
-#include <linux/clk.h>
-#include <linux/reset.h>
 #include <linux/sched_clock.h>
 #include <linux/slab.h>
 
-#include <linux/soc/adi/cpu.h>
+/*
+ * Shared gptimers registers
+ */
+#define GPTIMER_RUN								0x04
+#define GPTIMER_RUN_SET							0x08
+#define GPTIMER_RUN_CLR							0x0C
+#define GPTIMER_STOP_CFG						0x10
+#define GPTIMER_STOP_CFG_SET					0x14
+#define GPTIMER_STOP_CFG_CLR					0x18
+#define GPTIMER_DATA_IMSK						0x1C
+#define GPTIMER_STAT_IMSK						0x20
+#define GPTIMER_TRG_MSK							0x24
+#define GPTIMER_TRG_IE							0x28
+#define GPTIMER_DATA_ILAT						0x2C
+#define GPTIMER_STAT_ILAT						0x30
+#define GPTIMER_ERR_TYPE						0x34
+#define GPTIMER_BCAST_PER						0x38
+#define GPTIMER_BCAST_WID						0x3C
+#define GPTIMER_BCAST_DLY						0x40
 
-#include "timer-of.h"
+/**
+ * Per-timer registers starting at offset
+ */
+#define GPTIMER_CFG_OFF							0x00
+#define GPTIMER_CNT_OFF							0x04
+#define GPTIMER_PER_OFF							0x08
+#define GPTIMER_WID_OFF							0x0C
+#define GPTIMER_DLY_OFF							0x10
 
-#define TIMER_CLOCKSOURCE 1
-#define TIMER_CLOCKEVENT  0
+/*
+ * Timer Configuration Register Bits
+ */
+#define TIMER_EMU_RUN       0x8000
+#define TIMER_BPER_EN       0x4000
+#define TIMER_BWID_EN       0x2000
+#define TIMER_BDLY_EN       0x1000
+#define TIMER_OUT_DIS       0x0800
+#define TIMER_TIN_SEL       0x0400
+#define TIMER_CLK_SEL       0x0300
+#define TIMER_CLK_SCLK      0x0000
+#define TIMER_CLK_ALT_CLK0  0x0100
+#define TIMER_CLK_ALT_CLK1  0x0300
+#define TIMER_PULSE_HI      0x0080
+#define TIMER_SLAVE_TRIG    0x0040
+#define TIMER_IRQ_MODE      0x0030
+#define TIMER_IRQ_ACT_EDGE  0x0000
+#define TIMER_IRQ_DLY       0x0010
+#define TIMER_IRQ_WID_DLY   0x0020
+#define TIMER_IRQ_PER       0x0030
+#define TIMER_MODE          0x000f
+#define TIMER_MODE_WDOG_P   0x0008
+#define TIMER_MODE_WDOG_W   0x0009
+#define TIMER_MODE_PWM_CONT 0x000c
+#define TIMER_MODE_PWM      0x000d
+#define TIMER_MODE_WDTH     0x000a
+#define TIMER_MODE_WDTH_D   0x000b
+#define TIMER_MODE_EXT_CLK  0x000e
+#define TIMER_MODE_PININT   0x000f
 
-#define CGU_DIV         0x0C //0x3108D00C
-
-static struct sc5xx_gptimer *timer_clock, *timer_event;
-
-static const struct of_device_id sc5xx_fixed_dt_ids[] = {
-	{ .compatible = "fixed-clock", },
-	{}
+struct sc5xx_gptimer {
+	int id;
+	int irq;
+	void __iomem *io_base;
+};
+struct clocksource_gptimer {
+	struct clocksource cs;
+	struct sc5xx_gptimer *timer;
 };
 
-//Manually calculate sclk0_0 as the clock framework is not yet alive
-static unsigned long get_sclk(void){
-	unsigned long sclk_rate;
-	struct device_node *np;
-	u32 sys_clkin0, df_div, vco_mult, sysclk0_div, sclk0_div;
-
-	for_each_matching_node(np, sc5xx_fixed_dt_ids){
-		if(strcmp(np->name, "sys-clkin0") == 0){
-			of_property_read_u32(np, "clock-frequency", &sys_clkin0);
-			break;
-		}
-	}
-
-	df_div = (ioread32(timer_clock->cgu0_ctl) & 0x1) == 0x1 ? 2 : 1;
-	vco_mult = ioread32(timer_clock->cgu0_ctl) >> 8 & 0x7F;
-	sysclk0_div = ioread32(timer_clock->cgu0_ctl + CGU_DIV) >> 8 & 0x1F;
-	sclk0_div = ioread32(timer_clock->cgu0_ctl + CGU_DIV) >> 5 & 0x7;
-
-	sclk_rate = ((sys_clkin0 / df_div) * vco_mult / sysclk0_div) / sclk0_div;
-
-	return sclk_rate;
-}
-
-void __init setup_gptimer(struct sc5xx_gptimer *timer)
-{
-	int id = timer->id;
-
-	disable_gptimers(1 << id);
-	set_gptimer_config(timer, TIMER_OUT_DIS
-			| TIMER_MODE_PWM_CONT | TIMER_PULSE_HI | TIMER_IRQ_PER);
-	set_gptimer_period(timer, 0xFFFFFFFF);
-	set_gptimer_pwidth(timer, 0xFFFFFFFE);
-
-	enable_gptimers(1 << id);
-}
-
-static u64 read_gptimer(struct clocksource *cs)
-{
-	return (u64) get_gptimer_count(timer_clock);
-}
-
-static struct clocksource cs_gptimer = {
-	.name           = "cs_gptimer",
-	.rating         = 350,
-	.read           = read_gptimer,
-	.mask           = CLOCKSOURCE_MASK(32),
-	.flags          = CLOCK_SOURCE_IS_CONTINUOUS,
+struct clockevent_gptimer {
+	struct clock_event_device evt;
+	struct sc5xx_gptimer *timer;
 };
 
-static int __init cs_gptimer_init(void)
+struct sc5xx_gptimer_controller {
+	void __iomem *base;
+	struct clk *clk;
+	struct clocksource_gptimer *cs;
+	struct clockevent_gptimer *cevt;
+	struct sc5xx_gptimer *timers;
+	size_t num_timers;
+};
+
+static struct sc5xx_gptimer_controller gptimer_controller = {0};
+
+static struct clockevent_gptimer *to_clockevent_gptimer(struct clock_event_device *evt)
 {
-	setup_gptimer(timer_clock);
-
-	if (clocksource_register_hz(&cs_gptimer, get_sclk()))
-		panic("failed to register clocksource");
-
-	return 0;
+	return container_of(evt, struct clockevent_gptimer, evt);
 }
 
-static int gptmr_set_next_event(unsigned long cycles,
-		struct clock_event_device *evt)
-{
-	int id = timer_event->id;
+/**
+ * Per gptimer accessors
+ */
+static void set_gptimer_period(struct sc5xx_gptimer *timer, uint32_t period) {
+	writel(period, timer->io_base + GPTIMER_PER_OFF);
+}
 
-	disable_gptimers(1 << id);
+static void set_gptimer_pwidth(struct sc5xx_gptimer *timer, uint32_t value) {
+	writel(value, timer->io_base + GPTIMER_WID_OFF);
+}
+
+static void set_gptimer_delay(struct sc5xx_gptimer *timer, uint32_t value) {
+	writel(value, timer->io_base + GPTIMER_DLY_OFF);
+}
+
+static void set_gptimer_config(struct sc5xx_gptimer *timer, uint16_t config) {
+	writew(config, timer->io_base + GPTIMER_CFG_OFF);
+}
+
+static uint32_t get_gptimer_count(struct sc5xx_gptimer *timer) {
+	return readl(timer->io_base + GPTIMER_CNT_OFF);
+}
+
+/**
+ * Accessors that redirect to the shared registers
+ */
+static void gptimer_enable(struct sc5xx_gptimer *timer) {
+	writel(1 << timer->id, gptimer_controller.base + GPTIMER_RUN_SET);
+}
+
+static void gptimer_disable(struct sc5xx_gptimer *timer) {
+	writel(1 << timer->id, gptimer_controller.base + GPTIMER_STOP_CFG_SET);
+	writel(1 << timer->id, gptimer_controller.base + GPTIMER_RUN_CLR);
+}
+
+static void gptimer_clear_interrupt(struct sc5xx_gptimer *timer) {
+	writel(1 << timer->id, gptimer_controller.base + GPTIMER_DATA_ILAT);
+}
+
+static bool gptimer_is_running(struct sc5xx_gptimer *timer) {
+	u32 stat = readl(gptimer_controller.base + GPTIMER_RUN);
+	u32 check = 1 << timer->id;
+	return (stat & check) == check;
+}
+
+/**
+ * Scheduler/clocksource functions
+ */
+static u64 read_cs_gptimer(struct clocksource *cs) {
+	struct clocksource_gptimer *gp = container_of(cs, struct clocksource_gptimer, cs);
+	return (u64) get_gptimer_count(gp->timer);
+}
+
+static u64 notrace read_sched_gptimer(void) {
+	return (u64) get_gptimer_count(gptimer_controller.cs->timer);
+}
+
+/**
+ * Clockevent functions
+ */
+static int gptimer_set_next_event(unsigned long cycles,
+	struct clock_event_device *evt)
+{
+	struct clockevent_gptimer *cevt = to_clockevent_gptimer(evt);
 
 	/* it starts counting three SCLK cycles after the TIMENx bit is set */
-	set_gptimer_pwidth(timer_event, cycles - 3);
-	enable_gptimers(1 << id);
+	set_gptimer_pwidth(cevt->timer, 1);
+	set_gptimer_delay(cevt->timer, cycles - 3);
+
+	gptimer_enable(cevt->timer);
 	return 0;
 }
 
-static int gptmr_set_state_periodic(struct clock_event_device *evt)
+static int gptimer_set_state_periodic(struct clock_event_device *evt)
 {
-	int id = timer_event->id;
+	struct clockevent_gptimer *cevt = to_clockevent_gptimer(evt);
+	unsigned long rate = clk_get_rate(gptimer_controller.clk);
 
-	disable_gptimers(1 << id);
-	set_gptimer_config(timer_event, TIMER_OUT_DIS
-				| TIMER_MODE_PWM_CONT | TIMER_PULSE_HI |
-				TIMER_IRQ_PER);
+	gptimer_disable(cevt->timer);
+	set_gptimer_config(cevt->timer, TIMER_OUT_DIS | TIMER_MODE_PWM_CONT |
+		TIMER_PULSE_HI | TIMER_IRQ_PER);
 
-	set_gptimer_period(timer_event, get_sclk() / HZ);
-	set_gptimer_pwidth(timer_event, get_sclk() / HZ - 1);
-	enable_gptimers(1 << id);
+	set_gptimer_period(cevt->timer, rate / HZ);
+	set_gptimer_pwidth(cevt->timer, rate / HZ - 1);
+
+	gptimer_enable(cevt->timer);
 	return 0;
 }
 
-static int gptmr_set_state_oneshot(struct clock_event_device *evt)
+static int gptimer_set_state_oneshot(struct clock_event_device *evt)
 {
-	int id = timer_event->id;
+	struct clockevent_gptimer *cevt = to_clockevent_gptimer(evt);
 
-	while(1);
-	disable_gptimers(1 << id);
-	set_gptimer_config(timer_event, TIMER_OUT_DIS | TIMER_MODE_PWM
-			| TIMER_PULSE_HI | TIMER_IRQ_WID_DLY);
-	set_gptimer_period(timer_event, 0);
+	gptimer_disable(cevt->timer);
+	set_gptimer_config(cevt->timer, TIMER_OUT_DIS | TIMER_MODE_PWM |
+		TIMER_PULSE_HI | TIMER_IRQ_DLY);
+
+	/* gptimer_set_next_event will configure the period and delay */
 	return 0;
 }
 
-static int gptmr_set_state_shutdown(struct clock_event_device *evt)
+static int gptimer_set_state_shutdown(struct clock_event_device *evt)
 {
-	int id = timer_event->id;
-
-	disable_gptimers(1 << id);
+	struct clockevent_gptimer *cevt = to_clockevent_gptimer(evt);
+	gptimer_disable(cevt->timer);
 	return 0;
 }
 
-static void gptmr_ack(int id)
-{
-	set_gptimer_status(1 << id);
-}
+static irqreturn_t cevt_gptimer_handler(int irq, void *dev) {
+	struct clockevent_gptimer *cevt = dev;
 
-static u64 notrace gptmr_read_sched(void)
-{
-	return (u32)get_gptimer_count(timer_clock);
-}
-
-irqreturn_t gptmr_interrupt(int irq, void *dev_id)
-{
-	struct clock_event_device *evt = dev_id;
-	/*
-	 * We want to ACK before we handle so that we can handle smaller timer
-	 * intervals.  This way if the timer expires again while we're handling
-	 * things, we're more likely to see that 2nd int rather than swallowing
-	 * it by ACKing the int at the end of this handler.
-	 */
-	gptmr_ack(TIMER_CLOCKEVENT);
-	evt->event_handler(evt);
+	gptimer_clear_interrupt(cevt->timer);
+	cevt->evt.event_handler(&cevt->evt);
 	return IRQ_HANDLED;
 }
 
-static struct irqaction gptmr_irq = {
-	.name           = "SC5xx GPTimer0",
-	.flags          = IRQF_TIMER | IRQF_IRQPOLL,
-	.handler        = gptmr_interrupt,
-};
-
-static struct clock_event_device clockevent_gptmr = {
-	.name           = "sc5xx_gptimer0",
-	.rating         = 300,
-	.shift          = 32,
-	.features       = CLOCK_EVT_FEAT_PERIODIC,
-	.set_next_event = gptmr_set_next_event,
-	.set_state_periodic = gptmr_set_state_periodic,
-	.set_state_oneshot = gptmr_set_state_oneshot,
-	.set_state_shutdown = gptmr_set_state_shutdown,
-};
-
-static void __init gptmr_clockevent_init(struct clock_event_device *evt)
+/**
+ * Initializes an individual gptimer belonging to the controller
+ * @todo resource cleanup in error paths
+ */
+static int __init sc5xx_gptimer_init(struct device_node *np,
+	struct sc5xx_gptimer *timer)
 {
-	unsigned long clock_tick;
+	int irq, id;
+	u32 offset;
+	int ret;
+	struct clk *clk = gptimer_controller.clk;
 
-	clock_tick = get_sclk();
-	evt->mult = div_sc(clock_tick, NSEC_PER_SEC, evt->shift);
-	evt->max_delta_ns = clockevent_delta2ns(-1, evt);
-	evt->min_delta_ns = clockevent_delta2ns(100, evt);
-
-	evt->cpumask = cpumask_of(0);
-
-	clockevents_register_device(evt);
-}
-
-static struct sc5xx_gptimer *sc5xx_timer_of_init(struct device_node *node)
-{
-	void __iomem *base, *cgu0_ctl;
-	int irq;
-	int id;
-	struct sc5xx_gptimer *timer = NULL;
-
-	id = of_alias_get_id(node, "timer");
-	if (id < 0)
-		panic("Can't timer id");
-
-	base = of_iomap(node, 0);
-	if (!base)
-		panic("Can't remap registers");
-
-	cgu0_ctl = of_iomap(node, 1);
-	if (!base)
-		panic("Can't remap registers");
-
-	irq = irq_of_parse_and_map(node, 0);
-	if (irq <= 0)
-		panic("Can't parse IRQ");
-
-	timer = kzalloc(sizeof(struct sc5xx_gptimer), GFP_KERNEL);
-	if (!timer) {
-		pr_err("%s: no memory.\n", __func__);
-		return ERR_PTR(-ENOMEM);
+	irq = irq_of_parse_and_map(np, 0);
+	if (!irq) {
+		pr_err("%s: Unable to find irq for gptimer %pOFn\n", __func__, np);
+		return -ENODEV;
 	}
+
+	ret = of_property_read_s32(np, "reg", &id);
+	if (ret) {
+		pr_err("%s: Missing reg property containing timer id for gptimer %pOFn\n",
+			__func__, np);
+		return -ENODEV;
+	}
+
+	ret = of_property_read_u32(np, "adi,offset", &offset);
+	if (ret) {
+		pr_err("%s: Missing adi,offset for gptimer %pOFn\n", __func__, np);
+		return -ENODEV;
+	}
+
 	timer->id = id;
-	timer->io_base = base;
-	timer->cgu0_ctl = cgu0_ctl;
 	timer->irq = irq;
+	timer->io_base = gptimer_controller.base + offset;
 
-	return timer;
-}
+	/*
+	 * @todo add period or other timing options to dts?
+	 */
+	if (!gptimer_is_running(timer) ||
+		of_property_read_bool(np, "adi,reset-timer"))
+	{
+		gptimer_disable(timer);
 
-static const struct of_device_id sc5xx_timer_core_dt_ids[] = {
-	{ .compatible = "adi,sc5xx-timer-core", },
-	{}
-};
+		set_gptimer_config(timer, TIMER_OUT_DIS | TIMER_MODE_PWM_CONT |
+			TIMER_PULSE_HI | TIMER_IRQ_PER);
+		set_gptimer_period(timer, 0xFFFFFFFF);
+		set_gptimer_pwidth(timer, 0xFFFFFFFE);
 
-int __init adsp_sc5xx_timer_core_init(void)
-{
-	struct device_node *np, *clocksrc_np = NULL, *clockevent_np = NULL;
-	int ret = 0;
-
-	for_each_matching_node(np, sc5xx_timer_core_dt_ids){
-		if (!clocksrc_np && (of_alias_get_id(np, "timer") == TIMER_CLOCKSOURCE)) {
-			clocksrc_np = np;
-		}
-
-		if (!clockevent_np && (of_alias_get_id(np, "timer") == TIMER_CLOCKEVENT)) {
-			clockevent_np = np;
-		}
+		gptimer_enable(timer);
 	}
 
-	timer_clock = sc5xx_timer_of_init(clocksrc_np);
-	timer_event = sc5xx_timer_of_init(clockevent_np);
+	if (of_property_read_bool(np, "adi,is-clocksource")) {
+		struct clocksource_gptimer *cs;
 
-	clockevent_gptmr.irq = timer_event->irq;
+		cs = kzalloc(sizeof(*cs), GFP_KERNEL);
+		if (!cs) {
+			pr_err("%s: could not allocate clocksource\n", __func__);
+			return -ENOMEM;
+		}
 
-	map_gptimers();
+		cs->cs.name = "cs_adi_gptimer";
+		cs->cs.rating = 350;
+		cs->cs.read = read_cs_gptimer;
+		cs->cs.mask = CLOCKSOURCE_MASK(32);
+		cs->cs.flags = CLOCK_SOURCE_IS_CONTINUOUS;
+		cs->timer = timer;
+		gptimer_controller.cs = cs;
 
-	cs_gptimer_init();
+		ret = clocksource_register_hz(&cs->cs, clk_get_rate(clk));
+		if (ret) {
+			pr_err("%s: failed to register clocksource = %d\n", __func__, ret);
+			return ret;
+		}
 
-	sched_clock_register(gptmr_read_sched, 32, get_sclk());
+		sched_clock_register(read_sched_gptimer, 32, clk_get_rate(clk));
 
-	setup_irq(timer_event->irq, &gptmr_irq);
-	gptmr_irq.dev_id = &clockevent_gptmr;
-	gptmr_clockevent_init(&clockevent_gptmr);
+		// optionally, register_current_timer_delay if we also want to
+		// use this gptimer for timer-based delays instead of while loops, but
+		// this may not be a good idea on slower platforms
+	}
 
-	return ret;
+	if (of_property_read_bool(np, "adi,is-clockevent")) {
+		struct clockevent_gptimer *cevt;
+		u16 imsk;
+
+		cevt = kzalloc(sizeof(*cevt), GFP_KERNEL);
+		if (!cevt) {
+			pr_err("%s: could not allocate clockevent\n", __func__);
+			return -ENOMEM;
+		}
+
+		cevt->evt = (struct clock_event_device) {
+			.name = "cevt_adi_gptimer",
+			.features = CLOCK_EVT_FEAT_PERIODIC | CLOCK_EVT_FEAT_ONESHOT,
+			.rating = 300,
+			.shift = 32,
+			.cpumask = cpumask_of(0),
+			.set_next_event = gptimer_set_next_event,
+			.set_state_periodic = gptimer_set_state_periodic,
+			.set_state_oneshot = gptimer_set_state_oneshot,
+			.set_state_shutdown = gptimer_set_state_shutdown,
+		};
+
+		cevt->timer = timer;
+		gptimer_controller.cevt = cevt;
+
+		imsk = readw(gptimer_controller.base + GPTIMER_DATA_IMSK);
+		imsk &= ~(1 << timer->id);
+		writew(imsk, gptimer_controller.base + GPTIMER_DATA_IMSK);
+
+		ret = request_irq(irq, cevt_gptimer_handler, IRQF_TIMER | IRQF_IRQPOLL,
+			"sc5xx gptimer clockevent", cevt);
+		if (ret) {
+			pr_err("%s: Could not register clockevent handler\n", __func__);
+			return ret;
+		}
+
+		clockevents_config_and_register(&cevt->evt, clk_get_rate(clk), 100, -1);
+	}
+
+	return 0;
 }
+
+/**
+ * Map master gptimers module, which finds a clocksource and clockevent child
+ * and registers them as such with the system. The other gptimers are registers
+ * as counters with the counter framework
+ *
+ * @todo clear up resource leaks in exit paths
+ */
+static int __init sc5xx_gptimer_controller_init(struct device_node *np) {
+	struct device_node *timer_np;
+	void __iomem *base;
+	struct clk *clk;
+	int ret;
+	int i, n;
+
+	if (gptimer_controller.base) {
+		pr_err("%s: Tried to initialize a second gptimer controller; check your "
+			"device tree\n", __func__);
+		return -EINVAL;
+	}
+
+	base = of_iomap(np, 0);
+	if (!base) {
+		pr_err("%s: Unable to map gptimer registers\n", __func__);
+		return -ENODEV;
+	}
+
+	clk = of_clk_get(np, 0);
+	if (IS_ERR(clk)) {
+		pr_err("%s: could not find sclk0_0 = %ld\n", __func__, PTR_ERR(clk));
+		return PTR_ERR(clk);
+	}
+
+	ret = clk_prepare_enable(clk);
+	if (ret) {
+		pr_err("%s: sclk0_0 clock enable failed = %d\n", __func__, ret);
+		return ret;
+	}
+
+	gptimer_controller.clk = clk;
+	gptimer_controller.base = base;
+
+	n = of_get_child_count(np);
+	gptimer_controller.num_timers = n;
+	gptimer_controller.timers = kcalloc(n, sizeof(*gptimer_controller.timers),
+		GFP_KERNEL);
+
+	if (!gptimer_controller.timers) {
+		pr_err("%s: Unable to allocate memory for timers\n", __func__);
+		return -ENOMEM;
+	}
+
+	i = 0;
+	for_each_child_of_node(np, timer_np) {
+		ret = sc5xx_gptimer_init(timer_np, &gptimer_controller.timers[i]);
+		if (ret) {
+			of_node_put(timer_np);
+			return ret;
+		}
+
+		i += 1;
+	}
+
+	return 0;
+}
+
+TIMER_OF_DECLARE(sc5xx_gptimers, "adi,sc5xx-gptimers", sc5xx_gptimer_controller_init);

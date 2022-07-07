@@ -16,14 +16,10 @@ static const char * const sc57x_dt_board_compat[] __initconst = {
 	NULL
 };
 
-// @todo this needs to be in a header and defined in one place, under soc/adi
-extern void __init adsp_sc5xx_timer_core_init(void);
-
 DT_MACHINE_START(SC57X_DT, "SC57x-EZKIT (Device Tree Support)")
 	.l2c_aux_val = 0,
 	.l2c_aux_mask = ~0,
 	.init_early	= sc57x_init_early,
-	.init_time	= adsp_sc5xx_timer_core_init,
 	.init_machine	= sc57x_init,
 	.dt_compat	= sc57x_dt_board_compat,
 MACHINE_END

@@ -14,12 +14,13 @@
 #include <linux/phy.h>
 
 #include <asm/mach-types.h>
-#include <mach/sc57x.h>
 
 #include "core.h"
 
 #include <asm/siginfo.h>
 #include <asm/signal.h>
+
+#define REG_SPU0_CTL                    0x3108B000         /* SPU0 Control Register */
 
 static bool first_fault = true;
 
