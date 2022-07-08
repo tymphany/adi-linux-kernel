@@ -17,7 +17,9 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_irq.h>
+#include <linux/of_platform.h>
 #include <linux/platform_device.h>
+#include <linux/soc/adi/adsp-gpio-port.h>
 
 #define ADSP_PINT_IRQS 32
 
@@ -44,6 +46,67 @@ static struct adsp_pint *to_adsp_pint(struct irq_chip *chip) {
 	return container_of(chip, struct adsp_pint, chip);
 }
 
+/**
+ * Each gpio device should be connected to one of the two valid pints with an
+ * indicator of which half it is connected to:
+ *
+ * pint0 {
+ *   ...
+ * };
+ * gpa {
+ *   adi,pint = <&pint0 1>;
+ * };
+ * gpb {
+ *   adi,pint = <&pint0 0>;
+ * };
+ *
+ * This relies on the default configuration of the hardware, which we do not
+ * expose an interface to change.
+ */
+int adsp_attach_pint_to_gpio(struct adsp_gpio_port *port) {
+	struct platform_device *pint_pdev;
+	struct device_node *pint_node;
+	struct adsp_pint *pint;
+	struct of_phandle_args args;
+	int ret;
+
+	ret = of_parse_phandle_with_fixed_args(port->dev->of_node, "adi,pint", 1, 0,
+		&args);
+	if (ret) {
+		dev_err(port->dev, "Missing or invalid adi,pint connection for %pOFn; "
+			"attach a pint instance with one argument for port assignment\n",
+			port->dev->of_node);
+		return ret;
+	}
+
+	pint_node = args.np;
+
+	pint_pdev = of_find_device_by_node(pint_node);
+	if (!pint_pdev) {
+		ret = -EPROBE_DEFER;
+		goto cleanup;
+	}
+
+	pint = dev_get_drvdata(&pint_pdev->dev);
+	if (!pint) {
+		ret = -EPROBE_DEFER;
+		goto cleanup;
+	}
+
+	port->irq_domain = pint->domain;
+
+	if (args.args[0]) {
+		port->irq_offset = 16;
+	}
+	else {
+		port->irq_offset = 0;
+	}
+
+cleanup:
+	of_node_put(pint_node);
+	return ret;
+}
+
 static void adsp_pint_dispatch_irq(struct irq_desc *desc) {
 	struct irq_chip *chip = irq_desc_get_chip(desc);
 	struct adsp_pint *pint = to_adsp_pint(chip);
@@ -58,6 +121,8 @@ static void adsp_pint_dispatch_irq(struct irq_desc *desc) {
 		else
 			writel(pos, pint->regs + ADSP_PINT_REG_INVERT_SET);
 	}
+
+	writel(pos, pint->regs + ADSP_PINT_REG_REQUEST);
 
 	/* either edge is set */
 	if (type & IRQ_TYPE_EDGE_BOTH)

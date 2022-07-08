@@ -49,6 +49,17 @@ static int adsp_gpio_get_value(struct gpio_chip *chip, unsigned offset) {
 	return !!(__adsp_gpio_readw(port, ADSP_PORT_REG_DATA) & BIT(offset));
 }
 
+static int adsp_gpio_to_irq(struct gpio_chip *chip, unsigned offset) {
+	struct adsp_gpio_port *port = to_adsp_gpio_port(chip);
+	irq_hw_number_t irq = offset + port->irq_offset;
+	int map = irq_find_mapping(port->irq_domain, irq);
+
+	if (!map)
+		map = irq_create_mapping(port->irq_domain, irq);
+
+	return map;
+}
+
 static int adsp_gpio_probe(struct platform_device *pdev) {
 	struct device *dev = &pdev->dev;
 	struct adsp_gpio_port *gpio;
@@ -64,7 +75,16 @@ static int adsp_gpio_probe(struct platform_device *pdev) {
 	if (IS_ERR(gpio->regs))
 		return PTR_ERR(gpio->regs);
 
+	gpio->dev = dev;
 	platform_set_drvdata(pdev, gpio);
+
+	ret = adsp_attach_pint_to_gpio(gpio);
+	if (ret) {
+		if (ret == -EPROBE_DEFER)
+			return ret;
+		dev_err(dev, "Failed to attach to pint node!\n");
+		return ret;
+	}
 
 	spin_lock_init(&gpio->lock);
 
@@ -73,6 +93,7 @@ static int adsp_gpio_probe(struct platform_device *pdev) {
 	gpio->gpio.direction_output = adsp_gpio_direction_output;
 	gpio->gpio.get = adsp_gpio_get_value;
 	gpio->gpio.set = adsp_gpio_set_value;
+	gpio->gpio.to_irq = adsp_gpio_to_irq;
 	gpio->gpio.request = gpiochip_generic_request;
 	gpio->gpio.free = gpiochip_generic_free;
 	gpio->gpio.of_node = dev->of_node;

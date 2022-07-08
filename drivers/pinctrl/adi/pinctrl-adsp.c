@@ -341,6 +341,9 @@ static int adsp_pinmux_set_mux(struct pinctrl_dev *pctldev, unsigned func,
 	u32 offset;
 
 	range = pinctrl_find_gpio_range_from_pin(pctldev, group);
+	if (!range || !range->gc)
+		return -EPROBE_DEFER;
+
 	offset = group - range->pin_base;
 
 	port = to_adsp_gpio_port(range->gc);

@@ -36,6 +36,8 @@ struct adsp_gpio_port {
 	struct device *dev;
 	void __iomem *regs;
 	struct gpio_chip gpio;
+	struct irq_domain *irq_domain;
+	uint32_t irq_offset;
 	spinlock_t lock;
 };
 
@@ -62,5 +64,7 @@ static inline void __adsp_gpio_writew(struct adsp_gpio_port *port, u16 val, size
 static inline struct adsp_gpio_port *to_adsp_gpio_port(struct gpio_chip *chip) {
 	return container_of(chip, struct adsp_gpio_port, gpio);
 }
+
+int adsp_attach_pint_to_gpio(struct adsp_gpio_port *port);
 
 #endif
