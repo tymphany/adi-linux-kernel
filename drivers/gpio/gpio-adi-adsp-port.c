@@ -64,6 +64,7 @@ static int adsp_gpio_probe(struct platform_device *pdev) {
 	struct device *dev = &pdev->dev;
 	struct adsp_gpio_port *gpio;
 	struct resource *res;
+	int base;
 	int ret;
 
 	gpio = devm_kzalloc(dev, sizeof(*gpio), GFP_KERNEL);
@@ -97,8 +98,11 @@ static int adsp_gpio_probe(struct platform_device *pdev) {
 	gpio->gpio.request = gpiochip_generic_request;
 	gpio->gpio.free = gpiochip_generic_free;
 	gpio->gpio.of_node = dev->of_node;
-	gpio->gpio.base = -1;
 	gpio->gpio.ngpio = ADSP_PORT_NGPIO;
+
+	base = -1;
+	of_property_read_u32(dev->of_node, "adi,gpio-base", &base);
+	gpio->gpio.base = base;
 
 	ret = devm_gpiochip_add_data(dev, &gpio->gpio, gpio);
 	if (ret)

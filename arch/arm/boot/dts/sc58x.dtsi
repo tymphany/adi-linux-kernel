@@ -622,6 +622,7 @@
 			reg = <0x31004000 0x7F>;
 			gpio-ranges = <&pinctrl0 0 0 16>;
 			adi,pint = <&pint0 1>;
+			adi,gpio-base = <0>;
 		};
 
 		gpb: gport@0x31004080 {
@@ -631,6 +632,7 @@
 			reg = <0x31004080 0x7F>;
 			gpio-ranges = <&pinctrl0 0 16 16>;
 			adi,pint = <&pint0 0>;
+			adi,gpio-base = <16>;
 		};
 
 		gpc: gport@0x31004100 {
@@ -640,6 +642,7 @@
 			reg = <0x31004100 0x7F>;
 			gpio-ranges = <&pinctrl0 0 32 16>;
 			adi,pint = <&pint2 1>;
+			adi,gpio-base = <32>;
 		};
 
 		gpd: gport@0x31004180 {
@@ -649,6 +652,7 @@
 			reg = <0x31004180 0x7F>;
 			gpio-ranges = <&pinctrl0 0 48 16>;
 			adi,pint = <&pint2 0>;
+			adi,gpio-base = <48>;
 		};
 
 		gpe: gport@0x31004200 {
@@ -658,6 +662,7 @@
 			reg = <0x31004200 0x7F>;
 			gpio-ranges = <&pinctrl0 0 64 16>;
 			adi,pint = <&pint4 1>;
+			adi,gpio-base = <64>;
 		};
 
 		gpf: gport@0x31004280 {
@@ -667,6 +672,7 @@
 			reg = <0x31004280 0x7F>;
 			gpio-ranges = <&pinctrl0 0 80 16>;
 			adi,pint = <&pint4 0>;
+			adi,gpio-base = <80>;
 		};
 
 		gpg: gport@0x31004300 {
@@ -676,6 +682,7 @@
 			reg = <0x31004300 0x7F>;
 			gpio-ranges = <&pinctrl0 0 96 16>;
 			adi,pint = <&pint5 0>;
+			adi,gpio-base = <96>;
 		};
 
 		usb0_phy: usb-phy@310c1390 {
