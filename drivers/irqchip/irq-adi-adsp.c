@@ -291,4 +291,9 @@ static struct platform_driver adsp_pint_driver = {
 	.probe = adsp_pint_probe,
 	.remove = adsp_pint_remove,
 };
-module_platform_driver(adsp_pint_driver);
+
+static int __init adsp_pint_init(void) {
+	return platform_driver_register(&adsp_pint_driver);
+}
+
+arch_initcall(adsp_pint_init);
