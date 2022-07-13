@@ -248,6 +248,11 @@
 			status = "disabled";
 		};
 
+		gptimer_counter: gptimer-counters@0 {
+			compatible = "adi,gptimer-counter";
+			status = "okay";
+		};
+
 		rcu: rcu@0x3108c000 {
 			compatible = "adi,reset-controller";
 			reg = <0x3108c000 0x1000>;

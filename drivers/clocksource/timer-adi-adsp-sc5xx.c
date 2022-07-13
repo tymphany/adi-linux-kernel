@@ -10,13 +10,16 @@
 #include <linux/clk.h>
 #include <linux/clocksource.h>
 #include <linux/clockchips.h>
+#include <linux/counter.h>
 #include <linux/delay.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/irq.h>
+#include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
+#include <linux/platform_device.h>
 #include <linux/sched_clock.h>
 #include <linux/slab.h>
 
@@ -84,6 +87,11 @@ struct sc5xx_gptimer {
 	int irq;
 	void __iomem *io_base;
 };
+
+struct gptimer_counter {
+	struct counter_device counter;
+};
+
 struct clocksource_gptimer {
 	struct clocksource cs;
 	struct sc5xx_gptimer *timer;
@@ -101,6 +109,7 @@ struct sc5xx_gptimer_controller {
 	struct clockevent_gptimer *cevt;
 	struct sc5xx_gptimer *timers;
 	size_t num_timers;
+	struct counter_device counter_dev;
 };
 
 static struct sc5xx_gptimer_controller gptimer_controller = {0};
@@ -225,6 +234,23 @@ static irqreturn_t cevt_gptimer_handler(int irq, void *dev) {
 	cevt->evt.event_handler(&cevt->evt);
 	return IRQ_HANDLED;
 }
+
+static int gptimer_counter_count_read(struct counter_device *counter,
+	struct counter_count *count, struct counter_count_read_value *val)
+{
+	uint32_t id = count->id;
+	struct sc5xx_gptimer *timer = &gptimer_controller.timers[id];
+	u64 timer_count = get_gptimer_count(timer);
+	counter_count_read_value_set(val, COUNTER_COUNT_POSITION, &timer_count);
+	return 0;
+}
+
+/**
+ * Counter implementation
+ */
+static struct counter_ops gptimer_counter_ops = {
+	.count_read = gptimer_counter_count_read,
+};
 
 /**
  * Initializes an individual gptimer belonging to the controller
@@ -415,3 +441,47 @@ static int __init sc5xx_gptimer_controller_init(struct device_node *np) {
 }
 
 TIMER_OF_DECLARE(sc5xx_gptimers, "adi,sc5xx-gptimers", sc5xx_gptimer_controller_init);
+
+static int gptimer_counter_probe(struct platform_device *pdev) {
+	struct device *dev = &pdev->dev;
+	struct counter_count *counts;
+	uint32_t i;
+
+	if (!gptimer_controller.base) {
+		dev_err(dev, "gptimer controller not yet mapped?\n");
+		return -ENODEV;
+	}
+
+	counts = devm_kcalloc(dev, gptimer_controller.num_timers, sizeof(*counts),
+		GFP_KERNEL);
+	if (!counts)
+		return -ENOMEM;
+
+	for (i = 0; i < gptimer_controller.num_timers; ++i) {
+		counts[i].id = i;
+		counts[i].name = kasprintf(GFP_KERNEL, "gptimer_counter%d", i);
+	}
+
+	gptimer_controller.counter_dev.name = dev_name(dev);
+	gptimer_controller.counter_dev.parent = dev;
+	gptimer_controller.counter_dev.ops = &gptimer_counter_ops;
+	gptimer_controller.counter_dev.counts = counts;
+	gptimer_controller.counter_dev.num_counts = gptimer_controller.num_timers;
+
+	return devm_counter_register(dev, &gptimer_controller.counter_dev);
+}
+
+static const struct of_device_id adsp_gptimer_counter_match[] = {
+	{ .compatible = "adi,gptimer-counter" },
+	{ },
+};
+MODULE_DEVICE_TABLE(of, adsp_gptimer_counter_match);
+
+static struct platform_driver gptimer_counter_driver = {
+	.probe = gptimer_counter_probe,
+	.driver = {
+		.name = "adsp-gptimer-counter",
+		.of_match_table = adsp_gptimer_counter_match,
+	},
+};
+module_platform_driver(gptimer_counter_driver);
