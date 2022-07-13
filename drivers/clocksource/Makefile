@@ -91,3 +91,4 @@ obj-$(CONFIG_HYPERV_TIMER)		+= hyperv_timer.o
 obj-$(CONFIG_ARCH_SC57X)		+= timer-adi-adsp-sc5xx.o
 obj-$(CONFIG_ARCH_SC58X)		+= timer-adi-adsp-sc5xx.o
 obj-$(CONFIG_ARCH_SC59X)		+= timer-adi-adsp-sc5xx.o
+obj-$(CONFIG_ARCH_SC59X_64)		+= timer-adi-adsp-sc5xx.o

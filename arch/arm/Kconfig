@@ -553,6 +553,7 @@ config ARCH_SC59X
         select PINCTRL
         select COMMON_CLK
 		select TIMER_OF
+		select COUNTER
         help
           This enables support for ADI Ltd sc59x board.
 
@@ -572,6 +573,7 @@ config ARCH_SC58X
 	select PINCTRL
 	select COMMON_CLK
 	select TIMER_OF
+	select COUNTER
 	help
 	  This enables support for ADI Ltd sc58x board.
 
@@ -592,6 +594,7 @@ config ARCH_SC57X
 	select OF
 	select COMMON_CLK
 	select TIMER_OF
+	select COUNTER
 	help
 		This enables support for ADI Ltd sc57x board.
 
