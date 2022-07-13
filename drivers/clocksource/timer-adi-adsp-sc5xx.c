@@ -137,20 +137,20 @@ static uint32_t get_gptimer_count(struct sc5xx_gptimer *timer) {
  * Accessors that redirect to the shared registers
  */
 static void gptimer_enable(struct sc5xx_gptimer *timer) {
-	writel(1 << timer->id, gptimer_controller.base + GPTIMER_RUN_SET);
+	writew(1 << timer->id, gptimer_controller.base + GPTIMER_RUN_SET);
 }
 
 static void gptimer_disable(struct sc5xx_gptimer *timer) {
-	writel(1 << timer->id, gptimer_controller.base + GPTIMER_STOP_CFG_SET);
-	writel(1 << timer->id, gptimer_controller.base + GPTIMER_RUN_CLR);
+	writew(1 << timer->id, gptimer_controller.base + GPTIMER_STOP_CFG_SET);
+	writew(1 << timer->id, gptimer_controller.base + GPTIMER_RUN_CLR);
 }
 
 static void gptimer_clear_interrupt(struct sc5xx_gptimer *timer) {
-	writel(1 << timer->id, gptimer_controller.base + GPTIMER_DATA_ILAT);
+	writew(1 << timer->id, gptimer_controller.base + GPTIMER_DATA_ILAT);
 }
 
 static bool gptimer_is_running(struct sc5xx_gptimer *timer) {
-	u32 stat = readl(gptimer_controller.base + GPTIMER_RUN);
+	u32 stat = readw(gptimer_controller.base + GPTIMER_RUN);
 	u32 check = 1 << timer->id;
 	return (stat & check) == check;
 }
