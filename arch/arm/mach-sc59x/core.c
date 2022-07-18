@@ -25,7 +25,6 @@
 #include <linux/sched_clock.h>
 
 #include <asm/irq.h>
-#include <asm/hardware/cache-l2x0.h>
 #include <asm/mach-types.h>
 
 #include <asm/mach/arch.h>
@@ -310,7 +309,6 @@ static struct adi_display_config adi_display_data = {
 #endif
 #endif
 
-#ifdef CONFIG_OF
 static const struct of_dev_auxdata sc59x_auxdata_lookup[] __initconst = {
 #if IS_ENABLED(CONFIG_VIDEO_ADI_DISPLAY)
 	OF_DEV_AUXDATA("adi,disp", 0x31040000, "adi_display.0", &adi_display_data),
@@ -320,12 +318,6 @@ static const struct of_dev_auxdata sc59x_auxdata_lookup[] __initconst = {
 #endif
 	{},
 };
-
-static struct of_device_id sc59x_of_bus_ids[] __initdata = {
-	{ .compatible = "simple-bus", },
-	{},
-};
-#endif
 
 #define DP83865_PHY_ID          0x20005c7a
 #define REG_DP83865_AUX_CTRL    0x12
@@ -374,16 +366,8 @@ static void sc59x_init_ethernet(void)
 
 void __init sc59x_init(void)
 {
-#ifdef CONFIG_CACHE_L2X0
-	l2x0_of_init(0, ~0UL);
-#endif
-
 	pr_info("%s: registering device resources\n", __func__);
-
-#ifdef CONFIG_OF
-	of_platform_populate(NULL, sc59x_of_bus_ids,
-				sc59x_auxdata_lookup, NULL);
-#endif
+	of_platform_default_populate(NULL, sc59x_auxdata_lookup, NULL);
 	sc59x_init_ethernet();
 }
 

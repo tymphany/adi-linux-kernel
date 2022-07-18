@@ -29,6 +29,8 @@ static const char * const sc59x_dt_board_compat[] __initconst = {
 extern void __init adsp_sc5xx_timer_core_init(void);
 
 DT_MACHINE_START(SC59X_DT, "SC59x-EZKIT (Device Tree Support)")
+	.l2c_aux_val = 0,
+	.l2c_aux_mask = ~0,
 	.map_io		= sc59x_map_io,
 	.init_machine	= sc59x_init,
 	.dt_compat	= sc59x_dt_board_compat,
