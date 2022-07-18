@@ -351,11 +351,6 @@ static int sc59x_dp83848_fixup(struct phy_device *phydev)
 static void sc59x_init_ethernet(void)
 {
 	if (IS_BUILTIN(CONFIG_PHYLIB)) {
-		/* select RGMII as the external PHY interface for EMAC0 */
-		writel((readl(__io_address(REG_PADS0_PCFG0)) |
-		        ENUM_PADS_PCFG0_EMACPHY_RGMII |
-		        BITM_PADS_PCFG0_EMACRESET),
-		        __io_address(REG_PADS0_PCFG0));
 		/* register fixup to be run for PHYs */
 		phy_register_fixup_for_uid(DP83865_PHY_ID, 0xffffffff,
 				sc59x_dp83865_fixup);
