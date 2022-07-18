@@ -41,39 +41,6 @@
 
 #include "core.h"
 
-void __init sc59x_init_irq(void)
-{
-	gic_init(__io_address(SC59X_GIC_PORT0), __io_address(SC59X_GIC_PORT1));
-}
-
-static struct map_desc sc59x_io_desc[] __initdata __maybe_unused = {
-	{
-		.virtual	=  IO_ADDRESS(SYS_MMR_BASE),
-		.pfn		= __phys_to_pfn(SYS_MMR_BASE),
-		.length		= SYS_MMR_SIZE,
-		.type		= MT_DEVICE,
-	}, {
-		.virtual	=  IO_ADDRESS(SYS_L2_START),
-		.pfn		= __phys_to_pfn(SYS_L2_START),
-		.length		= SZ_16K,
-		.type		= MT_MEMORY_RWX_NONCACHED,
-	}, {
-		.virtual	=  IO_ADDRESS(SYS_SRAM_BASE),
-		.pfn		= __phys_to_pfn(SYS_SRAM_BASE),
-		.length		= SYS_SRAM_SIZE,
-#ifdef CONFIG_ICC
-		.type		= MT_MEMORY_RWX_NONCACHED,
-#else
-		.type		= MT_MEMORY_RWX,
-#endif
-	},
-};
-
-void __init sc59x_map_io(void)
-{
-	iotable_init(sc59x_io_desc, ARRAY_SIZE(sc59x_io_desc));
-}
-
 #if IS_ENABLED(CONFIG_VIDEO_ADI_CAPTURE)
 #include <linux/videodev2.h>
 #include <media/adi/adi_capture.h>
