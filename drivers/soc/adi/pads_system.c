@@ -17,6 +17,13 @@
 		.is_bits = true, \
 	}
 
+#define ADI_SYSREG(_id, _offset) \
+	{ \
+		.id = ADI_SYSTEM_REG_##_id, \
+		.offset = _offset, \
+		.is_bits = false, \
+	}
+
 static struct system_register adi_pads_regs[] = {
 	/* fields in PADS CFG0 at offset +0x04 */
 	ADI_SYSREG_BITS(EMAC0_PTPCLK0, 0x04, 2, 0),     /* PTP Clock Source 0 */
@@ -36,10 +43,7 @@ static struct system_register adi_pads_regs[] = {
 	ADI_SYSREG_BITS(PUMSIHL, 0x04, 2, 15),         /* Pull-Up Enable for MSI DATA[7:4] bits */
 #endif
 
-#if defined(CONFIG_ARCH_SC59X) || defined(CONFIG_ARCH_SC58X) || defined(CONFIG_ARCH_SC57X)
-	ADI_SYSREG_BITS(PUTMS, 0x04, 2, 16),            /* Pull-Up Enable for MSI DATA[7:4] bits */
-#endif
-
+	ADI_SYSREG_BITS(PUTMS, 0x04, 2, 16),            /* Pull-Up Enable for TMS/SWDIO (debug port) */
 	ADI_SYSREG_BITS(EMAC0_AUXIE, 0x04, 1, 17),      /* Input enable control for PTP_AUXIN pins */
 	ADI_SYSREG_BITS(FAULT_DIS, 0x04, 1, 18),        /* FAULT does not exist */
 
@@ -47,6 +51,17 @@ static struct system_register adi_pads_regs[] = {
 	ADI_SYSREG_BITS(EMAC0_ENDIANNESS, 0x04, 1, 19), /* EMAC0 DMA transfer endian format */
 	ADI_SYSREG_BITS(EMAC1_ENDIANNESS, 0x04, 1, 20), /* EMAC1 DMA transfer endian format */
 	ADI_SYSREG_BITS(MSHC_CCLK_DIV_EN, 0x04, 1, 22), /* Enable MSHC Card Clock Divider */
+#endif
+
+	/* DAIn port input enable registers */
+#if defined(CONFIG_ARCH_SC58X)
+	ADI_SYSREG(DAI0_IE, 0x60),
+	ADI_SYSREG(DAI1_IE, 0x64),
+#endif
+
+#if defined (CONFIG_ARCH_SC59X_64) || defined(CONFIG_ARCH_SC59X)
+	ADI_SYSREG(DAI0_IE, 0x90),
+	ADI_SYSREG(DAI1_IE, 0x94),
 #endif
 };
 

@@ -19,6 +19,8 @@
 #include <linux/soc/adi/adsp-gpio-port.h>
 #include <linux/slab.h>
 
+#include <linux/soc/adi/adi_system_config.h>
+
 #include "../core.h"
 #include "../pinconf.h"
 #include "../pinctrl-utils.h"
@@ -1122,6 +1124,7 @@ int adsp_sru_ctrl_probe(struct platform_device *pdev) {
     struct adsp_sru_ctrl *adsp_sru_ctrl;
     struct pinctrl_desc *pnctrl_desc;
     struct resource *res;
+	struct regmap *regmap;
     u32 val;
     int ret;
 
@@ -1145,13 +1148,24 @@ int adsp_sru_ctrl_probe(struct platform_device *pdev) {
     pnctrl_desc->pctlops = &adsp_pctlops;
     pnctrl_desc->owner = THIS_MODULE;
 
+	regmap = system_config_regmap_lookup_by_phandle(np, "adi,system-config");
+	if (IS_ERR(regmap)) {
+		if (PTR_ERR(regmap) == -EPROBE_DEFER)
+			return PTR_ERR(regmap);
+
+		dev_err(&pdev->dev, "adi,system-config regmap not connected\n");
+		return PTR_ERR(regmap);
+	}
+
     adsp_sru_ctrl->dai = of_alias_get_id(np, "sru");
     if(adsp_sru_ctrl->dai == 0){
         adsp_sru_ctrl->dest = dai0_destinations;
         adsp_sru_ctrl->dest_count = DAI0_DESTINATION_COUNT;
+		regmap_write(regmap, ADI_SYSTEM_REG_DAI0_IE, 0xffffffff);
     }else if(adsp_sru_ctrl->dai == 1){
         adsp_sru_ctrl->dest = dai1_destinations;
         adsp_sru_ctrl->dest_count = DAI1_DESTINATION_COUNT;
+		regmap_write(regmap, ADI_SYSTEM_REG_DAI1_IE, 0xffffffff);
     }else{
         dev_err(adsp_sru_ctrl->dev, "Unknown DAI instance (%d)\n", adsp_sru_ctrl->dai);
         return -EINVAL;

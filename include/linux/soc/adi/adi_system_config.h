@@ -24,6 +24,8 @@ enum adi_system_reg_id {
 	ADI_SYSTEM_REG_EMAC0_ENDIANNESS,    /* EMAC0 DMA transfer endian format */
 	ADI_SYSTEM_REG_EMAC1_ENDIANNESS,    /* EMAC1 DMA transfer endian format */
 	ADI_SYSTEM_REG_MSHC_CCLK_DIV_EN,    /* Enable MSHC Card Clock Divider */
+	ADI_SYSTEM_REG_DAI0_IE,				/* Port input enable for DAI0 */
+	ADI_SYSTEM_REG_DAI1_IE,				/* Port input enable for DAI1 */
 	__ADI_SYSTEM_REG_COUNT
 };
 

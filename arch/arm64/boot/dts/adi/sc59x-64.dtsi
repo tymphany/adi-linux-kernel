@@ -626,6 +626,7 @@
 			#address-cells = <1>;
 			#size-cells = <1>;
 			reg = <0x310C9000 0x224>;
+			adi,system-config = <&pads_system_config>;
 			status = "disabled";
 		};
 
@@ -634,6 +635,7 @@
 			#address-cells = <1>;
 			#size-cells = <1>;
 			reg = <0x310CA000 0x224>;
+			adi,system-config = <&pads_system_config>;
 			status = "disabled";
 		};
 

@@ -65,14 +65,6 @@
 #define ADSP_PADS_REG_DAI1_0_DS			0x80
 #define ADSP_PADS_REG_DAI1_1_DS			0x84
 
-#ifdef CONFIG_ARCH_SC58X
-#define ADSP_PADS_REG_DAI0_IE			0x60
-#define ADSP_PADS_REG_DAI1_IE			0x64
-#else
-#define ADSP_PADS_REG_DAI0_IE			0x90
-#define ADSP_PADS_REG_DAI1_IE			0x94
-#endif
-
 #define ADSP_PADS_REG_DAI0_PUE			0xbc
 #define ADSP_PADS_REG_DAI1_PUE			0xc0
 #define ADSP_PADS_REG_DAI0_PDE			0xfc
@@ -742,10 +734,6 @@ int adsp_pinctrl_probe(struct platform_device *pdev) {
 	ret = of_property_read_u32(np, "adi,ospi-drive-strength", &val);
 	if (!ret)
 		adsp_set_nongpio_ds(adsp_pinctrl, ADSP_NONPORTS_DS_OSPI, !!val);
-
-	/* @todo create a device tree property for dai config, for now enable all */
-	writel(0xffffffff, adsp_pinctrl->regs + ADSP_PADS_REG_DAI0_IE);
-	writel(0xffffffff, adsp_pinctrl->regs + ADSP_PADS_REG_DAI1_IE);
 
 	pnctrl_desc->name = dev_name(dev);
 	pnctrl_desc->pctlops = &adsp_pctlops;
