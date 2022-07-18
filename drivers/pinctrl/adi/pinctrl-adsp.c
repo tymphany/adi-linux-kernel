@@ -21,11 +21,6 @@
 #include "../pinconf.h"
 #include "../pinctrl-utils.h"
 
-/* Number of pins that are controlled by port muxing */
-#define ADSP_PORT_NUMBER_OF_PORTS		9  /* A-I */
-#define ADSP_PORT_PINS_PER_PORT			16
-#define ADSP_PORT_TOTAL_PINS (ADSP_PORT_NUMBER_OF_PORTS * ADSP_PORT_PINS_PER_PORT)
-
 /* Convert from pinmux constants in device tree to actual settings */
 #define ADSP_PINMUX_PIN(p) ((p & 0xffffff00) >> 8)
 #define ADSP_PINMUX_FUNC(p) (p & 0xff)
@@ -125,6 +120,9 @@ struct adsp_pinctrl {
 	const char **group_names;
 	unsigned *pins;
 	spinlock_t lock;
+	size_t num_ports;
+	uint32_t *pin_counts;
+	uint32_t total_pins;
 };
 
 /*
@@ -179,7 +177,8 @@ static void adsp_portmux_setup(struct adsp_gpio_port *port, unsigned offset,
 
 /* pin control operations */
 static int adsp_pinctrl_get_groups_count(struct pinctrl_dev *pctldev) {
-	return ADSP_PORT_TOTAL_PINS;
+	struct adsp_pinctrl *adsp_pinctrl = pinctrl_dev_get_drvdata(pctldev);
+	return adsp_pinctrl->total_pins;
 }
 
 static const char *adsp_pinctrl_get_group_name(struct pinctrl_dev *pctldev,
@@ -328,7 +327,7 @@ static int adsp_pinmux_get_function_groups(struct pinctrl_dev *pctldev,
 	struct adsp_pinctrl *adsp_pinctrl = pinctrl_dev_get_drvdata(pctldev);
 
 	*groups = adsp_pinctrl->group_names;
-	*num_groups = ADSP_PORT_TOTAL_PINS;
+	*num_groups = adsp_pinctrl->total_pins;
 	return 0;
 }
 
@@ -618,35 +617,67 @@ static int adsp_pinctrl_init_groups(struct adsp_pinctrl *adsp_pinctrl,
 {
 	struct device *dev = adsp_pinctrl->dev;
 	struct pinctrl_pin_desc *all_pins;
-	size_t port, pin, i;
+	size_t port, pin;
+	unsigned i, pin_total;
+	int num_ports;
+	int ret;
 
-	all_pins = devm_kcalloc(dev, sizeof(*all_pins), ADSP_PORT_TOTAL_PINS,
+	num_ports = of_property_count_u32_elems(dev->of_node, "adi,port-sizes");
+
+	if (num_ports < 0)
+		return num_ports;
+
+	if (num_ports == 0) {
+		dev_err(dev, "pinctrl missing `adi,port-sizes` port size definition\n");
+		return -ENOENT;
+	}
+
+	adsp_pinctrl->num_ports = num_ports;
+
+	adsp_pinctrl->pin_counts = devm_kcalloc(dev, sizeof(*adsp_pinctrl->pin_counts),
+		num_ports, GFP_KERNEL);
+	if (!adsp_pinctrl->pin_counts)
+		return -ENOMEM;
+
+	ret = of_property_read_u32_array(dev->of_node, "adi,port-sizes",
+		adsp_pinctrl->pin_counts, num_ports);
+	if (ret)
+		return ret;
+
+	pin_total = 0;
+	for (i = 0; i < num_ports; ++i) {
+		pin_total += adsp_pinctrl->pin_counts[i];
+	}
+	adsp_pinctrl->total_pins = pin_total;
+
+	all_pins = devm_kcalloc(dev, sizeof(*all_pins), adsp_pinctrl->total_pins,
 		GFP_KERNEL);
 
-	adsp_pinctrl->pins = devm_kcalloc(dev, sizeof(int), ADSP_PORT_TOTAL_PINS,
-		GFP_KERNEL);
+	adsp_pinctrl->pins = devm_kcalloc(dev, sizeof(adsp_pinctrl->pins),
+		adsp_pinctrl->total_pins, GFP_KERNEL);
 	if (!adsp_pinctrl->pins)
 		return -ENOMEM;
 
 	adsp_pinctrl->group_names = devm_kcalloc(dev, sizeof(*adsp_pinctrl->group_names),
-		ADSP_PORT_TOTAL_PINS, GFP_KERNEL);
+		adsp_pinctrl->total_pins, GFP_KERNEL);
 	if (!adsp_pinctrl->group_names)
 		return -ENOMEM;
 
-	for (port = 0; port < ADSP_PORT_NUMBER_OF_PORTS; ++port) {
-		for (pin = 0; pin < ADSP_PORT_PINS_PER_PORT; ++pin) {
-			i = port * ADSP_PORT_PINS_PER_PORT + pin;
+	i = 0;
+	for (port = 0; port < adsp_pinctrl->num_ports; ++port) {
+		for (pin = 0; pin < adsp_pinctrl->pin_counts[port]; ++pin) {
 			adsp_pinctrl->group_names[i] = devm_kasprintf(dev, GFP_KERNEL,
-				"p%c%d", (char) ('A' + port), (unsigned) pin);
-			adsp_pinctrl->pins[i] = (unsigned) i;
+				"p%c%zu", (char) ('A' + port), pin);
+			adsp_pinctrl->pins[i] = i;
 
 			all_pins[i].name = adsp_pinctrl->group_names[i];
-			all_pins[i].number = (unsigned) i;
+			all_pins[i].number = i;
+			i += 1;
 		}
 	}
 
 	desc->pins = all_pins;
-	desc->npins = ADSP_PORT_TOTAL_PINS;
+	desc->npins = adsp_pinctrl->total_pins;
 
 	return 0;
 }

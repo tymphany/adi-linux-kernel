@@ -618,6 +618,7 @@
 			#address-cells = <1>;
 			#size-cells = <1>;
 			reg = <0x31004600 0x400>;
+			adi,port-sizes = <16 16 16 16 16 16 16 16 7>;
 		};
 
 		sru_ctrl_dai0: sru-ctrl-dai0@0x310C9000 {
@@ -837,7 +838,7 @@
 			gpio-controller;
 			#gpio-cells = <2>;
 			reg = <0x31004400 0x7F>;
-			gpio-ranges = <&pinctrl0 0 128 16>;
+			gpio-ranges = <&pinctrl0 0 128 7>;
 			adi,pint = <&pint7 1>;
 			adi,gpio-base = <128>;
 		};
