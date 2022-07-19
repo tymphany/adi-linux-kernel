@@ -23,10 +23,6 @@
 #include <linux/spi/flash.h>
 #include <linux/mtd/spi-nor.h>
 
-#if defined (CONFIG_ARCH_SC58X)
-#include <mach/gpio.h>
-#endif
-
 /* Define max times to check status register before we give up. */
 
 /*

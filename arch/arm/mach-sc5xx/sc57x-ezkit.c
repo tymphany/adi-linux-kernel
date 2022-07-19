@@ -1,46 +1,44 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * core timer and machine init for ADI processor on-chip memory
+ * Machine entries for the sc573 ezkit
  *
- * Copyright 2018 Analog Devices Inc.
- *
- * Licensed under the GPL-2 or later.
+ * Copyright 2022, Analog Devices, Inc.
  */
 
 #include <linux/init.h>
-#include <linux/device.h>
-#include <linux/dma-mapping.h>
-#include <linux/delay.h>
-#include <linux/interrupt.h>
-#include <linux/irqdomain.h>
-#include <linux/of_address.h>
 #include <linux/of_platform.h>
-#include <linux/io.h>
-#include <linux/gfp.h>
-#include <linux/bitops.h>
-#include <linux/irqchip/arm-gic.h>
-#include <linux/clocksource.h>
-#include <linux/clockchips.h>
-#include <linux/of.h>
-#include <linux/of_irq.h>
-#include <linux/phy.h>
-#include <linux/sched_clock.h>
-
-#include <asm/irq.h>
-#include <asm/mach-types.h>
 
 #include <asm/mach/arch.h>
-#include <asm/mach/time.h>
-#include <asm/mach/map.h>
-#include <asm/mach/irq.h>
-#include <linux/soc/adi/hardware.h>
-#include <linux/soc/adi/cpu.h>
-#include <mach/dma.h>
-#include <mach/sc58x.h>
-#include <mach/irqs.h>
-#include <mach/clkdev.h>
-#include <linux/of_clk.h>
+#include <asm/siginfo.h>
+#include <asm/signal.h>
 
 #include "core.h"
+
+static const char * const sc57x_dt_board_compat[] __initconst = {
+	"adi,sc57x",
+	NULL
+};
+
+static bool first_fault = true;
+
+static int sc57x_abort_handler(unsigned long addr, unsigned int fsr,
+		struct pt_regs *regs)
+{
+	if (fsr == 0x1c06 && first_fault) {
+		first_fault = false;
+
+		/*
+		 * These faults with code 0x1c06 happens for no good reason,
+		 * possibly left over from the CFE boot loader.
+		 */
+		pr_warn("External imprecise Data abort at addr=%#lx, fsr=%#x ignored.\n",
+				addr, fsr);
+		return 0;
+	}
+
+	/* Others should cause a fault */
+	return 1;
+}
 
 #if IS_ENABLED(CONFIG_VIDEO_ADI_CAPTURE)
 #include <linux/videodev2.h>
@@ -277,81 +275,33 @@ static struct adi_display_config adi_display_data = {
 #endif
 #endif
 
-static const struct of_dev_auxdata sc58x_auxdata_lookup[] __initconst = {
+static const struct of_dev_auxdata sc57x_auxdata_lookup[] __initconst = {
 #if IS_ENABLED(CONFIG_VIDEO_ADI_DISPLAY)
-	OF_DEV_AUXDATA("adi,disp", 0x31040000, "adi_display.0", &adi_display_data),
+	OF_DEV_AUXDATA("adi,disp", 0x3102D000, "adi_display.0", &adi_display_data),
 #endif
 #if IS_ENABLED(CONFIG_VIDEO_ADI_CAPTURE)
-	OF_DEV_AUXDATA("adi,cap", 0x31040000, "adi_capture.0", &adi_capture_data),
+	OF_DEV_AUXDATA("adi,cap", 0x3102D000, "adi_capture.0", &adi_capture_data),
 #endif
 	{},
 };
 
-#define DP83865_PHY_ID          0x20005c7a
-#define REG_DP83865_AUX_CTRL    0x12
-#define BITP_AUX_CTRL_RGMII_EN  12
-#define RGMII_3COM_MODE         3
-static int sc58x_dp83865_fixup(struct phy_device *phydev)
+static void __init sc57x_init_early(void)
 {
-	int  phy_data = 0;
-
-	phy_data = phy_read(phydev, REG_DP83865_AUX_CTRL);
-
-	/* enable 3com mode for RGMII */
-	phy_write(phydev, REG_DP83865_AUX_CTRL,
-			     (RGMII_3COM_MODE << BITP_AUX_CTRL_RGMII_EN) | phy_data);
-
-	return 0;
+	hook_fault_code(16 + 6, sc57x_abort_handler, SIGBUS, BUS_OBJERR,
+			"imprecise external abort");
 }
 
-#define DP83848_PHY_ID          0x20005c90
-#define REG_DP83848_PHY_MICR    0x11
-#define BITM_PHY_MICR_INTEN     0x2
-#define BITM_PHY_MICR_INT_OE    0x1
-static int sc58x_dp83848_fixup(struct phy_device *phydev)
-{
-	phy_write(phydev, REG_DP83848_PHY_MICR,
-				BITM_PHY_MICR_INTEN | BITM_PHY_MICR_INT_OE);
-
-	return 0;
-}
-
-static void sc58x_init_ethernet(void)
-{
-	if (IS_BUILTIN(CONFIG_PHYLIB)) {
-		/* register fixup to be run for PHYs */
-		phy_register_fixup_for_uid(DP83865_PHY_ID, 0xffffffff,
-				sc58x_dp83865_fixup);
-		phy_register_fixup_for_uid(DP83848_PHY_ID, 0xffffffff,
-				sc58x_dp83848_fixup);
-	}
-}
-
-void __init sc58x_init(void)
+static void __init sc57x_init(void)
 {
 	pr_info("%s: registering device resources\n", __func__);
-	of_platform_default_populate(NULL, sc58x_auxdata_lookup, NULL);
-	sc58x_init_ethernet();
+	of_platform_default_populate(NULL, sc57x_auxdata_lookup, NULL);
+	sc5xx_init_ethernet();
 }
 
-static void __iomem *spu_base;
-
-void set_spu_securep_msec(uint16_t n, bool msec)
-{
-	void __iomem *p = (void __iomem *)(spu_base + 0xA00 + 4 * n);
-	u32 securep = ioread32(p);
-
-	if (msec)
-		iowrite32(securep | 0x3, p);
-	else
-		iowrite32(securep & ~0x3, p);
-}
-EXPORT_SYMBOL(set_spu_securep_msec);
-
-static int __init spu_init(void)
-{
-	spu_base = ioremap(REG_SPU0_CTL, 0x1000);
-
-	return 0;
-}
-arch_initcall(spu_init);
+DT_MACHINE_START(SC57X_DT, "SC57x-EZKIT (Device Tree Support)")
+	.l2c_aux_val = 0,
+	.l2c_aux_mask = ~0,
+	.init_early	= sc57x_init_early,
+	.init_machine	= sc57x_init,
+	.dt_compat	= sc57x_dt_board_compat,
+MACHINE_END

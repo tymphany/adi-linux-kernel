@@ -537,66 +537,25 @@ config ARCH_OMAP1
 	help
 	  Support for older TI OMAP1 (omap7xx, omap15xx or omap16xx)
 
-config ARCH_SC59X
-        bool "ADI Ltd. sc59x family"
-        select ARM_GIC
-        select CPU_V7
-        select VFP
-        select NEON
-        select MIGHT_HAVE_CACHE_L2X0
-        select HAVE_CLK
-        select CLKDEV_LOOKUP
-        select GENERIC_CLOCKEVENTS
-        select IRQ_DOMAIN
-        select SPARSE_IRQ
-        select ARCH_REQUIRE_GPIOLIB
-        select PINCTRL
-        select COMMON_CLK
-		select TIMER_OF
-		select COUNTER
-        help
-          This enables support for ADI Ltd sc59x board.
-
-config ARCH_SC58X
-	bool "ADI Ltd. sc58x family"
-	select ARM_GIC
+config ARCH_SC5XX
+	bool "ADI ADSP-SC5XX Family"
 	select CPU_V7
+	select ARM_GIC
 	select VFP
 	select NEON
 	select MIGHT_HAVE_CACHE_L2X0
-	select HAVE_CLK
-	select CLKDEV_LOOKUP
-	select GENERIC_CLOCKEVENTS
-	select IRQ_DOMAIN
-	select SPARSE_IRQ
-	select ARCH_REQUIRE_GPIOLIB
-	select PINCTRL
-	select COMMON_CLK
-	select TIMER_OF
-	select COUNTER
-	help
-	  This enables support for ADI Ltd sc58x board.
-
-config ARCH_SC57X
-	bool "ADI Ltd. sc57x family"
-	select ARM_GIC
-	select CPU_V7
-	select VFP
-	select NEON
-	select MIGHT_HAVE_CACHE_L2X0
-	select HAVE_CLK
-	select CLKDEV_LOOKUP
-	select GENERIC_CLOCKEVENTS
-	select IRQ_DOMAIN
-	select SPARSE_IRQ
-	select ARCH_REQUIRE_GPIOLIB
-	select PINCTRL
 	select OF
+	select HAVE_CLK
+	select IRQ_DOMAIN
+	select SPARSE_IRQ
+	select GENERIC_CLOCKEVENTS
 	select COMMON_CLK
+	select GPIOLIB
+	select PINCTRL
 	select TIMER_OF
 	select COUNTER
-	help
-		This enables support for ADI Ltd sc57x board.
+	select PINCTRL_ADSP_SC5XX
+	select GPIO_ADI_ADSP_PORT
 
 endchoice
 
@@ -777,6 +736,8 @@ source "arch/arm/mach-s5pv210/Kconfig"
 
 source "arch/arm/mach-sa1100/Kconfig"
 
+source "arch/arm/mach-sc5xx/Kconfig"
+
 source "arch/arm/mach-shmobile/Kconfig"
 
 source "arch/arm/mach-socfpga/Kconfig"
@@ -809,10 +770,6 @@ source "arch/arm/mach-vt8500/Kconfig"
 source "arch/arm/mach-zx/Kconfig"
 
 source "arch/arm/mach-zynq/Kconfig"
-
-source "arch/arm/mach-sc59x/Kconfig"
-source "arch/arm/mach-sc58x/Kconfig"
-source "arch/arm/mach-sc57x/Kconfig"
 
 # ARMv7-M architecture
 config ARCH_EFM32

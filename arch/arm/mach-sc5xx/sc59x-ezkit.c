@@ -1,45 +1,23 @@
-/* SPDX-License-Identifier: GPL-2.0 */
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * core timer and machine init for ADI processor on-chip memory
+ * Machine entries for the sc594 ezkit
  *
- * Copyright 2020 - 2021 Analog Devices Inc.
+ * Copyright 2022, Analog Devices, Inc.
  */
 
 #include <linux/init.h>
-#include <linux/device.h>
-#include <linux/dma-mapping.h>
-#include <linux/delay.h>
-#include <linux/interrupt.h>
-#include <linux/irqdomain.h>
-#include <linux/of_address.h>
 #include <linux/of_platform.h>
-#include <linux/io.h>
-#include <linux/gfp.h>
-#include <linux/bitops.h>
-#include <linux/irqchip/arm-gic.h>
-#include <linux/clocksource.h>
-#include <linux/clockchips.h>
-#include <linux/of.h>
-#include <linux/of_irq.h>
-#include <linux/phy.h>
-#include <linux/sched_clock.h>
-
-#include <asm/irq.h>
-#include <asm/mach-types.h>
 
 #include <asm/mach/arch.h>
-#include <asm/mach/time.h>
-#include <asm/mach/map.h>
-#include <asm/mach/irq.h>
-#include <linux/soc/adi/hardware.h>
-#include <linux/soc/adi/cpu.h>
-#include <mach/dma.h>
-#include <mach/sc59x.h>
-#include <mach/irqs.h>
-#include <mach/clkdev.h>
-#include <linux/of_clk.h>
+#include <asm/siginfo.h>
+#include <asm/signal.h>
 
 #include "core.h"
+
+static const char * const sc59x_dt_board_compat[] __initconst = {
+	"adi,sc59x",
+	NULL
+};
 
 #if IS_ENABLED(CONFIG_VIDEO_ADI_CAPTURE)
 #include <linux/videodev2.h>
@@ -286,71 +264,16 @@ static const struct of_dev_auxdata sc59x_auxdata_lookup[] __initconst = {
 	{},
 };
 
-#define DP83865_PHY_ID          0x20005c7a
-#define REG_DP83865_AUX_CTRL    0x12
-#define BITP_AUX_CTRL_RGMII_EN  12
-#define RGMII_3COM_MODE         3
-static int sc59x_dp83865_fixup(struct phy_device *phydev)
-{
-	int  phy_data = 0;
-
-	phy_data = phy_read(phydev, REG_DP83865_AUX_CTRL);
-
-	/* enable 3com mode for RGMII */
-	phy_write(phydev, REG_DP83865_AUX_CTRL,
-			     (RGMII_3COM_MODE << BITP_AUX_CTRL_RGMII_EN) | phy_data);
-
-	return 0;
-}
-
-#define DP83848_PHY_ID          0x20005c90
-#define REG_DP83848_PHY_MICR    0x11
-#define BITM_PHY_MICR_INTEN     0x2
-#define BITM_PHY_MICR_INT_OE    0x1
-static int sc59x_dp83848_fixup(struct phy_device *phydev)
-{
-	phy_write(phydev, REG_DP83848_PHY_MICR,
-				BITM_PHY_MICR_INTEN | BITM_PHY_MICR_INT_OE);
-
-	return 0;
-}
-
-static void sc59x_init_ethernet(void)
-{
-	if (IS_BUILTIN(CONFIG_PHYLIB)) {
-		/* register fixup to be run for PHYs */
-		phy_register_fixup_for_uid(DP83865_PHY_ID, 0xffffffff,
-				sc59x_dp83865_fixup);
-		phy_register_fixup_for_uid(DP83848_PHY_ID, 0xffffffff,
-				sc59x_dp83848_fixup);
-	}
-}
-
-void __init sc59x_init(void)
+static void __init sc59x_init(void)
 {
 	pr_info("%s: registering device resources\n", __func__);
 	of_platform_default_populate(NULL, sc59x_auxdata_lookup, NULL);
-	sc59x_init_ethernet();
+	sc5xx_init_ethernet();
 }
 
-static void __iomem *spu_base;
-
-void set_spu_securep_msec(uint16_t n, bool msec)
-{
-	void __iomem *p = (void __iomem *)(spu_base + 0xA00 + 4 * n);
-	u32 securep = ioread32(p);
-
-	if (msec)
-		iowrite32(securep | 0x3, p);
-	else
-		iowrite32(securep & ~0x3, p);
-}
-EXPORT_SYMBOL(set_spu_securep_msec);
-
-static int __init spu_init(void)
-{
-	spu_base = ioremap(REG_SPU0_CTL, 0x1000);
-
-	return 0;
-}
-arch_initcall(spu_init);
+DT_MACHINE_START(SC59X_DT, "SC59x-EZKIT (Device Tree Support)")
+	.l2c_aux_val = 0,
+	.l2c_aux_mask = ~0,
+	.init_machine	= sc59x_init,
+	.dt_compat	= sc59x_dt_board_compat,
+MACHINE_END
