@@ -483,10 +483,12 @@
 			compatible = "adi,mmc";
 			reg = <0x31010000 0xFFF>;
 			interrupts = <GIC_SPI 123 IRQ_TYPE_LEVEL_HIGH>;
-			spu_securep_id = <41>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			fifo-depth = <1024>;
+			clocks = <&clk ADSP_SC57X_CLK_SDIO>,
+					<&clk ADSP_SC57X_CLK_CGU0_SCLK0>;
+			clock-names = "ciu", "biu";
 			status = "disabled";
 		};
 

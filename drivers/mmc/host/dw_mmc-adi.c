@@ -19,65 +19,19 @@
 #include <linux/mmc/mmc.h>
 #include <linux/of.h>
 #include <linux/pm.h>
-#include <linux/soc/adi/cpu.h>
-#include <linux/pinctrl/consumer.h>
-#include <linux/pinctrl/pinctrl.h>
 
 #include "dw_mmc.h"
 #include "dw_mmc-pltfm.h"
 
-static int dwmmc_adi_priv_init(struct dw_mci *host)
-{
-	int spu_securep_id, ret = 0;
-
-	struct device_node *node = host->dev->of_node;
-	struct pinctrl *pctrl;
-	struct pinctrl_state *pstate;
-
-	/*initialize pin mux*/
-	pctrl = devm_pinctrl_get(host->dev);
-
-	pstate = pinctrl_lookup_state(pctrl, PINCTRL_STATE_DEFAULT);
-	if (IS_ERR(pstate))
-		return ret;
-
-	ret	= pinctrl_select_state(pctrl, pstate);
-	if (ret)
-		return ret;
-
-	/*disable msi spu*/
-	ret = of_property_read_u32(node, "spu_securep_id", &spu_securep_id);
-	if (ret)
-		return ret;
-	set_spu_securep_msec(spu_securep_id, true);
-
-	return 0;
-}
-
-static const struct dw_mci_drv_data adi_drv_data = {
-	.init				= dwmmc_adi_priv_init,
-};
-
 static const struct of_device_id dwmmc_adi_match[] = {
-	{ .compatible = "adi,mmc",
-			.data = &adi_drv_data, },
+	{ .compatible = "adi,mmc", },
 	{},
 };
 MODULE_DEVICE_TABLE(of, dwmmc_adi_match);
 
 static int dwmmc_adi_probe(struct platform_device *pdev)
 {
-	const struct dw_mci_drv_data *drv_data;
-	const struct of_device_id *match;
-
-	match = of_match_node(dwmmc_adi_match, pdev->dev.of_node);
-
-	if (!match)
-		return -1;
-
-	drv_data = match->data;
-
-	return dw_mci_pltfm_register(pdev, drv_data);
+	return dw_mci_pltfm_register(pdev, NULL);
 }
 
 static int dwmmc_adi_remove(struct platform_device *pdev)

@@ -517,7 +517,6 @@
 			compatible = "adi,mmc";
 			reg = <0x31010000 0xFFF>;
 			interrupts = <GIC_SPI 131 IRQ_TYPE_LEVEL_HIGH>;
-			spu_securep_id = <58>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			fifo-depth = <1024>;
