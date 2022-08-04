@@ -203,7 +203,6 @@ struct sm_icc_desc {
 	struct sm_message_queue *icc_queue;
 	struct sm_message_queue *icc_high_queue;
 	uint32_t *icc_queue_attribute;
-	struct task_struct *iccq_thread;
 	wait_queue_head_t iccq_tx_wait;
 	uint32_t irq;
 	uint32_t notify;

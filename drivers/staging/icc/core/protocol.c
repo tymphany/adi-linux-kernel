@@ -63,8 +63,6 @@ void icc_clear_ipi_cpu(unsigned int cpu, int irq)
 
 static void wakeup_icc_thread(struct sm_icc_desc *icc_info)
 {
-	if (icc_info->iccq_thread)
-		wake_up_process(icc_info->iccq_thread);
 	wake_up(&adi_icc->icc_rx_wait);
 }
 
@@ -2126,28 +2124,20 @@ void msg_handle(struct sm_icc_desc *icc_info)
 		__msg_handle(icc_info, icc_info->icc_queue);
 }
 
-static int message_queue_thread(void *data)
+static irqreturn_t message_queue_thread(int irq, void *dev_instance)
 {
-	int pending;
-	struct sm_icc_desc *icc_info = (struct sm_icc_desc *)data;
+	struct adi_icc *icc = (struct adi_icc *)dev_instance;
+	struct sm_icc_desc *icc_info;
+	int i;
 
-	do {
-		set_current_state(TASK_INTERRUPTIBLE);
-		pending = iccqueue_getpending(icc_info);
-		if (!pending) {
-			if (kthread_should_stop()) {
-				set_current_state(TASK_RUNNING);
-				break;
-			}
-			schedule_timeout_interruptible(HZ);
-			continue;
+	for (i = 0, icc_info = icc->icc_info; i < icc->peer_count;
+			i++, icc_info++) {
+		while (iccqueue_getpending(icc_info)) {
+			msg_handle(icc_info);
 		}
-		set_current_state(TASK_RUNNING);
+	}
 
-		msg_handle(icc_info);
-
-	} while (1);
-	return 0;
+	return IRQ_HANDLED;
 }
 
 void register_sm_proto(struct adi_icc *icc)
@@ -2205,7 +2195,7 @@ static irqreturn_t ipi_handler_int0(int irq, void *dev_instance)
 			i++, icc_info++)
 		wakeup_icc_thread(icc_info);
 
-	return IRQ_HANDLED;
+	return IRQ_WAKE_THREAD;
 }
 
 static const struct file_operations icc_proc_fops = {
@@ -2337,8 +2327,8 @@ static int adi_icc_probe(struct platform_device *pdev)
 
 	}
 
-	ret = devm_request_irq(dev, icc->irq, ipi_handler_int0, icc->irq_type,
-			"ICC receive IRQ", icc);
+	ret = devm_request_threaded_irq(dev, icc->irq, ipi_handler_int0,
+			message_queue_thread, icc->irq_type, "ICC receive IRQ", icc);
 	if (ret) {
 		dev_err(dev, "Fail to request ICC receive IRQ\n");
 		return -ENOENT;
@@ -2364,10 +2354,6 @@ static int adi_icc_probe(struct platform_device *pdev)
 		memset(icc_info->icc_queue_attribute, 0, sizeof(struct sm_message_queue));
 
 		init_waitqueue_head(&icc_info->iccq_tx_wait);
-		icc_info->iccq_thread = kthread_run(message_queue_thread,
-					icc_info, "iccqd");
-		if (IS_ERR(icc_info->iccq_thread))
-			sm_debug("kthread create failed %ld\n", PTR_ERR(icc_info->iccq_thread));
 	}
 
 	ret = misc_register(&icc->mdev);
