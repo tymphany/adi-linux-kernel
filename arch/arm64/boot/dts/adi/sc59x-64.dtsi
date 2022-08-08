@@ -234,6 +234,12 @@
 			status = "okay";
 		};
 
+		dmc_pmu: dmc-pmu@31070000 {
+			compatible = "adi,dmc-pmu";
+			reg = <0x31070000 0x200>;
+			status = "okay";
+		};
+
 		sram-controller@31080000 {
 			compatible = "adi,sram-controller";
 			reg = <0x31080000 0x100>;
