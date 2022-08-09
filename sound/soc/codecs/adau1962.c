@@ -782,12 +782,7 @@ int adau1962_probe(struct device *dev, struct regmap *regmap,
 
 #ifndef CONFIG_ARCH_SC59X //Reset currently controlled by gpio hog
 	adau1962->reset_gpio = devm_gpiod_get(dev, "reset", GPIOD_OUT_HIGH);
-	if (IS_ERR(adau1962->reset_gpio)) {
-		if(PTR_ERR(adau1962->reset_gpio) == -EPROBE_DEFER) {
-			return -EPROBE_DEFER;
-		}
-		dev_info(dev, "invalid or missing reset-gpios: %ld\n", PTR_ERR(adau1962->reset_gpio));
-	}
+	//Do not check for errors here, as the ADAU1977 may have already claimed this
 #endif
 
 	dev_set_drvdata(dev, adau1962);

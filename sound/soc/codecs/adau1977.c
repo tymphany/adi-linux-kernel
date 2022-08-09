@@ -943,7 +943,24 @@ int adau1977_probe(struct device *dev, struct regmap *regmap,
 		adau1977->dvdd_reg = NULL;
 	}
 
+#ifndef CONFIG_ARCH_SC59X //Reset currently controlled by gpio hog
+	adau1977->reset_gpio = devm_gpiod_get(dev, "reset", GPIOD_OUT_HIGH);
+	//Do not check for errors here, as the ADAU1962 may have already claimed this
+#endif
+
 	dev_set_drvdata(dev, adau1977);
+
+#ifndef CONFIG_ARCH_SC59X //Reset currently controlled by gpio hog
+	if (!IS_ERR(adau1977->reset_gpio)) {
+		/* Hardware power-on reset */
+		gpiod_set_value_cansleep(adau1977->reset_gpio, 1);
+		msleep(38);
+		gpiod_set_value_cansleep(adau1977->reset_gpio, 0);
+		/* After asserting the PU/RST pin high, ADAU1977
+			* requires 300ms to stabilize */
+		msleep(300);
+	}
+#endif
 
 	ret = adau1977_power_enable(adau1977);
 	if (ret)
