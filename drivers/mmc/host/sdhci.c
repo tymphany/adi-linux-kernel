@@ -3638,7 +3638,7 @@ void __sdhci_read_caps(struct sdhci_host *host, const u16 *ver,
 		host->quirks2 = debug_quirks2;
 
 #ifdef CONFIG_ARCH_SC59X_64
-	host->quirks2 |= SDHCI_QUIRK2_BROKEN_HS200;
+	host->quirks2 |= SDHCI_QUIRK2_BROKEN_HS200 | SDHCI_QUIRK2_ACMD23_BROKEN;
 #endif
 
 	sdhci_do_reset(host, SDHCI_RESET_ALL);
