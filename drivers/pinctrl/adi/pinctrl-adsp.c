@@ -367,7 +367,6 @@ static const struct pinmux_ops adsp_pmxops = {
 	.set_mux = adsp_pinmux_set_mux,
 	.gpio_request_enable = adsp_pinmux_request_gpio,
 	.gpio_disable_free = adsp_pinmux_release_gpio,
-	.strict = true,
 };
 
 /* pin configuration operations */
@@ -428,6 +427,22 @@ static int adsp_pinconf_get(struct pinctrl_dev *pctldev, unsigned int pin,
 	case PIN_CONFIG_DRIVE_STRENGTH:
 		arg = __adsp_pinconf_get_ds(adsp_pinctrl, pin);
 		break;
+	case PIN_CONFIG_DRIVE_OPEN_DRAIN:
+		range = pinctrl_find_gpio_range_from_pin_nolock(pctldev, pin);
+		offset = pin - range->pin_base;
+		port = to_adsp_gpio_port(range->gc);
+
+		if (!(port->open_drain & BIT(offset)))
+			return -EINVAL;
+		break;
+	case PIN_CONFIG_DRIVE_PUSH_PULL:
+		range = pinctrl_find_gpio_range_from_pin_nolock(pctldev, pin);
+		offset = pin - range->pin_base;
+		port = to_adsp_gpio_port(range->gc);
+
+		if (port->open_drain & BIT(offset))
+			return -EINVAL;
+		break;
 	case ADSP_PIN_CONFIG_TRU_TOGGLE:
 		range = pinctrl_find_gpio_range_from_pin_nolock(pctldev, pin);
 		offset = pin - range->pin_base;
@@ -480,11 +495,7 @@ static void __adsp_pinconf_ds(struct adsp_pinctrl *p, unsigned int pin, bool hig
 	else
 		writel(val | (ADSP_PADS_DS_LOW << shift), p->regs + offset);
 }
-/**
- * @todo open drain is not directly supported but the HRM explains how to emulate
- * it by toggling the output drivers rather than the data register with a fixed data
- * value of 0 for the pin. We could try to add support for it here
- */
+
 static int adsp_pinconf_set(struct pinctrl_dev *pctldev, unsigned int pin,
 	unsigned long *config, unsigned int num_configs)
 {
@@ -518,6 +529,49 @@ static int adsp_pinconf_set(struct pinctrl_dev *pctldev, unsigned int pin,
 			/* This only supports high/low-speed drive strength (see HRM)
 			 * so assume any positive value means we would like high-speed strength */
 			__adsp_pinconf_ds(adsp_pinctrl, pin, !!arg);
+			break;
+		case PIN_CONFIG_DRIVE_OPEN_DRAIN:
+			range = pinctrl_find_gpio_range_from_pin(pctldev, pin);
+			offset = pin - range->pin_base;
+			port = to_adsp_gpio_port(range->gc);
+
+			spin_lock(&port->lock);
+			val = __adsp_gpio_readw(port, ADSP_PORT_REG_DATA);
+			val &= BIT(offset);
+
+			if (val) {
+				/* open drain with value of 1 => configure as input */
+				__adsp_gpio_writew(port, BIT(offset), ADSP_PORT_REG_DIR_CLEAR);
+				__adsp_gpio_writew(port, BIT(offset), ADSP_PORT_REG_INEN_SET);
+			}
+			else {
+				/* open drain with value of 0 => configure as output, drive 0 */
+				__adsp_gpio_writew(port, BIT(offset), ADSP_PORT_REG_INEN_CLEAR);
+				__adsp_gpio_writew(port, BIT(offset), ADSP_PORT_REG_DATA_CLEAR);
+				__adsp_gpio_writew(port, BIT(offset), ADSP_PORT_REG_DIR_SET);
+			}
+
+			port->open_drain |= BIT(offset);
+			spin_unlock(&port->lock);
+			break;
+		case PIN_CONFIG_DRIVE_PUSH_PULL:
+			range = pinctrl_find_gpio_range_from_pin(pctldev, pin);
+			offset = pin - range->pin_base;
+			port = to_adsp_gpio_port(range->gc);
+
+			spin_lock(&port->lock);
+
+			/*
+			 * by default make the pin an input when exiting open drain mode;
+			 * user can correct later with GPIO in/out configuration
+			 */
+			if (port->open_drain & BIT(offset)) {
+				port->open_drain &= ~BIT(offset);
+				__adsp_gpio_writew(port, BIT(offset), ADSP_PORT_REG_DIR_CLEAR);
+				__adsp_gpio_writew(port, BIT(offset), ADSP_PORT_REG_INEN_SET);
+			}
+
+			spin_unlock(&port->lock);
 			break;
 		case ADSP_PIN_CONFIG_TRU_TOGGLE:
 			range = pinctrl_find_gpio_range_from_pin(pctldev, pin);

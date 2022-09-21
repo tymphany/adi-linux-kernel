@@ -23,6 +23,13 @@ static int adsp_gpio_direction_output(struct gpio_chip *chip, unsigned offset,
 {
 	struct adsp_gpio_port *port = to_adsp_gpio_port(chip);
 
+	/*
+	 * For open drain ports, they've already been configured by pinctrl and
+	 * we should not modify their output characteristics
+	 */
+	if (port->open_drain & BIT(offset))
+		return 0;
+
 	__adsp_gpio_writew(port, BIT(offset), ADSP_PORT_REG_INEN_CLEAR);
 
 	if (value)
@@ -37,10 +44,27 @@ static int adsp_gpio_direction_output(struct gpio_chip *chip, unsigned offset,
 static void adsp_gpio_set_value(struct gpio_chip *chip, unsigned offset, int value) {
 	struct adsp_gpio_port *port = to_adsp_gpio_port(chip);
 
-	if (value)
-		__adsp_gpio_writew(port, BIT(offset), ADSP_PORT_REG_DATA_SET);
-	else
-		__adsp_gpio_writew(port, BIT(offset), ADSP_PORT_REG_DATA_CLEAR);
+	/*
+	 * For open drain ports, set as input if driving a 1, set as output
+	 * if driving a 0
+	 */
+	if (port->open_drain & BIT(offset)) {
+		if (value) {
+			__adsp_gpio_writew(port, BIT(offset), ADSP_PORT_REG_DIR_CLEAR);
+			__adsp_gpio_writew(port, BIT(offset), ADSP_PORT_REG_INEN_SET);
+		}
+		else {
+			__adsp_gpio_writew(port, BIT(offset), ADSP_PORT_REG_INEN_CLEAR);
+			__adsp_gpio_writew(port, BIT(offset), ADSP_PORT_REG_DATA_CLEAR);
+			__adsp_gpio_writew(port, BIT(offset), ADSP_PORT_REG_DIR_SET);
+		}
+	}
+	else {
+		if (value)
+			__adsp_gpio_writew(port, BIT(offset), ADSP_PORT_REG_DATA_SET);
+		else
+			__adsp_gpio_writew(port, BIT(offset), ADSP_PORT_REG_DATA_CLEAR);
+	}
 }
 
 static int adsp_gpio_get_value(struct gpio_chip *chip, unsigned offset) {

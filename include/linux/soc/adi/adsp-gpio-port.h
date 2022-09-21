@@ -38,6 +38,7 @@ struct adsp_gpio_port {
 	struct gpio_chip gpio;
 	struct irq_domain *irq_domain;
 	uint32_t irq_offset;
+	uint32_t open_drain;
 	spinlock_t lock;
 };
 
