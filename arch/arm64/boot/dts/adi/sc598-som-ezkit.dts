@@ -397,7 +397,7 @@
 		pushbutton {
 			gpio-hog;
 			gpios = <1 0x0>;
-			output-low;
+			output-high;
 			line-name = "pushbutton-en";
 		};
 
