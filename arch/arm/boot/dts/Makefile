@@ -1306,7 +1306,6 @@ dtb-$(CONFIG_ARCH_ASPEED) += \
 dtb-$(CONFIG_ARCH_SC59X) += \
 	sc594-som-ezkit.dtb
 dtb-$(CONFIG_ARCH_SC58X) += \
-	sc58x.dtb \
 	sc589-mini.dtb \
 	sc589-ezkit.dtb \
 	sc584-ezkit.dtb \
