@@ -134,8 +134,8 @@
 
 &thermal {
 	status = "okay";
-	adi,gain = <0x6>;
-	adi,offset = <0x7D86>;
+	adi,gain = <0x4>;
+	adi,offset = <0x7D40>;
 	adi,trip-alert = <60>;
 	adi,trip-fault = <85>;
 	/* adi,average; */
