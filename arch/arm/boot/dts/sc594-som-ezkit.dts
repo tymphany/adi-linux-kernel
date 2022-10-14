@@ -261,9 +261,29 @@
 		spi-rx-bus-width = <4>;
 		/*adi,enable-dma;*/
 
-		partition@0 {
-			label = "unallocated (is25lp512)";
-			reg = <0x0 0x2000000>;
+		spi2_0: partition@0 {
+			label = "U-boot SPL (spi2)";
+			reg = <0x0 0x20000>;
+		};
+
+		spi2_1: partition@1 {
+			label = "U-boot proper (spi2)";
+			reg = <0x20000 0xc0000>;
+		};
+
+		spi2_2: partition@2 {
+			label = "U-boot env (spi2)";
+			reg = <0xe0000 0x20000>;
+		};
+
+		spi2_3: partition@3 {
+			label = "Kernel FIT (spi2)";
+			reg = <0x100000 0x800000>;
+		};
+
+		spi2_4: partition@4 {
+			label = "JFFS2 Formatted RFS (spi2)";
+			reg = <0x0900000 0x3700000>;
 		};
 
 	};
@@ -323,7 +343,7 @@
 
 			ospi_4: partition@4 {
 				label = "JFFS2 Formatted RFS";
-				reg = <0x6C0000 0x1940000>;
+				reg = <0x0900000 0x1700000>;
 			};
 		};
 	};
