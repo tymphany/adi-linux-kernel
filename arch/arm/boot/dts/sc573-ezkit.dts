@@ -154,22 +154,22 @@
 
 		partition@1 {
 			label = "uboot proper (spi)";
-			reg = <0x20000 0xc4000>;
+			reg = <0x20000 0xb0000>;
 		};
 
 		partition@2 {
 			label = "uboot env";
-			reg = <0xe0000 0x4000>;
+			reg = <0xd0000 0x10000>;
 		};
 
 		partition@3 {
 			label = "kernel (spi)";
-			reg = <0x00e4000 0x0500000>;
+			reg = <0x00e0000 0x0500000>;
 		};
 
 		partition@4 {
 			label = "root file system (spi)";
-			reg = <0x05e4000 0xa1c000>;
+			reg = <0x05e0000 0xa20000>;
 		};
 	};
 };
