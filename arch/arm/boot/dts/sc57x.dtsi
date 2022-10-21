@@ -7,7 +7,6 @@
  *
  */
 
-#include <dt-bindings/input/adi_gp_counter.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/clock/adi-sc5xx-clock.h>
@@ -212,6 +211,11 @@
 				reg = <0x31080000 0x100>;
 				interrupts = <GIC_SPI 10 IRQ_TYPE_LEVEL_HIGH>;
 			};
+		};
+
+		gptimer_counter: gptimer-counters@0 {
+			compatible = "adi,gptimer-counter";
+			status = "okay";
 		};
 
 		sram_mmap: sram-mmap@0 { /* mmap from sram1 pool*/
@@ -513,15 +517,6 @@
 			reg = <0x3102D000 0xfff>;
 			spu_securep_id = <68>;
 			i2c_bus_id = <0>;
-			status = "disabled";
-		};
-
-		gp_counter: cnt@0x3100B000 {
-			compatible = "adi,gp_counter";
-			reg = <0x3100B000 0xFF>;
-			interrupts = <GIC_SPI 118 IRQ_TYPE_LEVEL_HIGH>;
-			#address-cells = <1>;
-			#size-cells = <0>;
 			status = "disabled";
 		};
 
