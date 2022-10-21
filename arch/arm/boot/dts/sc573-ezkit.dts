@@ -278,21 +278,21 @@
 		pushbutton3-en {
 			gpio-hog;
 			gpios = <0 0>;
-			output-high;
+			output-low;
 			line-name = "~pushbutton3-en";
 		};
 
 		pushbutton2-en {
 			gpio-hog;
 			gpios = <1 0>;
-			output-high;
+			output-low;
 			line-name = "~pushbutton2-en";
 		};
 
 		pushbutton1-en {
 			gpio-hog;
 			gpios = <2 0>;
-			output-high;
+			output-low;
 			line-name = "~pushbutton1-en";
 		};
 
