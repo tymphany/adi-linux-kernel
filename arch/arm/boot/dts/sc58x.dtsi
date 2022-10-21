@@ -209,6 +209,11 @@
 			status = "okay";
 		};
 
+		gptimer_counter: gptimer-counters@0 {
+			compatible = "adi,gptimer-counter";
+			status = "okay";
+		};
+
 		sram_mmap: sram-mmap@0 { /* mmap from sram1 pool*/
 			compatible = "adi,sram-mmap";
 			adi,sram = <&sram1>;
