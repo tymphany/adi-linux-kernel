@@ -142,31 +142,42 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&spi2_quad>;
 	status = "okay";
-
 	cs-gpios = <&gpc 6 GPIO_ACTIVE_LOW>;
 
-	flash: w25q32@0 {
+	flash: w25q128@0 {
 		#address-cells = <1>;
 		#size-cells = <1>;
-		compatible = "winbond,w25q32", "jedec,spi-nor";
+		compatible = "winbond,w25q128";
+		spi-max-frequency = <50000000>;
 		reg = <0>;
 		spi-cpol;
 		spi-cpha;
-		spi-max-frequency = <5000000>;
+		spi-tx-bus-width = <4>;
 		spi-rx-bus-width = <4>;
-		adi,enable-dma;
 
 		partition@0 {
-			label = "uboot (spi)";
-			reg = <0x0 0x80000>;
+			label = "uboot spl (spi)";
+			reg = <0x0 0x20000>;
 		};
+
 		partition@1 {
-			label = "kernel (spi)";
-			reg = <0x80000 0x580000>;
+			label = "uboot proper (spi)";
+			reg = <0x20000 0xb0000>;
 		};
+
 		partition@2 {
+			label = "uboot env";
+			reg = <0xd0000 0x10000>;
+		};
+
+		partition@3 {
+			label = "kernel (spi)";
+			reg = <0x00e0000 0x0500000>;
+		};
+
+		partition@4 {
 			label = "root file system (spi)";
-			reg = <0x600000 0xa00000>;
+			reg = <0x05e0000 0xa20000>;
 		};
 	};
 };
