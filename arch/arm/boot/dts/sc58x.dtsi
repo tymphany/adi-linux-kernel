@@ -7,7 +7,6 @@
  *
  */
 
-#include <dt-bindings/input/adi_gp_counter.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/clock/adi-sc5xx-clock.h>
@@ -541,15 +540,6 @@
 			status = "disabled";
 		};
 */
-
-		gp_counter: cnt@0x3100B000 {
-			compatible = "adi,gp_counter";
-			reg = <0x3100B000 0xFF>;
-			interrupts = <GIC_SPI 126 IRQ_TYPE_LEVEL_HIGH>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-			status = "disabled";
-        };
 
 /*
 		video_encoder: disp@0x31040000 {
