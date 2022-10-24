@@ -493,6 +493,8 @@
 			#size-cells = <1>;
 			reg = <0x31004400 0x400>;
 			adi,port-sizes = <16 16 16 16 16 16 6>;
+			adi,no-drive-strength;
+			adi,no-pull-up-down;
 		};
 
 		sru_ctrl_dai0: sru-ctrl-dai0@0x310C9000 {

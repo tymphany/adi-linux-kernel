@@ -104,6 +104,8 @@ static const struct adsp_pin_function pin_functions[] = {
 /*
  * One pinctrl instance per chip, unifies the interface to the port mux and pad
  * conf registers in the PORT instances
+ * @todo pads registers should be routed through system configuration abstraction
+ *       to remove the need for feature testing/listing "missing" registers here
  */
 struct adsp_pinctrl {
 	struct device *dev;
@@ -115,6 +117,12 @@ struct adsp_pinctrl {
 	size_t num_ports;
 	uint32_t *pin_counts;
 	uint32_t total_pins;
+
+	/* Are the drive strength registers missing on this part? */
+	bool ds_missing;
+
+	/* Are the pull up/down enable registers missing on this part? */
+	bool pude_missing;
 };
 
 /*
@@ -372,23 +380,38 @@ static const struct pinmux_ops adsp_pmxops = {
 /* pin configuration operations */
 static bool __adsp_pinconf_is_pue(struct adsp_pinctrl *p, unsigned int pin) {
 	u32 offset = ADSP_PADS_PORTx_PUE(pin);
-	u32 val = readl(p->regs + offset);
-	u32 bit = BIT(pin & (ADSP_PADS_PUD_PINS_PER_REG-1));
+	u32 val, bit;
+
+	if (p->pude_missing)
+		return 0;
+
+	val = readl(p->regs + offset);
+	bit = BIT(pin & (ADSP_PADS_PUD_PINS_PER_REG-1));
 	return !!(val & bit);
 }
 
 static bool __adsp_pinconf_is_pde(struct adsp_pinctrl *p, unsigned int pin) {
 	u32 offset = ADSP_PADS_PORTx_PDE(pin);
-	u32 val = readl(p->regs + offset);
-	u32 bit = BIT(pin & (ADSP_PADS_PUD_PINS_PER_REG-1));
+	u32 val, bit;
+
+	if (p->pude_missing)
+		return 0;
+
+	val = readl(p->regs + offset);
+	bit = BIT(pin & (ADSP_PADS_PUD_PINS_PER_REG-1));
 	return !!(val & bit);
 }
 
 static u32 __adsp_pinconf_get_ds(struct adsp_pinctrl *p, unsigned int pin) {
 	u32 offset = ADSP_PADS_PORTx_DS(pin);
-	u32 val = readl(p->regs + offset);
-	u32 shift = (pin & (ADSP_PADS_DS_PINS_PER_REG-1)) * ADSP_PADS_DS_BITS;
-	u32 mask = GENMASK(ADSP_PADS_DS_BITS-1, 0) << shift;
+	u32 val, shift, mask;
+
+	if (p->ds_missing)
+		return 0;
+
+	val = readl(p->regs + offset);
+	shift = (pin & (ADSP_PADS_DS_PINS_PER_REG-1)) * ADSP_PADS_DS_BITS;
+	mask = GENMASK(ADSP_PADS_DS_BITS-1, 0) << shift;
 	val = val & mask;
 
 	if (val == ADSP_PADS_DS_HIGH)
@@ -463,8 +486,15 @@ static int adsp_pinconf_get(struct pinctrl_dev *pctldev, unsigned int pin,
 
 static void __adsp_pinconf_pue(struct adsp_pinctrl *p, unsigned int pin, bool state) {
 	u32 offset = ADSP_PADS_PORTx_PUE(pin);
-	u32 val = readl(p->regs + offset);
-	u32 bit = BIT(pin & (ADSP_PADS_PUD_PINS_PER_REG-1));
+	u32 val, bit;
+
+	if (p->pude_missing) {
+		dev_warn(p->dev, "Pull Up Enable is not supported by this PADS HW (tried to set PUE for pin %d)\n", pin);
+		return;
+	}
+
+	val = readl(p->regs + offset);
+	bit = BIT(pin & (ADSP_PADS_PUD_PINS_PER_REG-1));
 
 	if (state)
 		writel(val | bit, p->regs + offset);
@@ -474,8 +504,15 @@ static void __adsp_pinconf_pue(struct adsp_pinctrl *p, unsigned int pin, bool st
 
 static void __adsp_pinconf_pde(struct adsp_pinctrl *p, unsigned int pin, bool state) {
 	u32 offset = ADSP_PADS_PORTx_PDE(pin);
-	u32 val = readl(p->regs + offset);
-	u32 bit = BIT(pin & (ADSP_PADS_PUD_PINS_PER_REG-1));
+	u32 val, bit;
+
+	if (p->pude_missing) {
+		dev_warn(p->dev, "Pull Down Enable is not supported by this PADS HW (tried to set PDE for pin %d)\n", pin);
+		return;
+	}
+
+	val = readl(p->regs + offset);
+	bit = BIT(pin & (ADSP_PADS_PUD_PINS_PER_REG-1));
 
 	if (state)
 		writel(val | bit, p->regs + offset);
@@ -485,9 +522,16 @@ static void __adsp_pinconf_pde(struct adsp_pinctrl *p, unsigned int pin, bool st
 
 static void __adsp_pinconf_ds(struct adsp_pinctrl *p, unsigned int pin, bool high) {
 	u32 offset = ADSP_PADS_PORTx_DS(pin);
-	u32 val = readl(p->regs + offset);
-	u32 shift = (pin & (ADSP_PADS_DS_PINS_PER_REG-1)) * ADSP_PADS_DS_BITS;
-	u32 mask = GENMASK(ADSP_PADS_DS_BITS-1, 0) << shift;
+	u32 val, shift, mask;
+
+	if (p->ds_missing) {
+		dev_warn(p->dev, "Drive strength is not supported by this PADS HW (tried to set drive strength for pin %d)\n", pin);
+		return;
+	}
+
+	val = readl(p->regs + offset);
+	shift = (pin & (ADSP_PADS_DS_PINS_PER_REG-1)) * ADSP_PADS_DS_BITS;
+	mask = GENMASK(ADSP_PADS_DS_BITS-1, 0) << shift;
 	val = val & ~mask;
 
 	if (high)
@@ -763,6 +807,11 @@ int adsp_pinctrl_probe(struct platform_device *pdev) {
 	adsp_pinctrl->regs = devm_ioremap_resource(dev, res);
 	if (IS_ERR(adsp_pinctrl->regs))
 		return PTR_ERR(adsp_pinctrl->regs);
+
+	/* Different features are available in different hw revisions; no way to read this
+	 * from an ID register so the missing features need to be specified in dts */
+	adsp_pinctrl->ds_missing = of_property_read_bool(np, "adi,no-drive-strength");
+	adsp_pinctrl->pude_missing = of_property_read_bool(np, "adi,no-pull-up-down");
 
 	/* Only if requested, adjust non-port drive strengths */
 	ret = of_property_read_u32(np, "adi,clkout-drive-strength", &val);
