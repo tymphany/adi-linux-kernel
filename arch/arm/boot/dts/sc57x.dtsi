@@ -464,6 +464,11 @@
 			reg = <0x31004400 0x400>;
 			adi,port-sizes = <16 16 16 16 16 12>;
 			adi,no-drive-strength;
+			/*
+			 * @todo fix pinctrl driver:
+			 * PUE/PDE is supported but the register locations are different
+			 */
+			adi,no-pull-up-down;
 		};
 
 		sru_ctrl_dai0: sru-ctrl-dai0@0x310C9000 {
