@@ -80,31 +80,20 @@
 		cache-level = <2>;
 	};
 
-	sram0: sram-icc@20000000 { /* ICC SRAM 8KB */
+	sram0: sram-icc@20000000 {
 		compatible = "mmio-sram";
 		#address-cells = <1>;
 		#size-cells = <1>;
-		reg = <0x20000000 0x2000>;
-		ranges = <0 0x20000000 0x2000>;
-
-		/* 1KB - Shared between SHARC cores*/
-		reserved@0{
-			reg = <0x0 0x400>;
-			label = "SHARC_common";
-		};
-		/* 1KB - Reserved resource_tables for SHARC cores*/
-		resource_table@1000{
-			reg = <0x1000 0x400>;
-			label = "SHARC_resource_tables";
-		};
+		reg = <0x20025000 0x1B000>;
+		ranges = <0 0x20025000 0x1B000>; /*108KiB*/
 	};
 
-	sram1: sram-reserved@20100000 {
+	sram1: sram-reserved@20040000 {
 		compatible = "mmio-sram";
-		reg = <0x20100000 0x100000>;
 		#address-cells = <1>;
 		#size-cells = <1>;
-		ranges = <0 0x20100000 0x100000>;
+		reg = <0x20040000 0x40000>;
+		ranges = <0 0x20040000 0x40000>; /*256KiB*/
 	};
 
 	sys_clkin0: sys-clkin0@1 {
@@ -198,6 +187,32 @@
 			interrupt-parent = <&gic>;
 			interrupts = <GIC_SPI 55 IRQ_TYPE_LEVEL_HIGH>;
 			adi,offset = <0x140>;
+		};
+	};
+
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		rsc_tbl0: rsc_tbl0@20000000 {
+			reg = <0x20000000 0x400>; /*1KiB*/
+			no-map;
+		};
+
+		rsc_tbl1: rsc_tbl0@20000400 {
+			reg = <0x20000400 0x400>; /*1KiB*/
+			no-map;
+		};
+
+		sram_B1_unused@20000800 {
+			reg = <0x20000800 0x4800>; /*18KiB*/
+			no-map;
+		};
+
+		sharc_internal_icc@20005000 {
+			reg = <0x20005000 0x20000>; /*128KiB*/
+			no-map;
 		};
 	};
 
@@ -467,23 +482,6 @@
 			clocks = <&clk ADSP_SC594_CLK_GIGE>;
 			clock-names = "stmmaceth";
 			status = "disabled";
-		};
-
-		icc0: icc@0 {
-			compatible = "adi,icc";
-			reg = <0x20000000 0x1000>;
-			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI 165 IRQ_TYPE_EDGE_RISING>;
-			peerinfo = <1 140>, <2 141>;
-			status = "disabled";
-		};
-
-		core_ctrl0: core_ctrl@0 {
-			compatible = "adi,core_ctrl";
-			#address-cells = <1>;
-			#size-cells = <1>;
-			reg = <0x3108C000 0x80>; /* RCU0 control reg base */
-			adi,icc_mem = <&icc0>;
 		};
 
 		crc0: crc@0x31001200 {
