@@ -52,12 +52,12 @@ config	MACH_SC584_EZKIT
 		Say 'Y' here if you want your kernel to run on the ADI
 		SC584-EZKIT board.
 
-config  MACH_SC594_SOM_EZKIT
-	bool "ADI SC594-som-ezkit board"
+config  MACH_SC594_SOM
+	bool "ADI SC594-SOM board"
 	depends on ARCH_SC59X
 	select MIGHT_HAVE_PCI
 	select HIGHMEM
 	select HIGHPTE
 	help
 		Say 'Y' here if you want your kernel to run on the ADI
-		SC594-SOM-EZKIT board.
+		SC594-SOM-EZKIT or SC594-SOM-EZLITE board.

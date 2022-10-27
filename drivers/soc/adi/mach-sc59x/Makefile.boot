@@ -1,4 +1,4 @@
-ifeq ($(CONFIG_MACH_SC594_SOM_EZKIT),y)
+ifeq ($(CONFIG_MACH_SC594_SOM),y)
 zreladdr-y      += 0x82008000
 params_phys-y   := 0x82000100
 else
