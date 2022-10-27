@@ -31,6 +31,30 @@
 		reg = <0x80000000 0xF000000>;
 	};
 
+	reserved-memory {
+		vdev0vrings: vdev0vring0@20080000 {
+			reg = <0x20080000 0x4000>;
+			no-map;
+		};
+
+		vdev0buffer: vdev0buffer@20084000 {
+			compatible = "shared-dma-pool";
+			reg = <0x20084000 0x20000>;
+			no-map;
+		};
+
+		vdev1vrings: vdev0vring0@200A4000 {
+			reg = <0x200A4000 0x4000>;
+			no-map;
+		};
+
+		vdev1buffer: vdev0buffer@200A8000 {
+			compatible = "shared-dma-pool";
+			reg = <0x200A8000 0x20000>;
+			no-map;
+		};
+	};
+
 	scb {
 		button0: button@0 {
 			compatible = "adi,button-led";
@@ -65,8 +89,10 @@
 			adi,rcu = <&rcu>;
 			adi,l1-da = <0x240000 0x3a0000>;
 			adi,l2-da = <0x20080000 0x200C0000>;
+			adi,rsc-table = <&rsc_tbl0>;
 			adi,tru = <&tru>;
 			adi,tru-master-id = <71>; /* trigger master SOFT4 */
+			status = "okay";
 		};
 
 		core2-rproc@0x3108C000 {
@@ -80,8 +106,10 @@
 			adi,rcu = <&rcu>;
 			adi,l1-da = <0x240000 0x3a0000>;
 			adi,l2-da = <0x20080000 0x200C0000>;
+			adi,rsc-table = <&rsc_tbl1>;
 			adi,tru = <&tru>;
 			adi,tru-master-id = <72>; /* trigger master SOFT5 */
+			status = "okay";
 		};
 
 		sound {
@@ -451,10 +479,6 @@
 	bus-width = <4>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&mmc0_default>;
-	status = "okay";
-};
-
-&icc0 {
 	status = "okay";
 };
 

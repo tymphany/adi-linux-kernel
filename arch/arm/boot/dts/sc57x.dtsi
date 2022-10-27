@@ -77,20 +77,20 @@
 		cache-level = <2>;
 	};
 
-	sram0: sram-icc@20000000 { /* ICC SRAM 4KB */
+	sram0: sram-icc@20000000 {
 		compatible = "mmio-sram";
 		#address-cells = <1>;
 		#size-cells = <1>;
-		reg = <0x20000000 0x1000>;
-		ranges = <0 0x20000000 0x1000>;
+		reg = <0x20010000 0x1000>;
+		ranges = <0 0x20010000 0x1000>; /* 64 KiB */
 	};
 
 	sram1: sram-reserved@20004000 {
 		compatible = "mmio-sram";
 		#address-cells = <1>;
 		#size-cells = <1>;
-		reg = <0x20004000 0x3B000>;
-		ranges = <0 0x20004000 0x3B000>;
+		reg = <0x20040000 0x40000>;
+		ranges = <0 0x20040000 0x40000>; /* 256 KiB */
 	};
 
 	sys_clkin0: sys-clkin0@1 {
@@ -187,6 +187,27 @@
 		};
 	};
 
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		rsc_tbl0: rsc_tbl0@20000000 {
+			reg = <0x20000000 0x400>; /*1KiB*/
+			no-map;
+		};
+
+		rsc_tbl1: rsc_tbl0@20000400 {
+			reg = <0x20000400 0x400>; /*1KiB*/
+			no-map;
+		};
+
+		sram_B1_unused@20000800 {
+			reg = <0x20000800 0x1F800>; /* <128 KiB*/
+			no-map;
+		};
+	};
+
 	scb {
 		compatible = "simple-bus";
 		#address-cells = <1>;
@@ -199,22 +220,11 @@
 			status = "okay";
 		};
 
-		sram-controller@20080000 {
+		sram-controller@31080000 {
 			compatible = "adi,sram-controller";
-			#address-cells = <1>;
-			#size-cells = <1>;
-			adi,sram = <&sram0>,
-					<&sram1>;
-
-			sram-ecc-err@31080000 {
-				compatible = "adi,sram-ecc-err";
-				reg = <0x31080000 0x100>;
-				interrupts = <GIC_SPI 10 IRQ_TYPE_LEVEL_HIGH>;
-			};
-		};
-
-		gptimer_counter: gptimer-counters@0 {
-			compatible = "adi,gptimer-counter";
+			reg = <0x31080000 0x100>;
+			adi,sram = <&sram0>, <&sram1>;
+			interrupts = <GIC_SPI 10 IRQ_TYPE_LEVEL_HIGH>;
 			status = "okay";
 		};
 
@@ -222,6 +232,11 @@
 			compatible = "adi,sram-mmap";
 			adi,sram = <&sram1>;
 			status = "disabled";
+		};
+
+		gptimer_counter: gptimer-counters@0 {
+			compatible = "adi,gptimer-counter";
+			status = "okay";
 		};
 
 		rcu: rcu@0x3108B000 {
@@ -360,24 +375,6 @@
 			clock-names = "stmmaceth";
 			adi,system-config = <&pads_system_config>;
 			status = "disabled";
-		};
-
-		icc0: icc@0 {
-			compatible = "adi,icc";
-			reg = <0x20000000 0x1000>;
-			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI 206 IRQ_TYPE_EDGE_RISING>;
-			peerinfo = <1 71>, <2 72>;
-			adi,tru = <&tru>;
-			status = "disabled";
-		};
-
-		core_ctrl0: core_ctrl@0 {
-			compatible = "adi,core_ctrl";
-			#address-cells = <1>;
-			#size-cells = <1>;
-			reg = <0x3108C000 0x80>; /* RCU0 control reg base */
-			adi,icc_mem = <&icc0>;
 		};
 
 		spi0: spi@0x3102E000 {
