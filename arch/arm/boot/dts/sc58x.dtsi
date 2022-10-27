@@ -79,20 +79,20 @@
 		cache-level = <2>;
 	};
 
-	sram0: sram-icc@20080000 { /* ICC SRAM 4KB */
+	sram0: sram-icc@20084000 {
 		compatible = "mmio-sram";
 		#address-cells = <1>;
 		#size-cells = <1>;
-		reg = <0x20080000 0x1000>;
-		ranges = <0 0x20080000 0x1000>;
+		reg = <0x20084000 0x4000>;
+		ranges = <0 0x20084000 0x4000>; /* 16 KiB */
 	};
 
-	sram1: sram-reserved@20084000 {
+	sram1: sram-reserved@20088000 {
 		compatible = "mmio-sram";
 		#address-cells = <1>;
 		#size-cells = <1>;
-		reg = <0x20084000 0x3B000>;
-		ranges = <0 0x20084000 0x3B000>;
+		reg = <0x20088000 0x18000>;
+		ranges = <0 0x20088000 0x18000>; /* 96 KiB */
 	};
 
 	sys_clkin0: sys-clkin0@1 {
@@ -186,6 +186,27 @@
 			interrupt-parent = <&gic>;
 			interrupts = <GIC_SPI 75 IRQ_TYPE_LEVEL_HIGH>;
 			adi,offset = <0x140>;
+		};
+	};
+
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		rsc_tbl0: rsc_tbl0@20080000 {
+			reg = <0x20080000 0x400>; /*1KiB*/
+			no-map;
+		};
+
+		rsc_tbl1: rsc_tbl0@20000400 {
+			reg = <0x20080400 0x400>; /*1KiB*/
+			no-map;
+		};
+
+		sram_B1_unused@20000800 {
+			reg = <0x20080800 0x3800>; /* <128 KiB*/
+			no-map;
 		};
 	};
 
@@ -454,23 +475,6 @@
 			clocks = <&clk ADSP_SC58X_CLK_GIGE>;
 			clock-names = "stmmaceth";
 			status = "disabled";
-		};
-
-		icc0: icc@0 {
-			compatible = "adi,icc";
-			reg = <0x20080000 0x1000>;
-			interrupt-parent = <&gic>;
-			interrupts = <GIC_SPI 251 IRQ_TYPE_EDGE_RISING>;
-			peerinfo = <1 97>, <2 98>;
-			status = "disabled";
-		};
-
-		core_ctrl0: core_ctrl@0 {
-			compatible = "adi,core_ctrl";
-			#address-cells = <1>;
-			#size-cells = <1>;
-			reg = <0x3108B000 0x80>; /* RCU0 control reg base */
-			adi,icc_mem = <&icc0>;
 		};
 
 		crc0: crc@0x31001200 {

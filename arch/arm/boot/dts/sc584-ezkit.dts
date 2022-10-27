@@ -28,6 +28,30 @@
 		reg = <0x89000000 0x7000000>;
 	};
 
+	reserved-memory {
+		vdev0vrings: vdev0vring0@200A0000 {
+			reg = <0x200A0000 0x4000>;
+			no-map;
+		};
+
+		vdev0buffer: vdev0buffer@200A4000 {
+			compatible = "shared-dma-pool";
+			reg = <0x200A4000 0xC000>;
+			no-map;
+		};
+
+		vdev1vrings: vdev0vring0@200B0000 {
+			reg = <0x200B0000 0x4000>;
+			no-map;
+		};
+
+		vdev1buffer: vdev0buffer@200B4000 {
+			compatible = "shared-dma-pool";
+			reg = <0x200B4000 0xC000>;
+			no-map;
+		};
+	};
+
 	scb {
 		button0: button@0 {
 			compatible = "adi,button-led";
@@ -62,6 +86,7 @@
 			adi,rcu = <&rcu>;
 			adi,l1-da = <0x240000 0x3a0000>;
 			adi,l2-da = <0x20080000 0x200C0000>;
+			adi,rsc-table = <&rsc_tbl0>;
 			adi,tru = <&tru>;
 			adi,tru-master-id = <97>; /* trigger master SOFT4 */
 		};
@@ -77,6 +102,7 @@
 			adi,rcu = <&rcu>;
 			adi,l1-da = <0x240000 0x3a0000>;
 			adi,l2-da = <0x20080000 0x200C0000>;
+			adi,rsc-table = <&rsc_tbl1>;
 			adi,tru = <&tru>;
 			adi,tru-master-id = <98>; /* trigger master SOFT5 */
 		};
@@ -101,6 +127,21 @@
 			pinctrl-2 = <&ppi0_24b>;
 		};
 */
+	};
+};
+
+&tru {
+	rpmsg_to_a5: channel@0 {
+		adi,tru-master-id = <96>; /* trigger master SOFT3 */
+		adi,tru-slave-id = <87>; /* TRU0_IRQ3 */
+	};
+	rpmsg_to_sharc0: channel@1 {
+		adi,tru-master-id = <97>; /* trigger master SOFT4 */
+		adi,tru-slave-id = <91>; /* TRU0_IRQ7 */
+	};
+	rpmsg_to_sharc1: channel@2 {
+		adi,tru-master-id = <98>; /* trigger master SOFT5 */
+		adi,tru-slave-id = <95>; /* TRU0_IRQ11 */
 	};
 };
 
@@ -464,11 +505,6 @@
 	/* mode = <2>; Place OTG port into Device Mode */
 	/* mode = <1>; Place OTG port into Host Mode */
 	mode = <1>;
-	status = "okay";
-};
-
-&icc0 {
-	adi,tru = <&tru>;
 	status = "okay";
 };
 
