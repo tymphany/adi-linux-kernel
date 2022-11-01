@@ -17,6 +17,8 @@ struct device;
 int adau1372_probe(struct device *dev, struct regmap *regmap,
 	void (*switch_mode)(struct device *dev));
 
+int adau1372_remove(struct device *dev);
+
 extern const struct regmap_config adau1372_regmap_config;
 
 #endif

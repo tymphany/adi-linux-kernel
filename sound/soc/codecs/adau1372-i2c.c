@@ -24,7 +24,7 @@ static int adau1372_i2c_probe(struct i2c_client *client,
 
 static int adau1372_i2c_remove(struct i2c_client *client)
 {
-	snd_soc_unregister_codec(&client->dev);
+	adau1372_remove(&client->dev);
 	return 0;
 }
 
@@ -34,9 +34,18 @@ static const struct i2c_device_id adau1372_i2c_ids[] = {
 };
 MODULE_DEVICE_TABLE(i2c, adau1372_i2c_ids);
 
+#if defined(CONFIG_OF)
+static const struct of_device_id adau1372_i2c_dt_ids[] = {
+	{ .compatible = "adi,adau1372", },
+	{ },
+};
+MODULE_DEVICE_TABLE(of, adau1372_i2c_dt_ids);
+#endif
+
 static struct i2c_driver adau1372_i2c_driver = {
 	.driver = {
 		.name = "adau1372",
+		.of_match_table = of_match_ptr(adau1372_i2c_dt_ids),
 	},
 	.probe = adau1372_i2c_probe,
 	.remove = adau1372_i2c_remove,

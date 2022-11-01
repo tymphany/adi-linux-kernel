@@ -882,10 +882,10 @@ static void adau1372_set_power(struct adau1372 *adau1372, bool enable)
 	adau1372->enabled = enable;
 }
 
-static int adau1372_set_bias_level(struct snd_soc_codec *codec,
-	enum snd_soc_bias_level level)
+static int adau1372_set_bias_level(struct snd_soc_component *component,
+		enum snd_soc_bias_level level)
 {
-	struct adau1372 *adau1372 = snd_soc_codec_get_drvdata(codec);
+	struct adau1372 *adau1372 = snd_soc_component_get_drvdata(component);
 
 	switch (level) {
 	case SND_SOC_BIAS_ON:
@@ -903,10 +903,9 @@ static int adau1372_set_bias_level(struct snd_soc_codec *codec,
 	return 0;
 }
 
-static struct snd_soc_codec_driver adau1372_codec_driver = {
+static struct snd_soc_component_driver adau1372_component_driver = {
 	.set_bias_level = adau1372_set_bias_level,
-	.idle_bias_off = true,
-
+	.idle_bias_on = 0,
 	.controls = adau1372_controls,
 	.num_controls = ARRAY_SIZE(adau1372_controls),
 	.dapm_widgets = adau1372_dapm_widgets,
@@ -1038,14 +1037,17 @@ int adau1372_probe(struct device *dev, struct regmap *regmap,
 
 	regmap_write(regmap, 0x7, 0x01); /* CLOCK OUT */
 
-	return snd_soc_register_codec(dev, &adau1372_codec_driver,
+	return devm_snd_soc_register_component(dev, &adau1372_component_driver,
 		&adau1372_dai_driver, 1);
 }
 EXPORT_SYMBOL(adau1372_probe);
 
 int adau1372_remove(struct device *dev)
 {
-	snd_soc_unregister_codec(dev);
+	struct adau1372 *adau = dev_get_drvdata(dev);
+
+	if (adau->mclk)
+		clk_disable_unprepare(adau->mclk);
 	return 0;
 }
 EXPORT_SYMBOL(adau1372_remove);
