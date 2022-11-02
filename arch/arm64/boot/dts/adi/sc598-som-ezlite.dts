@@ -174,21 +174,33 @@
 	sru_dai0: sru_dai0_mux {
 		route {
 			sru-routing =
-				/* 1362 LRCLK */
+				/* 1362 TX LRCLK */
 				<DAI0_LOW_F           DAI0_PBEN01_I>,  /* set DAI0_PIN01 to input */
 				<DAI0_PB01_O_ABCDE    SPT0_AFS_I>,     /* route DAI0_PIN01 to SPT0_AFS */
 
-				/* 1363 BCLK */
+				/* 1363 TX BCLK */
 				<DAI0_LOW_F           DAI0_PBEN02_I>,  /* set DAI0_PIN02 to input */
 				<DAI0_PB02_O_ABCDE    SPT0_ACLK_I>,    /* route DAI0_PIN02 to SPT0_ACLK */
 
-				/* 1363 DAC_SDATA/MP0 */
+				/* 1363 TX DAC_SDATA/MP0 */
 				<DAI0_HIGH_F          DAI0_PBEN03_I>,  /* set DAI0_PIN03 to output */
 				<SPT0_AD0_O_BD        DAI0_PB03_I>,    /* route SPT0_AD0 to DAI0_PIN03 */
 
-				/* 1363 ADC_SDATA0/MP1 */
+				/* 1362 RX LRCLK */
+				<DAI0_LOW_F           DAI0_PBEN01_I>,  /* set DAI0_PIN01 to input */
+				<DAI0_PB01_O_ABCDE    SPT0_BFS_I>,     /* route DAI0_PIN01 to SPT0_BFS */
+
+				/* 1363 RX BCLK */
+				<DAI0_LOW_F           DAI0_PBEN02_I>,  /* set DAI0_PIN02 to input */
+				<DAI0_PB02_O_ABCDE    SPT0_BCLK_I>,    /* route DAI0_PIN02 to SPT0_BCLK */
+
+				/* 1363 RX ADC_SDATA0/MP1 */
 				<DAI0_LOW_F           DAI0_PBEN04_I>,  /* set DAI0_PIN04 to input */
-				<DAI0_PB04_O_ABCDE    SPT0_AD1_I>;     /* route DAI0_PIN04 to SPT0_AD1 */
+				<DAI0_PB04_O_ABCDE    SPT0_BD0_I>,     /* route DAI0_PIN04 to SPT0_BD0 */
+
+				/* 1363 RX ADC_SDATA1/MP6 */
+				<DAI0_LOW_F           DAI0_PBEN05_I>,  /* set DAI0_PIN05 to input */
+				<DAI0_PB05_O_ABCDE    SPT0_BD1_I>;     /* route DAI0_PIN05 to SPT0_BD1 */
 		};
 	};
 };
