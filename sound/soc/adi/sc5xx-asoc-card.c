@@ -22,6 +22,7 @@
 #include <sound/soc.h>
 #include <sound/pcm_params.h>
 
+#include "../codecs/adau1372.h"
 #include "../codecs/adau1962.h"
 #include "../codecs/adau1977.h"
 #include "../codecs/adau17x1.h"
@@ -55,6 +56,77 @@ static const struct snd_soc_dapm_route sc5xx_adau1761_dapm_routes[] = {
 	{ "Stereo Out", NULL, "LOUT" },
 	{ "Stereo Out", NULL, "ROUT" },
 };
+
+static int sc5xx_adau1372_hw_params(struct snd_pcm_substream *substream,
+	struct snd_pcm_hw_params *params)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	unsigned int fmt, rx_mask = 0;
+	unsigned int slot_width = 0;
+	int ret, slots = 0;
+
+	switch (params_channels(params)) {
+	case 2: /* Stereo I2S mode */
+		fmt =	SND_SOC_DAIFMT_I2S |
+			SND_SOC_DAIFMT_NB_NF |
+			SND_SOC_DAIFMT_CBM_CFM;
+		break;
+	case 1: /* TDM mode */
+		fmt =	SND_SOC_DAIFMT_DSP_A |
+			SND_SOC_DAIFMT_IB_NF |
+			SND_SOC_DAIFMT_CBM_CFM;
+		slots = 16;
+		rx_mask = 0x1;
+		break;
+	case 4: /* TDM mode */
+		fmt =	SND_SOC_DAIFMT_DSP_A |
+			SND_SOC_DAIFMT_IB_NF |
+			SND_SOC_DAIFMT_CBM_CFM;
+		slots = 4;
+		rx_mask = 0xf;
+		break;
+	case 8: /* TDM mode */
+		fmt =	SND_SOC_DAIFMT_DSP_A |
+			SND_SOC_DAIFMT_IB_NF |
+			SND_SOC_DAIFMT_CBM_CFM;
+		slots = 8;
+		rx_mask = 0xff;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	switch (params_width(params)) {
+	case 16:
+		slot_width = 16;
+		break;
+	case 24:
+	case 32:
+		slot_width = 32;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	ret = snd_soc_runtime_set_dai_fmt(rtd, fmt);
+	if (ret){
+		return ret;
+	}
+
+	return snd_soc_dai_set_tdm_slot(codec_dai, 0, rx_mask,
+				 slots, slot_width);
+
+}
+
+static const struct snd_soc_ops adau1372_ops = {
+	.hw_params = sc5xx_adau1372_hw_params,
+};
+
+static int __maybe_unused sc5xx_adau1372_init(struct snd_soc_pcm_runtime *rtd)
+{
+	return 0;
+}
 
 static int sc5xx_adau1962_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params)
@@ -288,6 +360,14 @@ static int __maybe_unused sc5xx_adau1979_init(struct snd_soc_pcm_runtime *rtd)
 			ADAU1977_SYSCLK_SRC_MCLK, 24576000, SND_SOC_CLOCK_IN);
 }
 
+static struct snd_soc_dai_link_component adau1372_codec_component[] = {
+	{
+		.name = NULL,
+		.of_node = NULL,
+		.dai_name = "adau1372",
+	},
+};
+
 static struct snd_soc_dai_link_component adau1962_codec_component[] = {
 	{
 		.name = NULL,
@@ -332,6 +412,20 @@ static struct snd_soc_dai_link_component sc5xx_cpu_component[] = {
 
 /* Digital audio interface glue - connect codec <--> CPU */
 static struct snd_soc_dai_link sc5xx_asoc_dai_links[] = {
+#if IS_ENABLED(CONFIG_SND_SC5XX_ADAU1372)
+	{
+		.name = "adau1372",
+		.stream_name = "ADAU1372",
+		.cpus = sc5xx_cpu_component,
+		.num_cpus = ARRAY_SIZE(sc5xx_cpu_component),
+		.codecs = adau1372_codec_component,
+		.num_codecs = ARRAY_SIZE(adau1372_codec_component),
+		.platforms = sc5xx_platform_component,
+		.num_platforms = ARRAY_SIZE(sc5xx_platform_component),
+		.init = sc5xx_adau1372_init,
+		.ops = &adau1372_ops,
+	},
+#endif
 #if IS_ENABLED(CONFIG_SND_SC5XX_ADAU1962)
 	{
 		.name = "adau1962",
@@ -397,6 +491,10 @@ static int sc5xx_asoc_probe(struct platform_device *pdev)
 	sc5xx_asoc_card.dev = &pdev->dev;
 
 	sc5xx_cpu_component->of_node = of_parse_phandle(pdev->dev.of_node, "adi,cpu-dai", 0);
+
+#if IS_ENABLED(CONFIG_SND_SC5XX_ADAU1372)
+	sc5xx_asoc_dai_links[id++].codecs[0].of_node = of_parse_phandle(pdev->dev.of_node, "adi,codec", 0);
+#endif
 #if IS_ENABLED(CONFIG_SND_SC5XX_ADAU1962)
 	sc5xx_asoc_dai_links[id++].codecs[0].of_node = of_parse_phandle(pdev->dev.of_node, "adi,codec", 0);
 #endif

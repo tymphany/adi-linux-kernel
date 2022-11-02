@@ -91,6 +91,17 @@ config SND_SC5XX_ADAU1962
 	Say Y if you want to add support for the Analog Devices ADAU1962
         machine driver on the SC5XX ezkit board.
 
+config SND_SC5XX_ADAU1372
+	tristate "Support for the ADAU1372 Machine driver on SC5XX ezkit board"
+	depends on SND_SC5XX_PCM && I2C && (!SND_SC5XX_ADAU1761)
+	select SND_SC5XX_MACHINE
+	select SND_SOC_ADI_SC5XX_I2S
+	select SND_SOC_ADAU1372_I2C
+	help
+	Say Y if you want to add support for the Analog Devices ADAU1962
+        machine driver on the SC5XX ezkit board.
+
+
 config SND_SOC_ADI_SC5XX_I2S
 	tristate
 	depends on ARCH_SC59X_64 || ARCH_SC59X || ARCH_SC58X || ARCH_SC57X
