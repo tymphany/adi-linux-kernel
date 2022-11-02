@@ -471,9 +471,22 @@
 			status = "disabled";
 			reg = <0x31002400 0x80>, <0x31002480 0x80>;
 			sport-channel = <4>;
-			interrupt-names = "tx_staus", "rx_staus";
+			interrupt-names = "tx_status", "rx_status";
 			interrupts = <GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI 100 IRQ_TYPE_LEVEL_HIGH>;
-			dmas = <&sport_dma_cluster 10>, <&sport_dma_cluster 11>;
+			dmas = <&sport4_dma_cluster 10>, <&sport4_dma_cluster 11>;
+			dma-names = "tx", "rx";
+			clocks = <&clk ADSP_SC598_CLK_CGU0_SCLK1>;
+			clock-names = "sclk";
+		};
+
+		i2s0: i2s0@0 {
+			compatible = "sc5xx,i2s-dai";
+			status = "disabled";
+			reg = <0x31002000 0x80>, <0x31002080 0x80>;
+			sport-channel = <0>;
+			interrupt-names = "tx_status", "rx_status";
+			interrupts = <GIC_SPI 82 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI 84 IRQ_TYPE_LEVEL_HIGH>;
+			dmas = <&sport0_dma_cluster 0>, <&sport0_dma_cluster 1>;
 			dma-names = "tx", "rx";
 			clocks = <&clk ADSP_SC598_CLK_CGU0_SCLK1>;
 			clock-names = "sclk";
@@ -1087,7 +1100,33 @@
 //			spu_securep_id = <115>;
 //		};
 
-		sport_dma_cluster: dma@0x31023000 {
+		sport0_dma_cluster: dma@0x31022000 {
+			compatible = "adi,dma-controller";
+			reg = <0x31022000 0x1000>;
+			status = "okay";
+			#dma-cells = <1>;
+
+			sport0a: channel@0 {
+				adi,id = <0>;
+				adi,src-offset = <0>;
+				adi,skip-interrupts = <0>;
+				interrupts = <GIC_SPI 81 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 297 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "complete", "error";
+			};
+
+			sport0b: channel@1 {
+				adi,id = <1>;
+				adi,src-offset = <0x80>;
+				adi,skip-interrupts = <0>;
+				interrupts = <GIC_SPI 83 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 298 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "complete", "error";
+			};
+		};
+
+
+		sport4_dma_cluster: dma@0x31023000 {
 			compatible = "adi,dma-controller";
 			reg = <0x31023000 0x1000>;
 			status = "okay";
