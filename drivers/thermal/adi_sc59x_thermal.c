@@ -93,12 +93,12 @@ static int sc59x_get_temp(struct thermal_zone_device *tzdev, int *temp) {
 
 	/* data is 9.7 fixed point representing temperature in celsius
 	 * linux expects integer millicelsius */
-	tmu_temp = readl(data->ioaddr + SC59X_TMU_TEMP);
+	tmu_temp = (int16_t) readl(data->ioaddr + SC59X_TMU_TEMP);
 
 	/* Check if value was read too soon after thermal event interrupt was cleared */
 	while (tmu_temp == SC59X_DEFAULT_TEMP) {
 		msleep_interruptible(50);
-		tmu_temp = readl(data->ioaddr + SC59X_TMU_TEMP);
+		tmu_temp = (int16_t) readl(data->ioaddr + SC59X_TMU_TEMP);
 	}
 
 	*temp = (tmu_temp * 1000) >> 7;
