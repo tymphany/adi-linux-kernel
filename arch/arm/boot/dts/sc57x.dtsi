@@ -862,5 +862,20 @@
 				adi,dest-offset = <0x80>;
 			};
 		};
+
+		trng: rng@0x310D0000 {
+			compatible = "adi,sc5xx-trng";
+			reg = <0x310D0000 0x74>, <0x310D8000 0x14>;
+			interrupts = <GIC_SPI 121 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "pkic0_irq";
+			startup-cycles = <0xff>;
+			minref-cycles = <0x21>;
+			maxref-cycles = <0x22>;
+			alarm-thresh  = <0xff>;
+			shdn-thresh = <0x04>;
+			poll-data = <0>; /* Use IRQ for data */
+			status = "okay";
+		};
+
 	};
 };
