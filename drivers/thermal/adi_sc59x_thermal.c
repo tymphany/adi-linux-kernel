@@ -142,6 +142,15 @@ static int sc59x_get_trip_temp(struct thermal_zone_device *tzdev, int trip, int 
 		return -EINVAL;
 	}
 
+	/* Convert from 9-bit two's complement to 32-bit --
+	This shouldn't really matter, as we're only reading back the high limits right now.
+	If we were to read back the low limits too, then we would need this. The high
+	limits are capped at >= 60C according to the reference manual, so they're
+	never negative */
+	if( tmu_temp & (1<<8) ){
+		tmu_temp |= 0xFFFFFE00;
+	}
+
 	/* temp limits are integer celsius */
 	*temp = tmu_temp * 1000;
 
