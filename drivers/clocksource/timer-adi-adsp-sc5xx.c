@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-/**
+/*
  * gptimer driver for providing system clock source, clock event source,
  * and generic counters for use in userspace
  *
- * Copyright (c) 2022, Analog Devices, Inc.
- * Greg Malysa <greg.malysa@timesys.com>
+ * (C) Copyright 2022 - Analog Devices, Inc.
+ *
+ * Written and/or maintained by Timesys Corporation
+ *
+ * Contact: Greg Malysa <greg.malysa@timesys.com>
+ * Contact: Nathan Barrett-Morrison <nathan.morrison@timesys.com>
+ *
  */
 
 #include <linux/clk.h>

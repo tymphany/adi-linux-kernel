@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+
 menu "sc59x 64-bit platform type"
 	depends on ARCH_SC59X_64
 

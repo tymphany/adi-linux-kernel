@@ -1,11 +1,20 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-#ifndef SOC_ADI_SYSTEM_CONFIG_H
-#define SOC_ADI_SYSTEM_CONFIG_H
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
  * Implementation of system_config, potential replacement for syscon that generalizes
  * it to support arbitrary regmap registration and requires the driver to be initialized
  * first
+ *
+ * (C) Copyright 2022 - Analog Devices, Inc.
+ *
+ * Written and/or maintained by Timesys Corporation
+ *
+ * Contact: Nathan Barrett-Morrison <nathan.morrison@timesys.com>
+ * Contact: Greg Malysa <greg.malysa@timesys.com>
+ *
  */
+
+#ifndef SOC_ADI_SYSTEM_CONFIG_H
+#define SOC_ADI_SYSTEM_CONFIG_H
 
 #include <linux/list.h>
 #include <linux/of.h>

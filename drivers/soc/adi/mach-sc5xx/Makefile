@@ -1,6 +1,4 @@
-#
-# Makefile for the linux kernel.
-#
+# SPDX-License-Identifier: GPL-2.0-or-later
 
 # todo modularize with kconfigs
 

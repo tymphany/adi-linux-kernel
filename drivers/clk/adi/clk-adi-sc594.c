@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * clock support for ADI processor
+ * Clock support for ADI processor
  *
- * Copyright 2018 Analog Devices Inc.
+ * (C) Copyright 2022 - Analog Devices, Inc.
+ *
+ * Written and/or maintained by Timesys Corporation
+ *
  * Author: Greg Malysa <greg.malysa@timesys.com>
+ * Contact: Nathan Barrett-Morrison <nathan.morrison@timesys.com>
+ *
  */
 
 #include <dt-bindings/clock/adi-sc5xx-clock.h>

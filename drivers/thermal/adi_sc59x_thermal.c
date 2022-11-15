@@ -1,8 +1,14 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Thermal monitoring unit driver for ADI SC59x series SoCs
  *
+ * (C) Copyright 2022 - Analog Devices, Inc.
+ *
+ * Written and/or maintained by Timesys Corporation
+ *
  * Author: Greg Malysa <greg.malysa@timesys.com>
+ * Contact: Nathan Barrett-Morrison <nathan.morrison@timesys.com>
+ *
  */
 
 #include <linux/device.h>

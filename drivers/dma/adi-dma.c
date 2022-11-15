@@ -1,6 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * DMA Controller driver for sc5xx hardware
+ *
+ * (C) Copyright 2022 - Analog Devices, Inc.
+ *
+ * Written and/or maintained by Timesys Corporation
+ *
+ * Contact: Nathan Barrett-Morrison <nathan.morrison@timesys.com>
+ * Author: Greg Malysa <greg.malysa@timesys.com>
+ *
  */
 
 #include <linux/delay.h>

@@ -1,11 +1,15 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
  * Pinctrl Driver for ADI GPIO2 controller
  *
- * Copyright 2007-2013 Analog Devices Inc.
+ * (C) Copyright 2022 - Analog Devices, Inc.
  *
- * Licensed under the GPLv2 or later
+ * Written and/or maintained by Timesys Corporation
+ *
+ * Contact: Nathan Barrett-Morrison <nathan.morrison@timesys.com>
+ * Contact: Greg Malysa <greg.malysa@timesys.com>
+ *
  */
-
 
 #ifndef PINCTRL_ADI2_H
 #define PINCTRL_ADI2_H

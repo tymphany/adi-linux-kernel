@@ -1,10 +1,15 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
  * board initialization should put one of these structures into platform_data
  * and place the adi-rotary onto platform_bus named "adi-rotary".
  *
- * Copyright 2008-2018 Analog Devices Inc.
+ * (C) Copyright 2022 - Analog Devices, Inc.
  *
- * Licensed under the GPL-2 or later.
+ * Written and/or maintained by Timesys Corporation
+ *
+ * Contact: Nathan Barrett-Morrison <nathan.morrison@timesys.com>
+ * Contact: Greg Malysa <greg.malysa@timesys.com>
+ *
  */
 
 #ifndef _ADI_ROTARY_H

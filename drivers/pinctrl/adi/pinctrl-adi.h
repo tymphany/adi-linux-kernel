@@ -1,4 +1,16 @@
-// SPDX-License-Identifier: GPL-2.0
+/* SPDX-License-Identifier: GPL-2.0-or-later */
+/*
+ * Analog Devices ADSP family pinctrl driver.
+ *
+ * (C) Copyright 2022 - Analog Devices, Inc.
+ *
+ * Written and/or maintained by Timesys Corporation
+ *
+ * Contact: Nathan Barrett-Morrison <nathan.morrison@timesys.com>
+ * Author: Greg Malysa <greg.malysa@timesys.com>
+ *
+ */
+
 #ifndef DRIVERS_PINCTRL_ADI_PINCTRL_ADI_H_
 #define DRIVERS_PINCTRL_ADI_PINCTRL_ADI_H_
 

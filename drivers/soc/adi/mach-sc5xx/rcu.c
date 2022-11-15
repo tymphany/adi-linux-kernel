@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-/**
+/*
  * Driver for Analog Devices Reset Control Unit
  *
- * Copyright (c) 2021 Analog Devices
- * Greg Malysa <greg.malysa@timesys.com>
+ * (C) Copyright 2022 - Analog Devices, Inc.
+ *
+ * Written and/or maintained by Timesys Corporation
+ *
+ * Author: Greg Malysa <greg.malysa@timesys.com>
+ * Contact: Nathan Barrett-Morrison <nathan.morrison@timesys.com>
+ *
  */
 
 #include <linux/bits.h>

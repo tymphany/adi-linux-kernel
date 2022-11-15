@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
+
 config ARCH_SC57X
 	bool "ADI SC57x SoCs"
 	depends on ARCH_SC5XX

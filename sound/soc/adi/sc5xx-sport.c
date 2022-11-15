@@ -1,16 +1,15 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * sc5xx_sport.c Analog Devices SC5XX SPORT driver
+ * Analog Devices SC5XX SPORT driver
  *
- * Copyright (c) 2015-2018 Analog Devices Inc.
+ * (C) Copyright 2022 - Analog Devices, Inc.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * Written and/or maintained by Timesys Corporation
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Contact: Nathan Barrett-Morrison <nathan.morrison@timesys.com>
+ * Contact: Greg Malysa <greg.malysa@timesys.com>
+ *
+ * Author: Scott Jiang <Scott.Jiang.Linux@gmail.com>
  */
 
 #include <linux/device.h>

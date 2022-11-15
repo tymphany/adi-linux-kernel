@@ -1,5 +1,15 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-/**
+/* SPDX-License-Identifier: GPL-2.0-or-later */
+/*
+ * (C) Copyright 2022 - Analog Devices, Inc.
+ *
+ * Written and/or maintained by Timesys Corporation
+ *
+ * Contact: Nathan Barrett-Morrison <nathan.morrison@timesys.com>
+ * Contact: Greg Malysa <greg.malysa@timesys.com>
+ *
+ */
+
+/*
  * @todo next step is to unify the arm/mach-sc5xx headers under linux/soc/adi
  * for now we forward to them based on platform
  */

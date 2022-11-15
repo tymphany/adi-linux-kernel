@@ -1,9 +1,14 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * ADSP-SC5xx Core Control Driver
  *
- * Copyright 2015-2019 Analog Devices Inc.
+ * (C) Copyright 2022 - Analog Devices, Inc.
  *
- * Licensed under the GPL-2
+ * Written and/or maintained by Timesys Corporation
+ *
+ * Contact: Nathan Barrett-Morrison <nathan.morrison@timesys.com>
+ * Contact: Greg Malysa <greg.malysa@timesys.com>
+ *
  */
 
 #include <linux/platform_device.h>

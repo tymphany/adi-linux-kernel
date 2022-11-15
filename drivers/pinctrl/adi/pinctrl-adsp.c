@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-/**
+/*
  * Analog Devices ADSP family pinctrl driver.
- * @todo extend pad configuration support to DAI pads as well
  *
- * Copyright (c) 2022, Analog Devices, Inc.
+ * (C) Copyright 2022 - Analog Devices, Inc.
+ *
+ * Written and/or maintained by Timesys Corporation
+ *
+ * Contact: Nathan Barrett-Morrison <nathan.morrison@timesys.com>
+ * Author: Greg Malysa <greg.malysa@timesys.com>
+ *
  */
 
 #include <linux/device.h>

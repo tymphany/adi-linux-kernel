@@ -1,4 +1,15 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
+/* SPDX-License-Identifier: GPL-2.0-or-later */
+/*
+ * ADSP SC5xx clock device tree bindings
+ *
+ * (C) Copyright 2022 - Analog Devices, Inc.
+ *
+ * Written and/or maintained by Timesys Corporation
+ *
+ * Contact: Nathan Barrett-Morrison <nathan.morrison@timesys.com>
+ * Contact: Greg Malysa <greg.malysa@timesys.com>
+ *
+ */
 
 #ifndef DT_BINDINGS_CLOCK_ADI_SC5XX_CLOCK_H
 #define DT_BINDINGS_CLOCK_ADI_SC5XX_CLOCK_H

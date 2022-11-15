@@ -1,17 +1,16 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
- * sc5xx-dai - Analog Devices SC5XX DAI code
+ * Analog Devices SC5XX DAI code
  *
- * Copyright (c) 2017-2018 Analog Devices Inc.
+ * (C) Copyright 2022 - Analog Devices, Inc.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * Written and/or maintained by Timesys Corporation
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Contact: Nathan Barrett-Morrison <nathan.morrison@timesys.com>
+ * Contact: Greg Malysa <greg.malysa@timesys.com>
+ *
  */
+
 #ifndef __SC5XX_DAI_H_
 #define __SC5XX_DAI_H_
 

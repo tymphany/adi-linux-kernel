@@ -2,9 +2,13 @@
 /*
  * sc59x SEC
  *
- * Copyright 2014 - 2020 Analog Devices Inc.
+ * (C) Copyright 2022 - Analog Devices, Inc.
  *
- * Licensed under the GPL-2 or later.
+ * Written and/or maintained by Timesys Corporation
+ *
+ * Contact: Nathan Barrett-Morrison <nathan.morrison@timesys.com>
+ * Contact: Greg Malysa <greg.malysa@timesys.com>
+ *
  */
 
 #include <linux/delay.h>

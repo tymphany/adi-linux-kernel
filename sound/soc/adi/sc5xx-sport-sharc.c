@@ -1,18 +1,18 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
- * sc5xx-sport-sharc.c Analog Devices SC5XX SHARC SPORT driver.
+ * Analog Devices SC5XX SHARC SPORT driver.
  * Data proccessed and feed into SPORT DMA buff by a SHARC core.
  * Code based on sc5xx-sport.c
  *
- * Copyright (c) 2015-2021 Analog Devices Inc.
+ * (C) Copyright 2022 - Analog Devices, Inc.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * Written and/or maintained by Timesys Corporation
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Contact: Nathan Barrett-Morrison <nathan.morrison@timesys.com>
+ * Contact: Greg Malysa <greg.malysa@timesys.com>
+ *
+ * Author: Scott Jiang <Scott.Jiang.Linux@gmail.com>
+ * Author: Piotr Wojtaszczyk <piotr.wojtaszczyk@timesys.com>
  */
 
 #include <linux/device.h>

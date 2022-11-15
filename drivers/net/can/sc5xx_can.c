@@ -1,9 +1,14 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * ADI SC5xx On-Chip CAN Driver
+ * interface to ADI SC5xx CANs
  *
- * Copyright 2014 - 2018 Analog Devices Inc.
+ * (C) Copyright 2022 - Analog Devices, Inc.
  *
- * Licensed under the GPL-2 or later.
+ * Written and/or maintained by Timesys Corporation
+ *
+ * Contact: Nathan Barrett-Morrison <nathan.morrison@timesys.com>
+ * Contact: Greg Malysa <greg.malysa@timesys.com>
+ *
  */
 
 #include <linux/clk.h>

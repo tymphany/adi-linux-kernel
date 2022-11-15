@@ -436,13 +436,11 @@ static int dp83867_config_init(struct phy_device *phydev)
 
 	val = phy_read(phydev, DP83867_CFG3);
 	/* Enable Interrupt output INT_OE in CFG3 register */
-	if (phy_interrupt_is_valid(phydev)){
+	if (phy_interrupt_is_valid(phydev))
 		val |= DP83867_CFG3_INT_OE;
-	}
 
 	val |= DP83867_CFG3_ROBUST_AUTO_MDIX;
 	phy_write(phydev, DP83867_CFG3, val);
-
 
 	if (dp83867->port_mirroring != DP83867_PORT_MIRROING_KEEP)
 		dp83867_config_port_mirroring(phydev);

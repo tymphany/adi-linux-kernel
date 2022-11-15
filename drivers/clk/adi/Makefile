@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-2.0
+
 #SC594
 obj-$(CONFIG_COMMON_CLK_ADI_SC594)  += clk-adi-pll.o
 obj-$(CONFIG_COMMON_CLK_ADI_SC594)  += clk-adi-sc594.o

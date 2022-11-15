@@ -1,11 +1,14 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * dwmac-adi.c Analog Devices EMAC driver for sc5xx
+ * Analog Devices EMAC driver for sc5xx
  *
- * Copyright (c) 2018 Analog Devices Inc.
+ * (C) Copyright 2022 - Analog Devices, Inc.
  *
- * This file is licensed under the terms of the GNU General Public
- * License version 2. This program is licensed "as is" without any
- * warranty of any kind, whether express or implied.
+ * Written and/or maintained by Timesys Corporation
+ *
+ * Author: Nathan Barrett-Morrison <nathan.morrison@timesys.com>
+ * Contact: Greg Malysa <greg.malysa@timesys.com>
+ *
  */
 
 #include <linux/gpio.h>

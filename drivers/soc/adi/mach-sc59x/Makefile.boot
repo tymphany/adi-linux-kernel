@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+
 ifeq ($(CONFIG_MACH_SC594_SOM),y)
 zreladdr-y      += 0x82008000
 params_phys-y   := 0x82000100

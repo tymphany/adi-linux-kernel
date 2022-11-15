@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+
 obj-$(CONFIG_ICC) := icc.o
 PWD := core/
 

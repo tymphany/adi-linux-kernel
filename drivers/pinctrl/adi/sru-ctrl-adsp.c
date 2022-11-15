@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-
-/**
+/*
  * Analog Devices ADSP family SRU control driver.
  *
- * Maintainer: Nathan Barrett-Morrison <nathan.morrison@timesys.com>
+ * (C) Copyright 2022 - Analog Devices, Inc.
  *
- * Copyright (c) 2022, Analog Devices, Inc.
+ * Written and/or maintained by Timesys Corporation
+ *
+ * Author: Nathan Barrett-Morrison <nathan.morrison@timesys.com>
+ * Contact: Greg Malysa <greg.malysa@timesys.com>
+ *
  */
 
 #include <linux/device.h>

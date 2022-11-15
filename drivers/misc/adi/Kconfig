@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+
 config ADI_SRAM_MMAP
 	bool "MMAP driver for sc5xx onchip SRAM"
 	depends on (ARCH_SC59X_64 || ARCH_SC59X || ARCH_SC58X || ARCH_SC57X) && SRAM

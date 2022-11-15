@@ -139,12 +139,6 @@ config SPI_BCM2835AUX
 	  "universal SPI master", and the regular SPI controller.
 	  This driver is for the universal/auxiliary SPI controller.
 
-config SPI_BFIN5XX
-	tristate "SPI controller driver for ADI Blackfin5xx"
-	depends on BLACKFIN && !BF60x
-	help
-	  This is the SPI controller master driver for Blackfin 5xx processor.
-
 config SPI_ADI_V3
 	tristate "SPI controller v3 for ADI"
 	help

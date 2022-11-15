@@ -1,10 +1,15 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
- * ADAU1372 driver
+ * Analog Devices adau1372 codec driver
  *
- * Copyright 2016 Analog Devices Inc.
- *  Author: Lars-Peter Clausen <lars@metafoo.de>
+ * (C) Copyright 2022 - Analog Devices, Inc.
  *
- * Licensed under the GPL-2.
+ * Written and/or maintained by Timesys Corporation
+ *
+ * Contact: Nathan Barrett-Morrison <nathan.morrison@timesys.com>
+ * Contact: Greg Malysa <greg.malysa@timesys.com>
+ *
+ * Author: Lars-Peter Clausen <lars@metafoo.de>
  */
 
 #ifndef SOUND_SOC_CODECS_ADAU1372_H

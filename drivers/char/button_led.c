@@ -1,12 +1,16 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * Button interrupt trigger LED Driver
- *
  * This driver is an example of using the GPIO as external interrupt,
  * when pressing the push botton on the board repeatedly,
- * LED will get on and off repeatedly.
+ * LED will turn on and off repeatedly.
  *
- * Copyright 2017-2018 Analog Devices Inc.
- * Licensed under the GPL-2 or later.
+ * (C) Copyright 2022 - Analog Devices, Inc.
+ *
+ * Written and/or maintained by Timesys Corporation
+ *
+ * Contact: Nathan Barrett-Morrison <nathan.morrison@timesys.com>
+ * Contact: Greg Malysa <greg.malysa@timesys.com>
+ *
  */
 
 #include <linux/init.h>
