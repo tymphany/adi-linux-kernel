@@ -1230,7 +1230,7 @@ static bool cqspi_supports_mem_op(struct spi_mem *mem,
 	all_false = !op->cmd.dtr && !op->addr.dtr && !op->dummy.dtr &&
 		    !op->data.dtr;
 
-	if (all_true) {
+	if(all_true){
 		/* Right now we only support 8-8-8 DTR mode. */
 		if (op->cmd.nbytes && op->cmd.buswidth != 8)
 			return false;
@@ -1238,13 +1238,7 @@ static bool cqspi_supports_mem_op(struct spi_mem *mem,
 			return false;
 		if (op->data.nbytes && op->data.buswidth != 8)
 			return false;
-	} else if (all_false) {
-		/* Only 1-1-X ops are supported without DTR */
-		if (op->cmd.nbytes && op->cmd.buswidth > 1)
-			return false;
-		if (op->addr.nbytes && op->addr.buswidth > 1)
-			return false;
-	} else {
+	}else if (!all_false){
 		/* Mixed DTR modes are not supported. */
 		return false;
 	}
