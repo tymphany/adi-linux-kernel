@@ -423,7 +423,7 @@
 */
 
 &sram_mmap {
-	status = "disabled";
+	status = "okay";
 };
 
 &pinctrl0 {
