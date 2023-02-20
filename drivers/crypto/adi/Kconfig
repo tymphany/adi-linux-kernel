@@ -14,4 +14,13 @@ config CRYPTO_DEV_ADI_HASH
 	select CRYPTO_SHA256
 	select CRYPTO_ENGINE
 	help
-	  This enables support for hw-accelerated hashing on ADI's SC594
+	  This enables support for hw-accelerated hashing on ADI's SC598
+
+config CRYPTO_DEV_ADI_SKCIPHER
+	tristate "Support for ADI symmetric ciphers"
+	depends on (ARCH_SC59X || ARCH_SC59X_64)
+	select CRYPTO_SKCIPHER
+	select CRYPTO_ALGAPI
+	select CRYPTO_ENGINE
+	help
+	  This enables support for hw-accelerated symmetric ciphers on ADI's SC598

@@ -6,7 +6,7 @@
     #define PKTE_SRAM_ADDRESS        0x20001000
 #endif
 
-#define PKTE_MAX_KEY_SIZE      (SHA256_BLOCK_SIZE * 8)
+#define PKTE_MAX_KEY_SIZE      (AES_KEYSIZE_256 * 8)
 #define PKTE_BUFLEN            (8 * 1024)
 #define PKTE_RING_BUFFERS      4
 
@@ -546,11 +546,11 @@
 /*!
  *Configures the direction as outbound. Used for encryption and encryption-hash operation.
  */
-#define dir_outbound         0x0u   
+#define dir_outbound         0x0u
 /*!
  *Configures the direction as inbound. Used for decryption and hash-decryption
  */
-#define dir_inbound          0x1u   
+#define dir_inbound          0x1u
 /*!
  *Configures the cipher mode as DES
  */
@@ -594,39 +594,39 @@
 /*!
  *Configures the Digest length as 3 words i.e 96 bit output
  */
-#define digest_length0       0x0u  
+#define digest_length0       0x0u
 /*!
  *Configures the Digest length as 1 word
  */
-#define digest_length1       0x1u  
+#define digest_length1       0x1u
 /*!
  *Configures the Digest length as 2 words
  */
-#define digest_length2       0x2u  
+#define digest_length2       0x2u
 /*!
  *Configures the Digest length as 3 words
  */
-#define digest_length3       0x3u  
+#define digest_length3       0x3u
 /*!
  *Configures the Digest length as 4 words
  */
-#define digest_length4       0x4u  
+#define digest_length4       0x4u
 /*!
  *Configures the Digest length as 5 words
  */
-#define digest_length5       0x5u  
+#define digest_length5       0x5u
 /*!
  *Configures the Digest length as 6 words
  */
-#define digest_length6       0x6u  
+#define digest_length6       0x6u
 /*!
  *Configures the Digest length as 7 words
  */
-#define digest_length7       0x7u  
+#define digest_length7       0x7u
 /*!
  *Configures the Digest length as 8 words
  */
-#define digest_length8       0x8u  
+#define digest_length8       0x8u
 /*!
  *Configures the Ciphering in ECB mode
  */
@@ -700,8 +700,7 @@
 #define BITM_PKTE_TCM_MODE  0x02
 #define BITM_PKTE_AUTONOMOUS_MODE 0x03
 
-typedef enum
-{
+typedef enum {
     /*! Success */
     ADI_PKTE_SUCCESS = 0u,
     /*! Generic failure. */
@@ -738,8 +737,7 @@ typedef enum
     ADI_PKTE_DEVICE_IN_USE
 } ADI_PKTE_RESULT;
 
-typedef struct
-{
+typedef struct {
     u32 PE_CTRL_STAT;
     u32 PE_SOURCE_ADDR;
     u32 PE_DEST_ADDR;
@@ -748,16 +746,14 @@ typedef struct
     u32 PE_ARC4_STATE_ADDR;
     u32 PE_USER_ID;
     u32 PE_LENGTH;
-}PE_CDR,PE_RDR;
+} PE_CDR, PE_RDR;
 
-typedef struct
-{
+typedef struct {
     u32 SA_CMD0;
     u32 SA_CMD1;
-}SA_PARA;
+} SA_PARA;
 
-typedef struct
-{
+typedef struct {
     u32 SA_KEY0;
     u32 SA_KEY1;
     u32 SA_KEY2;
@@ -766,10 +762,9 @@ typedef struct
     u32 SA_KEY5;
     u32 SA_KEY6;
     u32 SA_KEY7;
-}SA_KEY;
+} SA_KEY;
 
-typedef struct
-{
+typedef struct {
     u32 SA_IDIGEST0;
     u32 SA_IDIGEST1;
     u32 SA_IDIGEST2;
@@ -778,10 +773,9 @@ typedef struct
     u32 SA_IDIGEST5;
     u32 SA_IDIGEST6;
     u32 SA_IDIGEST7;
-}SA_IDIGEST;
+} SA_IDIGEST;
 
-typedef struct
-{
+typedef struct {
     u32 SA_ODIGEST0;
     u32 SA_ODIGEST1;
     u32 SA_ODIGEST2;
@@ -790,18 +784,16 @@ typedef struct
     u32 SA_ODIGEST5;
     u32 SA_ODIGEST6;
     u32 SA_ODIGEST7;
-}SA_ODIGEST;
+} SA_ODIGEST;
 
-typedef struct
-{
+typedef struct {
     u32 SA_SEQNUM0;
     u32 SA_SEQNUM1;
     u32 SA_SEQNUMMASK0;
     u32 SA_SEQNUMMASK1;
 } SA_SEQ;
 
-typedef struct
-{
+typedef struct {
     SA_PARA SA_Para;
     SA_KEY SA_Key;
     SA_IDIGEST SA_Idigest;
@@ -809,16 +801,14 @@ typedef struct
     u32 SA_SPI;
     SA_SEQ SA_Seq;
     u32 SA_READY;
-}SA;
+} SA;
 
-typedef struct
-{
+typedef struct {
     PE_CDR PE_cdr0;
     PE_RDR PE_rdr0;
-}PE_CDRing;
+} PE_CDRing;
 
-typedef struct
-{
+typedef struct {
     u32 STATE_IV0;
     u32 STATE_IV1;
     u32 STATE_IV2;
@@ -833,18 +823,16 @@ typedef struct
     u32 STATE_IDIGEST5;
     u32 STATE_IDIGEST6;
     u32 STATE_IDIGEST7;
-}STATE;
+} STATE;
 
-typedef struct
-{
+typedef struct {
     PE_CDR  CmdDescriptor[PKTE_RING_BUFFERS];
     PE_RDR  ResultDescriptor[PKTE_RING_BUFFERS];
     SA      SARecord[PKTE_RING_BUFFERS];
     STATE   State;
-}ADI_PKTE_DESCRIPTOR;
+} ADI_PKTE_DESCRIPTOR;
 
-typedef struct
-{
+typedef struct {
     /*! Configures the mode of operation using PKTE*/
     u32 opcode;
     /*! Configures the direction as inbound or outbound*/
@@ -869,10 +857,9 @@ typedef struct
     u32 final_hash_condition;
     /*! Configures the mode of operation- Autonomous/TCM/Host mode*/
     u32 pkte_mode;
-}ADI_PKTE_COMMAND;
+} ADI_PKTE_COMMAND;
 
-typedef struct PKTE_LIST
-{
+typedef struct PKTE_LIST {
     /*! Pointer to the source buffer for encryption/hash operation*/
     u32 *pSource;
     /*! Pointer to the destination buffer for encryption/hash operation*/
@@ -891,14 +878,110 @@ typedef struct PKTE_LIST
     u32 nUserID;
     /*! Above command structure*/
     ADI_PKTE_COMMAND pCommand;
-}ADI_PKTE_LIST;
+} ADI_PKTE_LIST;
 
-typedef struct
-{
+typedef struct {
     ADI_PKTE_DESCRIPTOR   pPkteDescriptor;
     ADI_PKTE_LIST         pPkteList;
     u32                   source[PKTE_RING_BUFFERS][PKTE_BUFLEN/4];
-    u32                   destination[1];
+    u32                   destination[PKTE_BUFLEN];
 } ADI_PKTE_DEVICE;
+
+struct adi_ctx {
+	struct crypto_engine_ctx enginectx;
+	struct adi_dev          *pkte_dev;
+	int                     keylen;
+	__be32                  key[AES_KEYSIZE_256 / sizeof(u32)];
+	unsigned long           flags_skcipher;
+};
+
+struct adi_request_ctx {
+	struct adi_dev	*pkte_dev;
+	unsigned long		op;
+
+	u8 digest[SHA256_DIGEST_SIZE] __aligned(sizeof(u32));
+	size_t			digcnt;
+	size_t			bufcnt;
+	size_t			buflen;
+
+	struct scatterlist	*sg;
+	unsigned int		offset;
+	unsigned int		total;
+
+	int			nents;
+
+	u32			*hw_context;
+};
+
+typedef struct adi_algs_info {
+	struct ahash_alg	*algs_list;
+	size_t			size;
+} ADI_ALGS_INFO;
+
+struct adi_pdata {
+	ADI_ALGS_INFO	   *algs_info;
+	size_t				algs_info_size;
+};
+
+struct adi_dev {
+	struct list_head	list;
+	struct device		*dev;
+	struct clk		*clk;
+	struct reset_control	*rst;
+	void __iomem		*io_base;
+	phys_addr_t		phys_base;
+
+	struct ahash_request	*req;
+	struct crypto_engine	*engine;
+
+	int			err;
+	unsigned long		flags;
+
+	const struct adi_pdata	*pdata;
+
+	ADI_PKTE_DEVICE *pkte_device;
+	bool src_count_set;
+	u32 src_bytes_available;
+	u32 ring_pos_produce;
+	u32 ring_pos_consume;
+	dma_addr_t dma_handle;
+
+	u8			secret_key[PKTE_MAX_KEY_SIZE];
+	int			secret_keylen;
+};
+
+typedef struct adi_drv {
+	struct list_head	dev_list;
+	spinlock_t		lock; /* List protection access */
+} ADI_DRV;
+
+void adi_reset_state(struct adi_dev *hdev);
+void adi_start_engine(struct adi_dev *pkte_dev);
+void adi_init_spe(struct adi_dev *pkte_dev);
+void adi_init_ring(struct adi_dev *pkte_dev);
+void adi_configure_cdr(struct adi_dev *pkte_dev);
+void adi_source_data(struct adi_dev *pkte_dev, u32 size);
+void adi_config_sa_para(struct adi_dev *pkte_dev);
+void adi_config_sa_key(struct adi_dev *pkte_dev, u32 Key[]);
+void adi_config_state(struct adi_dev *pkte_dev, u32 IV[]);
+void adi_write(struct adi_dev *pkte_dev, u32 offset, u32 value);
+
+u32 adi_read(struct adi_dev *pkte_dev, u32 offset);
+u32 adi_physical_address(struct adi_dev *pkte_dev, u32 variableAddress);
+
+struct adi_dev *adi_find_dev(struct adi_ctx *ctx);
+
+int adi_hw_init(struct adi_dev *pkte_dev);
+
+extern wait_queue_head_t wq_processing;
+extern int processing;
+extern wait_queue_head_t wq_ready;
+extern bool ready;
+extern ADI_DRV adi;
+
+extern u32 Key[8];
+extern u32 IV[4];
+extern u32 IDigest[8];
+extern u32 ODigest[8];
 
 #endif
