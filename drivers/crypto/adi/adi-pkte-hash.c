@@ -758,6 +758,10 @@ static int adi_update(struct ahash_request *req)
 	dev_dbg(pkte_dev->dev, "%s\n", __func__);
 
 	if (unlikely(pkte_dev->flags & PKTE_FLAGS_HMAC)) {
+		if(req->nbytes > 257){
+			dev_err(pkte_dev->dev, "HMAC operations cannot currently be chained.  Cannot process > 257 bytes\n");
+			return -ENODEV;
+		}
 		if (pkte_dev->flags & PKTE_HOST_MODE) {
 			dev_err(pkte_dev->dev, "HMAC computation not yet supported while in Direct Host Mode\n");
 			return -ENODEV;
@@ -919,7 +923,7 @@ static struct ahash_alg algs_md5_sha1[] = {
 			.base = {
 				.cra_name = "hmac(md5)",
 				.cra_driver_name = "adi-hmac-md5",
-				.cra_priority = 1000,
+				.cra_priority = 1,
 				.cra_flags = CRYPTO_ALG_ASYNC |
 					     CRYPTO_ALG_KERN_DRIVER_ONLY,
 				.cra_blocksize = MD5_HMAC_BLOCK_SIZE,
@@ -970,7 +974,7 @@ static struct ahash_alg algs_md5_sha1[] = {
 			.base = {
 				.cra_name = "hmac(sha1)",
 				.cra_driver_name = "adi-hmac-sha1",
-				.cra_priority = 1000,
+				.cra_priority = 1,
 				.cra_flags = CRYPTO_ALG_ASYNC |
 					     CRYPTO_ALG_KERN_DRIVER_ONLY,
 				.cra_blocksize = SHA1_BLOCK_SIZE,
@@ -1024,7 +1028,7 @@ static struct ahash_alg algs_sha224_sha256[] = {
 			.base = {
 				.cra_name = "hmac(sha224)",
 				.cra_driver_name = "adi-hmac-sha224",
-				.cra_priority = 1000,
+				.cra_priority = 1,
 				.cra_flags = CRYPTO_ALG_ASYNC |
 					     CRYPTO_ALG_KERN_DRIVER_ONLY,
 				.cra_blocksize = SHA224_BLOCK_SIZE,
@@ -1075,7 +1079,7 @@ static struct ahash_alg algs_sha224_sha256[] = {
 			.base = {
 				.cra_name = "hmac(sha256)",
 				.cra_driver_name = "adi-hmac-sha256",
-				.cra_priority = 1000,
+				.cra_priority = 1,
 				.cra_flags = CRYPTO_ALG_ASYNC |
 					     CRYPTO_ALG_KERN_DRIVER_ONLY,
 				.cra_blocksize = SHA256_BLOCK_SIZE,
