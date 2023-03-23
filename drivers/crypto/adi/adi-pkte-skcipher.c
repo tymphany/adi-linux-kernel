@@ -46,9 +46,12 @@
 
 typedef enum {
 	UNUSED  = 0 << 0, /* not a bitmask */
-	CBC_AES = 1 << 1,
-	ENCRYPT = 1 << 2,
-	DECRYPT = 1 << 3,
+	CBC     = 1 << 1,
+	AES     = 1 << 2,
+	DES     = 1 << 3,
+	TDES    = 1 << 4,
+	ENCRYPT = 1 << 5,
+	DECRYPT = 1 << 6,
 } CIPHER_MODE;
 
 struct adi_crypt_reqctx {
@@ -115,15 +118,43 @@ static int adi_crypt_prepare_req(struct skcipher_request *req)
 			dev_err(crypt->dev, "%s: Unsupported Operation\n", __func__);
 		}
 
-		if (rctx->mode & CBC_AES) {
+		if (rctx->mode & AES) {
+			switch((ctx->keylen*8)){
+				case 256:
+					crypt->pkte_device->pPkteList.pCommand.aes_key_length = aes_key_length256;
+					break;
+				case 192:
+					crypt->pkte_device->pPkteList.pCommand.aes_key_length = aes_key_length192;
+					break;
+				case 128:
+					crypt->pkte_device->pPkteList.pCommand.aes_key_length = aes_key_length128;
+					break;
+				default:
+					dev_err(crypt->dev, "%s: Keylen %d unsupported\n", __func__, ctx->keylen);
+			}
+		}else{
+			crypt->pkte_device->pPkteList.pCommand.aes_key_length = aes_key_length_other;
+		}
+
+		if (rctx->mode & AES) {
 			crypt->pkte_device->pPkteList.pCommand.cipher = cipher_aes;
-			crypt->pkte_device->pPkteList.pCommand.cipher_mode = cipher_mode_cbc;
+			crypt->pkte_device->pPkteList.pCommand.aes_des_key = aes_key;
+		} else if (rctx->mode & DES){
+			crypt->pkte_device->pPkteList.pCommand.cipher = cipher_des;
+			crypt->pkte_device->pPkteList.pCommand.aes_des_key = des_key;
+		} else if (rctx->mode & TDES){
+			crypt->pkte_device->pPkteList.pCommand.cipher = cipher_tdes;
+			crypt->pkte_device->pPkteList.pCommand.aes_des_key = des_key;
 		} else {
 			dev_err(crypt->dev, "%s: Unsupported Mode\n", __func__);
 		}
 
-		crypt->pkte_device->pPkteList.pCommand.aes_key_length = aes_key_length256;
-		crypt->pkte_device->pPkteList.pCommand.aes_des_key = aes_key;
+		if (rctx->mode & CBC) {
+			crypt->pkte_device->pPkteList.pCommand.cipher_mode = cipher_mode_cbc;
+		}else{
+			//...
+		}
+
 		crypt->pkte_device->pPkteList.pCommand.hash_mode = hash_mode_standard;
 		crypt->pkte_device->pPkteList.pCommand.hash = hash_null;
 		crypt->pkte_device->pPkteList.pCommand.digest_length = digest_length0;
@@ -147,34 +178,22 @@ static int adi_crypt_prepare_req(struct skcipher_request *req)
 
 	if ((ctx->flags_skcipher & PKTE_FLAGS_STARTED)) {
 		if ((rctx->mode & ENCRYPT)) {
-#ifdef DEBUG_PKTE
-			for (i = 0, j = 0; i < ivsize; i++) {
-				j += sprintf(&temp[j], "%x ", (u8)crypt->pkte_device->destination[(crypt->src_bytes_available-16)/4+i]);
+
+			if ( (rctx->mode & DES) || (rctx->mode & TDES) ) {
+				memcpy((u8 *)&IV[0], &crypt->pkte_device->destination[(crypt->src_bytes_available-8)/4], 8);
+				IV[2] = 0;
+				IV[3] = 0;
+			}else{
+				memcpy((u8 *)&IV[0], &crypt->pkte_device->destination[(crypt->src_bytes_available-16)/4], 16);
 			}
-			temp[j] = 0;
-			dev_dbg(crypt->dev, "%s IV: %s\n", __func__, temp);
-#endif
+
 			//Feed previous result into IV
-			adi_config_state(crypt, (u32 *)&crypt->pkte_device->destination[(crypt->src_bytes_available-16)/4]);
+			adi_config_state(crypt, IV);
 		} else {
-#ifdef DEBUG_PKTE
-			for (i = 0, j = 0; i < ivsize; i++) {
-				j += sprintf(&temp[j], "%x ", (u8)IV[i]);
-			}
-			temp[j] = 0;
-			dev_dbg(crypt->dev, "%s IV: %s\n", __func__, temp);
-#endif
 			//Feed previous result into IV
 			adi_config_state(crypt, IV);
 		}
 	} else {
-#ifdef DEBUG_PKTE
-		for (i = 0, j = 0; i < ivsize; i++) {
-			j += sprintf(&temp[j], "%x ", (u8)req->iv[i]);
-		}
-		temp[j] = 0;
-		dev_dbg(crypt->dev, "%s IV: %s\n", __func__, temp);
-#endif
 		adi_config_state(crypt, (u32 *)req->iv);
 	}
 
@@ -187,7 +206,13 @@ static int adi_crypt_prepare_req(struct skcipher_request *req)
 	scatterwalk_copychunks(&crypt->pkte_device->source[crypt->ring_pos_consume][0], &in, req->cryptlen, 0);
 
 	if (rctx->mode & DECRYPT) {
-		memcpy((u8 *)&IV[0], &crypt->pkte_device->source[crypt->ring_pos_consume][(req->cryptlen-16)/4], 16);
+		if ( (rctx->mode & DES) || (rctx->mode & TDES) ) {
+			memcpy((u8 *)&IV[0], &crypt->pkte_device->source[crypt->ring_pos_consume][(req->cryptlen-8)/4], 8);
+			IV[2] = 0;
+			IV[3] = 0;
+		}else{
+			memcpy((u8 *)&IV[0], &crypt->pkte_device->source[crypt->ring_pos_consume][(req->cryptlen-16)/4], 16);
+		}
 	}
 
 #ifdef DEBUG_PKTE
@@ -326,6 +351,25 @@ static int adi_crypt_aes_setkey(struct crypto_skcipher *tfm, const u8 *key,
 		return adi_crypt_setkey(tfm, key, keylen);
 }
 
+static int adi_crypt_des_setkey(struct crypto_skcipher *tfm, const u8 *key,
+				 unsigned int keylen)
+{
+	pr_debug("%s, keylen %d\n", __func__, keylen);
+
+	return verify_skcipher_des_key(tfm, key) ?:
+	       adi_crypt_setkey(tfm, key, keylen);
+}
+
+static int adi_crypt_tdes_setkey(struct crypto_skcipher *tfm, const u8 *key,
+				 unsigned int keylen)
+{
+	pr_debug("%s, keylen %d\n", __func__, keylen);
+
+	return verify_skcipher_des3_key(tfm, key) ?:
+	       adi_crypt_setkey(tfm, key, keylen);
+}
+
+
 static int adi_crypt(struct skcipher_request *req, unsigned long mode)
 {
 	struct adi_ctx *ctx = crypto_skcipher_ctx(
@@ -353,7 +397,7 @@ static int adi_crypt_aes_cbc_decrypt(struct skcipher_request *req)
 	if (req->cryptlen == 0)
 		return 0;
 
-	return adi_crypt(req, CBC_AES | DECRYPT);
+	return adi_crypt(req, CBC | AES | DECRYPT);
 }
 
 static int adi_crypt_aes_cbc_encrypt(struct skcipher_request *req)
@@ -366,8 +410,63 @@ static int adi_crypt_aes_cbc_encrypt(struct skcipher_request *req)
 	if (req->cryptlen == 0)
 		return 0;
 
-	return adi_crypt(req, CBC_AES | ENCRYPT);
+	return adi_crypt(req, CBC | AES | ENCRYPT);
 }
+
+
+static int adi_crypt_des_cbc_decrypt(struct skcipher_request *req)
+{
+	pr_debug("%s\n", __func__);
+
+	if (req->cryptlen % DES_BLOCK_SIZE)
+		return -EINVAL;
+
+	if (req->cryptlen == 0)
+		return 0;
+
+	return adi_crypt(req, CBC | DES | DECRYPT);
+}
+
+static int adi_crypt_des_cbc_encrypt(struct skcipher_request *req)
+{
+	pr_debug("%s\n", __func__);
+
+	if (req->cryptlen % DES_BLOCK_SIZE)
+		return -EINVAL;
+
+	if (req->cryptlen == 0)
+		return 0;
+
+	return adi_crypt(req, CBC | DES | ENCRYPT);
+}
+
+
+static int adi_crypt_tdes_cbc_decrypt(struct skcipher_request *req)
+{
+	pr_debug("%s\n", __func__);
+
+	if (req->cryptlen % DES_BLOCK_SIZE)
+		return -EINVAL;
+
+	if (req->cryptlen == 0)
+		return 0;
+
+	return adi_crypt(req, CBC | TDES | DECRYPT);
+}
+
+static int adi_crypt_tdes_cbc_encrypt(struct skcipher_request *req)
+{
+	pr_debug("%s\n", __func__);
+
+	if (req->cryptlen % DES_BLOCK_SIZE)
+		return -EINVAL;
+
+	if (req->cryptlen == 0)
+		return 0;
+
+	return adi_crypt(req, CBC | TDES | ENCRYPT);
+}
+
 
 struct skcipher_alg crypto_algs[NUM_CRYPTO_ALGS] = {
 	{
@@ -387,5 +486,41 @@ struct skcipher_alg crypto_algs[NUM_CRYPTO_ALGS] = {
 		.setkey			= adi_crypt_aes_setkey,
 		.encrypt		= adi_crypt_aes_cbc_encrypt,
 		.decrypt		= adi_crypt_aes_cbc_decrypt,
-	}
+	},
+	{
+		.base.cra_name		= "cbc(des)",
+		.base.cra_driver_name	= "adi-cbc-des",
+		.base.cra_priority	= 1000,
+		.base.cra_flags		= CRYPTO_ALG_ASYNC,
+		.base.cra_blocksize	= DES_BLOCK_SIZE,
+		.base.cra_ctxsize	= sizeof(struct adi_ctx),
+		.base.cra_alignmask	= 0,
+		.base.cra_module	= THIS_MODULE,
+
+		.init			= adi_init_skcipher,
+		.min_keysize		= DES_BLOCK_SIZE,
+		.max_keysize		= DES_BLOCK_SIZE,
+		.ivsize			= DES_BLOCK_SIZE,
+		.setkey			= adi_crypt_des_setkey,
+		.encrypt		= adi_crypt_des_cbc_encrypt,
+		.decrypt		= adi_crypt_des_cbc_decrypt,
+	},
+	{
+		.base.cra_name		= "cbc(des3_ede)",
+		.base.cra_driver_name	= "adi-cbc-des3",
+		.base.cra_priority	= 1000,
+		.base.cra_flags		= CRYPTO_ALG_ASYNC,
+		.base.cra_blocksize	= DES_BLOCK_SIZE,
+		.base.cra_ctxsize	= sizeof(struct adi_ctx),
+		.base.cra_alignmask	= 0,
+		.base.cra_module	= THIS_MODULE,
+
+		.init			= adi_init_skcipher,
+		.min_keysize		= 3 * DES_BLOCK_SIZE,
+		.max_keysize		= 3 * DES_BLOCK_SIZE,
+		.ivsize			= DES_BLOCK_SIZE,
+		.setkey			= adi_crypt_tdes_setkey,
+		.encrypt		= adi_crypt_tdes_cbc_encrypt,
+		.decrypt		= adi_crypt_tdes_cbc_decrypt,
+	},
 };

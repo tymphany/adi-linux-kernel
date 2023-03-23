@@ -355,6 +355,11 @@ static void adi_config_odigest(struct adi_dev *pkte_dev, u32 Odigest[])
 
 void adi_config_state(struct adi_dev *pkte_dev, u32 IV[])
 {
+
+#ifdef DEBUG_PKTE
+	dev_dbg(pkte_dev->dev, "%s IV: %x %x %x %x\n", __func__, IV[0], IV[1], IV[2], IV[3]);
+#endif
+
 	pkte_dev->pkte_device->pPkteDescriptor.State.STATE_IV0 = IV[0];
 	pkte_dev->pkte_device->pPkteDescriptor.State.STATE_IV1 = IV[1];
 	pkte_dev->pkte_device->pPkteDescriptor.State.STATE_IV2 = IV[2];

@@ -22,5 +22,6 @@ config CRYPTO_DEV_ADI_SKCIPHER
 	select CRYPTO_SKCIPHER
 	select CRYPTO_ALGAPI
 	select CRYPTO_ENGINE
+	select CRYPTO_LIB_DES
 	help
 	  This enables support for hw-accelerated symmetric ciphers on ADI's SC598
