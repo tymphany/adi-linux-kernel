@@ -436,11 +436,9 @@ int adi_hw_init(struct adi_dev *pkte_dev)
 	ready = 0;
 	processing = 0;
 
-	if (likely(!(pkte_dev->flags & PKTE_FLAGS_HMAC))) {
-		//Continue with previous operation
-		if (!(pkte_dev->flags & PKTE_FLAGS_STARTED)) {
-			adi_start_engine(pkte_dev);
-		}
+	//Continue with previous operation
+	if (!(pkte_dev->flags & PKTE_FLAGS_STARTED)) {
+		adi_start_engine(pkte_dev);
 	}
 
 	return 0;

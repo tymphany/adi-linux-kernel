@@ -280,6 +280,10 @@ static int adi_process_packet(struct adi_dev *pkte_dev,
 {
 	unsigned int len32;
 	u32 temp;
+#ifdef DEBUG_PKTE
+	char tempString[8192];
+	int i = 0, j = 0;
+#endif
 
 	len32 = DIV_ROUND_UP(length, sizeof(u32));
 
@@ -310,9 +314,16 @@ static int adi_process_packet(struct adi_dev *pkte_dev,
 		processing = 1;
 	}
 	while( ! (adi_read(pkte_dev, STAT_OFFSET) & BITM_PKTE_STAT_OUTPTDN) );
-	while (!(adi_read(pkte_dev, CTL_STAT_OFFSET) & BITM_PKTE_CTL_STAT_PERDY));
+	while (! (adi_read(pkte_dev, CTL_STAT_OFFSET) & BITM_PKTE_CTL_STAT_PERDY));
 
 	pkte_dev->pkte_device->pPkteList.pSource = &pkte_dev->pkte_device->source[pkte_dev->ring_pos_consume][0];
+
+#ifdef DEBUG_PKTE
+	for (i = 0, j = 0; i < length; i++)
+		j += sprintf(&tempString[j], "%02x ", *(((u8*)pkte_dev->pkte_device->pPkteList.pSource)+i) );
+	tempString[j] = 0;
+	dev_dbg(pkte_dev->dev, "%s source data: %s\n", __func__, tempString);
+#endif
 
 	if (pkte_dev->flags & (PKTE_TCM_MODE | PKTE_AUTONOMOUS_MODE)) {
 		adi_configure_cdr(pkte_dev);
@@ -409,7 +420,8 @@ static void adi_prepare_secret_key(struct adi_dev *pkte_dev, struct adi_request_
 	u32 i;
 	u8 *source_bytewise;
 
-	//Compute the inner digest / inner key
+	//Compute the inner hash of the HMAC (Result).  From RFC2104:
+	//HASH(Key XOR opad, HASH(Key XOR ipad, text))
 	adi_prep_engine(pkte_dev, hash_mode_standard);
 	memset(&pkte_dev->pkte_device->source[pkte_dev->ring_pos_consume][0], 0, INNER_OUTER_KEY_SIZE);
 	memcpy(&pkte_dev->pkte_device->source[pkte_dev->ring_pos_consume][0], pkte_dev->secret_key, pkte_dev->secret_keylen);
@@ -421,29 +433,8 @@ static void adi_prepare_secret_key(struct adi_dev *pkte_dev, struct adi_request_
 	if (!(pkte_dev->flags & PKTE_HOST_MODE))
 		while (!(adi_read(pkte_dev, STAT_OFFSET) & BITM_PKTE_STAT_OUTPTDN));
 	while (!(adi_read(pkte_dev, CTL_STAT_OFFSET) & BITM_PKTE_CTL_STAT_PERDY));
-	if (pkte_dev->flags & PKTE_HOST_MODE)
-		adi_read_packet(pkte_dev, &pkte_dev->pkte_device->pPkteList.pDestination[0]);
-	memcpy(IDigest, &pkte_dev->pkte_device->destination[0], pkte_dev->pkte_device->pPkteList.pCommand.digest_length*4);
 
-	//Compute the outer digest / outer key
-	adi_prep_engine(pkte_dev, hash_mode_standard);
-	memset(&pkte_dev->pkte_device->source[pkte_dev->ring_pos_consume][0], 0, INNER_OUTER_KEY_SIZE);
-	memcpy(&pkte_dev->pkte_device->source[pkte_dev->ring_pos_consume][0], pkte_dev->secret_key, pkte_dev->secret_keylen);
-	source_bytewise = (u8 *)&pkte_dev->pkte_device->source[pkte_dev->ring_pos_consume][0];
-	for (i = 0; i < INNER_OUTER_KEY_SIZE; i++) {
-			*(source_bytewise+i) ^= 0x5c;
-	}
-	adi_process_packet(pkte_dev, INNER_OUTER_KEY_SIZE, 0);
-	if (!(pkte_dev->flags & PKTE_HOST_MODE))
-		while (!(adi_read(pkte_dev, STAT_OFFSET) & BITM_PKTE_STAT_OUTPTDN));
-	while (!(adi_read(pkte_dev, CTL_STAT_OFFSET) & BITM_PKTE_CTL_STAT_PERDY));
-	if (pkte_dev->flags & PKTE_HOST_MODE)
-		adi_read_packet(pkte_dev, &pkte_dev->pkte_device->pPkteList.pDestination[0]);
-	memcpy(ODigest, &pkte_dev->pkte_device->destination[0], pkte_dev->pkte_device->pPkteList.pCommand.digest_length*4);
-
-
-	//Now set the engine to compute the HMAC with the data it will receive in subsequent steps
-	adi_prep_engine(pkte_dev, hash_mode_hmac);
+	pkte_dev->ring_pos_produce++;
 
 	pkte_dev->flags |= PKTE_FLAGS_HMAC_KEY_PREPARED;
 }
@@ -519,11 +510,6 @@ static int adi_init(struct ahash_request *req)
 			dev_dbg(pkte_dev->dev, "adi_init, selected SHA224 hashing\n");
 			pkte_dev->pkte_device->pPkteList.pCommand.hash = hash_sha224;
 			pkte_dev->pkte_device->pPkteList.pCommand.digest_length = digest_length7;
-			if (unlikely(pkte_dev->flags & PKTE_FLAGS_HMAC)) {
-					dev_err(pkte_dev->dev, "HMAC computation currently unsupported for SHA224\n");
-					adi_reset_state(pkte_dev);
-					return -ENODEV;
-			}
 			break;
 		case SHA256_DIGEST_SIZE:
 			dev_dbg(pkte_dev->dev, "adi_init, selected SHA256 hashing\n");
@@ -647,6 +633,8 @@ static void adi_finish_req(struct ahash_request *req, int err)
 {
 	struct adi_request_ctx *rctx = ahash_request_ctx(req);
 	struct adi_dev *pkte_dev = rctx->pkte_dev;
+	u32 i, digestLength;
+	u8 *source_bytewise;
 
 	dev_dbg(pkte_dev->dev, "%s\n", __func__);
 
@@ -656,6 +644,39 @@ static void adi_finish_req(struct ahash_request *req, int err)
 
 		//if(pkte_dev->flags & PKTE_HOST_MODE)
 			adi_read_packet(pkte_dev, &pkte_dev->pkte_device->pPkteList.pDestination[0]);
+
+		if(PKTE_FLAGS_HMAC & pkte_dev->flags){
+			//Compute the outer hash of the HMAC (Result).  From RFC2104:
+			//HASH(Key XOR opad, HASH(Key XOR ipad, text))
+			adi_prep_engine(pkte_dev, hash_mode_standard);
+			memset(&pkte_dev->pkte_device->source[pkte_dev->ring_pos_consume][0], 0, INNER_OUTER_KEY_SIZE);
+			memcpy(&pkte_dev->pkte_device->source[pkte_dev->ring_pos_consume][0], pkte_dev->secret_key, pkte_dev->secret_keylen);
+			source_bytewise = (u8 *)&pkte_dev->pkte_device->source[pkte_dev->ring_pos_consume][0];
+			for (i = 0; i < INNER_OUTER_KEY_SIZE; i++) {
+					*(source_bytewise+i) ^= 0x5c;
+			}
+
+			digestLength = pkte_dev->pkte_device->pPkteList.pCommand.digest_length;
+
+			//Endian Swap!
+			if (pkte_dev->pkte_device->pPkteList.pCommand.hash == hash_md5) {
+				for (i = 0; i < digestLength; i++) {
+					*((u32*)(source_bytewise+INNER_OUTER_KEY_SIZE+i*4)) = pkte_dev->pkte_device->pPkteList.pDestination[i];
+				}
+
+			} else {
+				for (i = 0; i < digestLength; i++) {
+					*((u32*)(source_bytewise+INNER_OUTER_KEY_SIZE+i*4)) = __builtin_bswap32(pkte_dev->pkte_device->pPkteList.pDestination[i]);
+				}
+			}
+
+			adi_process_packet(pkte_dev, INNER_OUTER_KEY_SIZE+(digestLength*4), 1);
+			if (!(pkte_dev->flags & PKTE_HOST_MODE))
+				while (!(adi_read(pkte_dev, STAT_OFFSET) & BITM_PKTE_STAT_OUTPTDN));
+			while (!(adi_read(pkte_dev, CTL_STAT_OFFSET) & BITM_PKTE_CTL_STAT_PERDY));
+
+			adi_read_packet(pkte_dev, &pkte_dev->pkte_device->pPkteList.pDestination[0]);
+		}
 
 		adi_copy_hash(req);
 		err = adi_finish(req);
@@ -692,14 +713,6 @@ static int adi_prepare_req(struct crypto_engine *engine, void *areq)
 
 	dev_dbg(pkte_dev->dev, "processing new req, op: %lu, nbytes %d\n",
 		rctx->op, req->nbytes);
-
-	if (unlikely(pkte_dev->flags & PKTE_FLAGS_HMAC)) {
-		if (req->nbytes > PKTE_BUFLEN) {
-			dev_err(pkte_dev->dev, "HMAC computation unsupported on > %d bytes\n", PKTE_BUFLEN);
-			adi_reset_state(pkte_dev);
-			return -ENODEV;
-		}
-	}
 
 	return adi_hw_init(pkte_dev);
 }
@@ -757,25 +770,17 @@ static int adi_update(struct ahash_request *req)
 
 	dev_dbg(pkte_dev->dev, "%s\n", __func__);
 
-	if (unlikely(pkte_dev->flags & PKTE_FLAGS_HMAC)) {
-		if(req->nbytes > 257){
-			dev_err(pkte_dev->dev, "HMAC operations cannot currently be chained.  Cannot process > 257 bytes\n");
-			return -ENODEV;
-		}
-		if (pkte_dev->flags & PKTE_HOST_MODE) {
-			dev_err(pkte_dev->dev, "HMAC computation not yet supported while in Direct Host Mode\n");
-			return -ENODEV;
-		}
-		if (!(pkte_dev->flags & PKTE_FLAGS_HMAC_KEY_PREPARED))
-			adi_prepare_secret_key(pkte_dev, rctx);
-	}
-
 	if (!req->nbytes)
 		return 0;
 
 	rctx->total = req->nbytes;
 	rctx->sg = req->src;
 	rctx->offset = 0;
+
+	if (unlikely(pkte_dev->flags & PKTE_FLAGS_HMAC)) {
+		if (!(pkte_dev->flags & PKTE_FLAGS_HMAC_KEY_PREPARED))
+			adi_prepare_secret_key(pkte_dev, rctx);
+	}
 
 	if ((rctx->bufcnt + rctx->total <= rctx->buflen)) {
 		adi_append_sg(rctx, pkte_dev);
@@ -923,7 +928,7 @@ static struct ahash_alg algs_md5_sha1[] = {
 			.base = {
 				.cra_name = "hmac(md5)",
 				.cra_driver_name = "adi-hmac-md5",
-				.cra_priority = 1,
+				.cra_priority = 1000,
 				.cra_flags = CRYPTO_ALG_ASYNC |
 					     CRYPTO_ALG_KERN_DRIVER_ONLY,
 				.cra_blocksize = MD5_HMAC_BLOCK_SIZE,
@@ -974,7 +979,7 @@ static struct ahash_alg algs_md5_sha1[] = {
 			.base = {
 				.cra_name = "hmac(sha1)",
 				.cra_driver_name = "adi-hmac-sha1",
-				.cra_priority = 1,
+				.cra_priority = 1000,
 				.cra_flags = CRYPTO_ALG_ASYNC |
 					     CRYPTO_ALG_KERN_DRIVER_ONLY,
 				.cra_blocksize = SHA1_BLOCK_SIZE,
@@ -1028,7 +1033,7 @@ static struct ahash_alg algs_sha224_sha256[] = {
 			.base = {
 				.cra_name = "hmac(sha224)",
 				.cra_driver_name = "adi-hmac-sha224",
-				.cra_priority = 1,
+				.cra_priority = 1000,
 				.cra_flags = CRYPTO_ALG_ASYNC |
 					     CRYPTO_ALG_KERN_DRIVER_ONLY,
 				.cra_blocksize = SHA224_BLOCK_SIZE,
@@ -1079,7 +1084,7 @@ static struct ahash_alg algs_sha224_sha256[] = {
 			.base = {
 				.cra_name = "hmac(sha256)",
 				.cra_driver_name = "adi-hmac-sha256",
-				.cra_priority = 1,
+				.cra_priority = 1000,
 				.cra_flags = CRYPTO_ALG_ASYNC |
 					     CRYPTO_ALG_KERN_DRIVER_ONLY,
 				.cra_blocksize = SHA256_BLOCK_SIZE,
