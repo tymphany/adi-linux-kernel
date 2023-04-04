@@ -23,20 +23,20 @@ struct crc_info {
 	/* Input or output bytes */
 	unsigned long datasize;
 	union {
-	/* CRC to compare with that of input buffer */
-	unsigned long crc_compare;
-	/* Value to compare with input data */
-	unsigned long val_verify;
-	/* Value to fill */
-	unsigned long val_fill;
+		/* CRC to compare with that of input buffer */
+		unsigned long crc_compare;
+		/* Value to compare with input data */
+		unsigned long val_verify;
+		/* Value to fill */
+		unsigned long val_fill;
 	};
 	/* Value to program the 32b CRC Polynomial */
 	unsigned long crc_poly;
 	union {
-	/* CRC calculated from the input data */
-	unsigned long crc_result;
-	/* First failed position to verify input data */
-	unsigned long pos_verify;
+		/* CRC calculated from the input data */
+		unsigned long crc_result;
+		/* First failed position to verify input data */
+		unsigned long pos_verify;
 	};
 	/* CRC mirror flags */
 	unsigned int bitmirr:1;
@@ -47,19 +47,6 @@ struct crc_info {
 	unsigned int polymirr:1;
 	unsigned int cmpmirr:1;
 };
-
-/* Userspace interface */
-#define CRC_IOC_MAGIC		'C'
-#define CRC_IOC_CALC_CRC	_IOWR('C', 0x01, unsigned int)
-#define CRC_IOC_MEMCPY_CRC	_IOWR('C', 0x02, unsigned int)
-#define CRC_IOC_VERIFY_VAL	_IOWR('C', 0x03, unsigned int)
-#define CRC_IOC_FILL_VAL	_IOWR('C', 0x04, unsigned int)
-
-
-#ifdef __KERNEL__
-
-#include <linux/types.h>
-#include <linux/spinlock.h>
 
 struct crc_register {
 	u32 control;
@@ -121,9 +108,7 @@ struct crc_register {
 #define CMPMIRR_OFFSET		22		/* Mirror CRC compare offset. */
 
 /* CRC_INTREN Masks */
-#define CMPERRI 		0x02		/* CRC_ERROR_INTR */
-#define DCNTEXPI 		0x10		/* CRC_STATUS_INTR */
-
-#endif
+#define CMPERRI			0x02		/* CRC_ERROR_INTR */
+#define DCNTEXPI		0x10		/* CRC_STATUS_INTR */
 
 #endif
