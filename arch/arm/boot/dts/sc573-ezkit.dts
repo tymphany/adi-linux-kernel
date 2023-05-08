@@ -144,7 +144,6 @@
 		spi-cpha;
 		spi-tx-bus-width = <4>;
 		spi-rx-bus-width = <4>;
-		dma-mode;
 		partition@0 {
 			label = "uboot (spi)";
 			reg = <0x0 0x80000>;
