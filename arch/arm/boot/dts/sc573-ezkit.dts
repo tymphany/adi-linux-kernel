@@ -150,11 +150,11 @@
 		};
 		partition@1 {
 			label = "kernel (spi)";
-			reg = <0x80000 0x580000>;
+			reg = <0x80000 0x380000>;
 		};
 		partition@2 {
 			label = "root file system (spi)";
-			reg = <0x600000 0xa00000>;
+			reg = <0x400000 0xc00000>;
 		};
 	};
 };
