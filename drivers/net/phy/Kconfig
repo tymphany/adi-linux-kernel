@@ -222,6 +222,12 @@ config AMD_PHY
 	---help---
 	  Currently supports the am79c874
 
+config ADIN_PHY
+	tristate "Analog Devices Industrial Ethernet PHYs"
+	---help---
+	  Adds support for the Analog Devices Industrial Ethernet PHYs.
+	  Currently supports the ADIN1200 & ADIN1300.
+
 config AQUANTIA_PHY
 	tristate "Aquantia PHYs"
 	---help---
