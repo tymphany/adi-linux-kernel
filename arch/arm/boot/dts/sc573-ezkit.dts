@@ -132,12 +132,10 @@
 	pinctrl-0 = <&spi2_quad>;
 	status = "okay";
 
-	flash: w25q128@0 {
+	flash: mx25l25635e@0 {
 		#address-cells = <1>;
 		#size-cells = <1>;
-		compatible = "winbond,w25q128";
-		en-pins = <&ssw0 12 GPIO_ACTIVE_LOW>,	/* SP2IFLASH_CS_EN */
-		          <&ssw0 13 GPIO_ACTIVE_LOW>;	/* SPI2D2_D3_EN */
+		compatible = "Macronix,mx25l25635e";
 		spi-max-frequency = <50000000>;
 		reg = <31>;
 		spi-cpol;
