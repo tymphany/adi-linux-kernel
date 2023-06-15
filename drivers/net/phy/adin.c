@@ -14,6 +14,8 @@
 #include <linux/phy.h>
 #include <linux/property.h>
 
+#include "adin-compat.h"
+
 #define PHY_ID_ADIN1200				0x0283bc20
 #define PHY_ID_ADIN1300				0x0283bc30
 
@@ -72,15 +74,6 @@
 #define ADIN1300_GE_SOFT_RESET_REG		0xff0c
 #define   ADIN1300_GE_SOFT_RESET		BIT(0)
 
-#define ADIN1300_GE_CLK_CFG_REG			0xff1f
-#define   ADIN1300_GE_CLK_CFG_MASK		GENMASK(5, 0)
-#define   ADIN1300_GE_CLK_CFG_RCVR_125		BIT(5)
-#define   ADIN1300_GE_CLK_CFG_FREE_125		BIT(4)
-#define   ADIN1300_GE_CLK_CFG_REF_EN		BIT(3)
-#define   ADIN1300_GE_CLK_CFG_HRT_RCVR		BIT(2)
-#define   ADIN1300_GE_CLK_CFG_HRT_FREE		BIT(1)
-#define   ADIN1300_GE_CLK_CFG_25		BIT(0)
-
 #define ADIN1300_GE_RGMII_CFG_REG		0xff23
 #define   ADIN1300_GE_RGMII_RX_MSK		GENMASK(8, 6)
 #define   ADIN1300_GE_RGMII_RX_SEL(x)		\
@@ -115,8 +108,8 @@
 
 /**
  * struct adin_cfg_reg_map - map a config value to aregister value
- * @cfg:	value in device configuration
- * @reg:	value in the register
+ * @cfg		value in device configuration
+ * @reg		value in the register
  */
 struct adin_cfg_reg_map {
 	int cfg;
@@ -144,9 +137,9 @@ static const struct adin_cfg_reg_map adin_rmii_fifo_depths[] = {
 
 /**
  * struct adin_clause45_mmd_map - map to convert Clause 45 regs to Clause 22
- * @devad:		device address used in Clause 45 access
- * @cl45_regnum:	register address defined by Clause 45
- * @adin_regnum:	equivalent register address accessible via Clause 22
+ * @devad		device address used in Clause 45 access
+ * @cl45_regnum		register address defined by Clause 45
+ * @adin_regnum		equivalent register address accessible via Clause 22
  */
 struct adin_clause45_mmd_map {
 	int devad;
@@ -154,7 +147,7 @@ struct adin_clause45_mmd_map {
 	u16 adin_regnum;
 };
 
-static const struct adin_clause45_mmd_map adin_clause45_mmd_map[] = {
+static struct adin_clause45_mmd_map adin_clause45_mmd_map[] = {
 	{ MDIO_MMD_PCS,	MDIO_PCS_EEE_ABLE,	ADIN1300_EEE_CAP_REG },
 	{ MDIO_MMD_AN,	MDIO_AN_EEE_LPABLE,	ADIN1300_EEE_LPABLE_REG },
 	{ MDIO_MMD_AN,	MDIO_AN_EEE_ADV,	ADIN1300_EEE_ADV_REG },
@@ -168,7 +161,7 @@ struct adin_hw_stat {
 	u16 reg2;
 };
 
-static const struct adin_hw_stat adin_hw_stats[] = {
+static struct adin_hw_stat adin_hw_stats[] = {
 	{ "total_frames_checked_count",		0x940A, 0x940B }, /* hi + lo */
 	{ "length_error_frames_count",		0x940C },
 	{ "alignment_error_frames_count",	0x940D },
@@ -183,7 +176,7 @@ static const struct adin_hw_stat adin_hw_stats[] = {
 
 /**
  * struct adin_priv - ADIN PHY driver private data
- * @stats:		statistic counters for the PHY
+ * stats		statistic counters for the PHY
  */
 struct adin_priv {
 	u64			stats[ARRAY_SIZE(adin_hw_stats)];
@@ -375,10 +368,10 @@ static int adin_set_edpd(struct phy_device *phydev, u16 tx_interval)
 
 	switch (tx_interval) {
 	case 1000: /* 1 second */
-		//fallthrough;
+		/* fallthrough */
 	case ETHTOOL_PHY_EDPD_DFLT_TX_MSECS:
 		val |= ADIN1300_NRG_PD_TX_EN;
-		//fallthrough;
+		/* fallthrough */
 	case ETHTOOL_PHY_EDPD_NO_TX:
 		break;
 	default:
@@ -416,38 +409,15 @@ static int adin_set_tunable(struct phy_device *phydev,
 	}
 }
 
-static int adin_config_clk_out(struct phy_device *phydev)
-{
-	struct device *dev = &phydev->mdio.dev;
-	const char *val = NULL;
-	u8 sel = 0;
-
-	device_property_read_string(dev, "adi,phy-output-clock", &val);
-	if (!val) {
-		/* property not present, do not enable GP_CLK pin */
-	} else if (strcmp(val, "25mhz-reference") == 0) {
-		sel |= ADIN1300_GE_CLK_CFG_25;
-	} else if (strcmp(val, "125mhz-free-running") == 0) {
-		sel |= ADIN1300_GE_CLK_CFG_FREE_125;
-	} else if (strcmp(val, "adaptive-free-running") == 0) {
-		sel |= ADIN1300_GE_CLK_CFG_HRT_FREE;
-	} else {
-		phydev_err(phydev, "invalid adi,phy-output-clock\n");
-		return -EINVAL;
-	}
-
-	if (device_property_read_bool(dev, "adi,phy-output-reference-clock"))
-		sel |= ADIN1300_GE_CLK_CFG_REF_EN;
-
-	return phy_modify_mmd(phydev, MDIO_MMD_VEND1, ADIN1300_GE_CLK_CFG_REG,
-			      ADIN1300_GE_CLK_CFG_MASK, sel);
-}
-
 static int adin_config_init(struct phy_device *phydev)
 {
 	int rc;
 
 	phydev->mdix_ctrl = ETH_TP_MDI_AUTO;
+
+	rc = genphy_config_init(phydev);
+	if (rc < 0)
+		return rc;
 
 	rc = adin_config_rgmii_mode(phydev);
 	if (rc < 0)
@@ -462,10 +432,6 @@ static int adin_config_init(struct phy_device *phydev)
 		return rc;
 
 	rc = adin_set_edpd(phydev, ETHTOOL_PHY_EDPD_DFLT_TX_MSECS);
-	if (rc < 0)
-		return rc;
-
-	rc = adin_config_clk_out(phydev);
 	if (rc < 0)
 		return rc;
 
@@ -496,7 +462,7 @@ static int adin_phy_config_intr(struct phy_device *phydev)
 static int adin_cl45_to_adin_reg(struct phy_device *phydev, int devad,
 				 u16 cl45_regnum)
 {
-	const struct adin_clause45_mmd_map *m;
+	struct adin_clause45_mmd_map *m;
 	int i;
 
 	if (devad == MDIO_MMD_VEND1)
@@ -665,7 +631,7 @@ static int adin_soft_reset(struct phy_device *phydev)
 	if (rc < 0)
 		return rc;
 
-	msleep(20);
+	msleep(10);
 
 	/* If we get a read error something may be wrong */
 	rc = phy_read_mmd(phydev, MDIO_MMD_VEND1,
@@ -690,7 +656,7 @@ static void adin_get_strings(struct phy_device *phydev, u8 *data)
 }
 
 static int adin_read_mmd_stat_regs(struct phy_device *phydev,
-				   const struct adin_hw_stat *stat,
+				   struct adin_hw_stat *stat,
 				   u32 *val)
 {
 	int ret;
@@ -716,7 +682,7 @@ static int adin_read_mmd_stat_regs(struct phy_device *phydev,
 
 static u64 adin_get_stat(struct phy_device *phydev, int i)
 {
-	const struct adin_hw_stat *stat = &adin_hw_stats[i];
+	struct adin_hw_stat *stat = &adin_hw_stats[i];
 	struct adin_priv *priv = phydev->priv;
 	u32 val;
 	int ret;
@@ -769,7 +735,8 @@ static struct phy_driver adin_driver[] = {
 	{
 		PHY_ID_MATCH_MODEL(PHY_ID_ADIN1200),
 		.name		= "ADIN1200",
-		.features	= PHY_BASIC_FEATURES, /* FIXME: remove this when the `get_features` hook becomes available */
+		.features	= PHY_BASIC_FEATURES, /* FIXME: remove this when the `get_features
+` hook becomes available */
 		.probe		= adin_probe,
 		.config_init	= adin_config_init,
 		.soft_reset	= adin_soft_reset,
@@ -790,7 +757,8 @@ static struct phy_driver adin_driver[] = {
 	{
 		PHY_ID_MATCH_MODEL(PHY_ID_ADIN1300),
 		.name		= "ADIN1300",
-		.features	= PHY_GBIT_FEATURES, /* FIXME: remove this when the `get_features` hook becomes available */
+		.features	= PHY_GBIT_FEATURES, /* FIXME: remove this when the `get_features
+` hook becomes available */
 		.probe		= adin_probe,
 		.config_init	= adin_config_init,
 		.soft_reset	= adin_soft_reset,
@@ -821,4 +789,3 @@ static struct mdio_device_id __maybe_unused adin_tbl[] = {
 MODULE_DEVICE_TABLE(mdio, adin_tbl);
 MODULE_DESCRIPTION("Analog Devices Industrial Ethernet PHY driver");
 MODULE_LICENSE("GPL");
-

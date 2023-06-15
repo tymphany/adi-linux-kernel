@@ -664,9 +664,6 @@ struct phy_driver {
 
 #define PHY_ANY_ID "MATCH ANY PHY"
 #define PHY_ANY_UID 0xffffffff
-#define PHY_ID_MATCH_EXACT(id) .phy_id = (id), .phy_id_mask = GENMASK(31, 0)
-#define PHY_ID_MATCH_MODEL(id) .phy_id = (id), .phy_id_mask = GENMASK(31, 4)
-#define PHY_ID_MATCH_VENDOR(id) .phy_id = (id), .phy_id_mask = GENMASK(31, 10)
 
 /* A Structure for boards to register fixups with the PHY Lib */
 struct phy_fixup {
@@ -765,14 +762,6 @@ static inline int __phy_write(struct phy_device *phydev, u32 regnum, u16 val)
 
 int __phy_modify(struct phy_device *phydev, u32 regnum, u16 mask, u16 set);
 int phy_modify(struct phy_device *phydev, u32 regnum, u16 mask, u16 set);
-int __phy_modify_mmd_changed(struct phy_device *phydev, int devad, u32 regnum,
-			     u16 mask, u16 set);
-int phy_modify_mmd_changed(struct phy_device *phydev, int devad, u32 regnum,
-			   u16 mask, u16 set);
-int __phy_modify_mmd(struct phy_device *phydev, int devad, u32 regnum,
-		     u16 mask, u16 set);
-int phy_modify_mmd(struct phy_device *phydev, int devad, u32 regnum,
-		   u16 mask, u16 set);
 
 /**
  * __phy_set_bits - Convenience function for setting bits in a PHY register
@@ -821,66 +810,6 @@ static inline int phy_set_bits(struct phy_device *phydev, u32 regnum, u16 val)
 static inline int phy_clear_bits(struct phy_device *phydev, u32 regnum, u16 val)
 {
 	return phy_modify(phydev, regnum, val, 0);
-}
-
-/**
- * __phy_set_bits_mmd - Convenience function for setting bits in a register
- * on MMD
- * @phydev: the phy_device struct
- * @devad: the MMD containing register to modify
- * @regnum: register number to modify
- * @val: bits to set
- *
- * The caller must have taken the MDIO bus lock.
- */
-static inline int __phy_set_bits_mmd(struct phy_device *phydev, int devad,
-		u32 regnum, u16 val)
-{
-	return __phy_modify_mmd(phydev, devad, regnum, 0, val);
-}
-
-/**
- * __phy_clear_bits_mmd - Convenience function for clearing bits in a register
- * on MMD
- * @phydev: the phy_device struct
- * @devad: the MMD containing register to modify
- * @regnum: register number to modify
- * @val: bits to clear
- *
- * The caller must have taken the MDIO bus lock.
- */
-static inline int __phy_clear_bits_mmd(struct phy_device *phydev, int devad,
-		u32 regnum, u16 val)
-{
-	return __phy_modify_mmd(phydev, devad, regnum, val, 0);
-}
-
-/**
- * phy_set_bits_mmd - Convenience function for setting bits in a register
- * on MMD
- * @phydev: the phy_device struct
- * @devad: the MMD containing register to modify
- * @regnum: register number to modify
- * @val: bits to set
- */
-static inline int phy_set_bits_mmd(struct phy_device *phydev, int devad,
-		u32 regnum, u16 val)
-{
-	return phy_modify_mmd(phydev, devad, regnum, 0, val);
-}
-
-/**
- * phy_clear_bits_mmd - Convenience function for clearing bits in a register
- * on MMD
- * @phydev: the phy_device struct
- * @devad: the MMD containing register to modify
- * @regnum: register number to modify
- * @val: bits to clear
- */
-static inline int phy_clear_bits_mmd(struct phy_device *phydev, int devad,
-		u32 regnum, u16 val)
-{
-	return phy_modify_mmd(phydev, devad, regnum, val, 0);
 }
 
 /**
