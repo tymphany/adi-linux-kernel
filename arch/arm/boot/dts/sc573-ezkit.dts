@@ -106,8 +106,6 @@
 
 &uart0 {
 	pinctrl-names = "default", "hwflow";
-	enable-pin = <&ssw0 2 GPIO_ACTIVE_LOW>;		/* UART0_EN */
-	hwflow-en-pin = <&ssw0 1 GPIO_ACTIVE_LOW>;	/* UART0_FLOW_EN */
 	pinctrl-0 = <&uart0_default>;
 	pinctrl-1 = <&uart0_hwflow>;
 	status = "okay";
