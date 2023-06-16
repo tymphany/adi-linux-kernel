@@ -7,28 +7,6 @@
 
 #define PHY_ID_MATCH_MODEL(id) .phy_id = (id), .phy_id_mask = GENMASK(31, 4)
 
-#define phydev_warn(_phydev, format, args...)	\
-	dev_warn(&_phydev->mdio.dev, format, ##args)
-
-/* __mdiobus_read & __mdiobus_write are unlocked functions in upstream kernel,
- * but we shouldn't implement them as unlocked in 4.14, as the locks that
- * protect them, don't exist; this way, it should fail with compilation error
- * and we can remove them, as we know that the kernel implements correct locking
- */
-#if 0
-// Tony comment refer to above description
-static inline int __mdiobus_read(struct mii_bus *bus, int addr, u32 regnum)
-{
-	return mdiobus_read(bus, addr, regnum);
-}
-
-static inline int __mdiobus_write(struct mii_bus *bus, int addr,
-				  u32 regnum, u16 val)
-{
-	return mdiobus_write(bus, addr, regnum, val);
-}
-#endif
-
 static int adin_read_mmd(struct phy_device *phydev, int devad, u16 regnum);
 static int adin_write_mmd(struct phy_device *phydev, int devad, u16 regnum,
 			  u16 val);
@@ -84,33 +62,10 @@ static inline int phy_modify_changed(struct phy_device *phydev, u32 regnum,
 
 	return ret < 0 ? ret : 1;
 }
-#if 0
-// Tony comment(Implement in drivers/net/phy/phy-core.c)
-static inline int phy_modify(struct phy_device *phydev, u32 regnum,
-			     u16 mask, u16 set)
-{
-	int ret;
-
-	ret = phy_modify_changed(phydev, regnum, mask, set);
-
-	return ret < 0 ? ret : 0;
-}
-#endif
 
 static inline int phy_set_bits_mmd(struct phy_device *phydev, int devad,
 		u32 regnum, u16 val)
 {
 	return phy_modify_mmd(phydev, devad, regnum, 0, val);
 }
-#if 0
-// Tony comment(Implement in include/linux/phy.h)
-static inline int phy_clear_bits(struct phy_device *phydev, u32 regnum, u16 val)
-{
-	return phy_modify(phydev, regnum, val, 0);
-}
 
-static inline int phy_set_bits(struct phy_device *phydev, u32 regnum, u16 val)
-{
-	return phy_modify(phydev, regnum, 0, val);
-}
-#endif
