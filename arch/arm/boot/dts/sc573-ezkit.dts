@@ -88,14 +88,6 @@
 			firmware-name = "adi_adsp_core1_fw.ldr";
 		};
 
-		core2-rproc@0x3108C000 {
-			compatible = "adi,remoteproc";
-			reg = <0x3108C000 0x70>;
-			core-id = <2>;
-			core-irq = <85>;
-			firmware-name = "adi_adsp_core2_fw.ldr";
-		};
-
 		sound {
 			compatible = "sc5xx,asoc-card";
 			adi,cpu-dai = <&i2s0>;
