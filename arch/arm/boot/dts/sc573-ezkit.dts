@@ -85,7 +85,7 @@
 			reg = <0x3108C000 0x70>;
 			core-id = <1>;
 			core-irq = <84>;
-			firmware-name = "adi_adsp_core1_fw.ldr";
+			firmware-name = "SharcFW.ldr";
 		};
 
 		sound {
