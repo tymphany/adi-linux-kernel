@@ -93,6 +93,10 @@
 			adi,cpu-dai = <&i2s0>;
 			adi,codec = <&adau1962>, <&adau1979>;
 		};
+	
+		aw {
+			compatible = "aw,aw9110b";
+		};
 	};
 };
 
@@ -172,6 +176,27 @@
 		reg = <0x4>;
 		enable-pin = <&ssw0 8 GPIO_ACTIVE_LOW>;	/* ADAU1962_EN */
 		reset-gpio = <&gpa 6 0>;
+	};
+
+	/* for Test board and 512 */
+	ioex0: aw9110@0x5b {
+		compatible = "awinic,aw9110";
+		gpio-controller;
+		#gpio-cells = <2>;
+		reg = <0x5b>;
+
+		led0 {
+			label = "led-r";
+			led-gpios = <&ioex0 0 0>;
+		};
+		led1 {
+			label = "led-g";
+			led-gpios = <&ioex0 1 0>;
+		};
+		led2 {
+			label = "led-b";
+			led-gpios = <&ioex0 2 0>;
+		};
 	};
 };
 
