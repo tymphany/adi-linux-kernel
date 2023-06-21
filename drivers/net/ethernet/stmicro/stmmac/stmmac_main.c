@@ -2183,7 +2183,7 @@ static int stmmac_init_dma_engine(struct stmmac_priv *priv)
 
 	ret = stmmac_reset(priv, priv->ioaddr);
 	if (ret) {
-		dev_err(priv->device, "Failed to reset the dma\n");
+		dev_err(priv->device, "Failed to reset the dma, ret=%d;\n", ret);
 		return ret;
 	}
 

@@ -241,6 +241,23 @@
 	status = "okay";
 };
 
+&emac0 {
+	phy-handle = <&adin1300>;
+	phy-mode = "rgmii-id";
+	status = "okay";
+	mdio0 {
+		compatible = "snps,dwmac-mdio";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		adin1300: ethernet-phy@0 {
+			compatible = "ethernet-phy-id0283.bc30", "ethernet-phy-ieee802.3-c22";
+			reg = <0>;
+			adi,rx-internal-delay-ps = <1800>;
+			adi,tx-internal-delay-ps = <2200>;
+		};
+	};
+};
+
 &usb0_phy {
 	status = "okay";
 };
