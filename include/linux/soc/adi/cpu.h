@@ -67,6 +67,26 @@
 
 #define __BFP(m) u16 m; u16 __pad_##m
 
+#if 1  //struct sc5xx_gptimer{}: copied from drivers/clocksource/timer-adi-adsp-sc5xx.c
+struct sc5xx_gptimer {
+	int id;
+	int irq;
+	void __iomem *io_base;
+};
+
+/* The actual gptimer API */
+struct sc5xx_gptimer *gptimer_request(int id);
+void     set_gptimer_pwidth(struct sc5xx_gptimer *timer, uint32_t width);
+void     set_gptimer_period(struct sc5xx_gptimer *timer, uint32_t period);
+void     set_gptimer_delay(struct sc5xx_gptimer *timer, uint32_t delay);
+uint32_t get_gptimer_count(struct sc5xx_gptimer *timer);
+void     set_gptimer_config(struct sc5xx_gptimer *timer, uint16_t config);
+void     gptimer_enable(struct sc5xx_gptimer *timer);
+void     gptimer_disable(struct sc5xx_gptimer *timer);
+void     gptimer_clear_interrupt(struct sc5xx_gptimer *timer);
+bool     gptimer_is_running(struct sc5xx_gptimer *timer);
+
+#else //_legacy_
 struct gptimer3 {
 	__BFP(config);
 	u32 counter;
@@ -120,5 +140,6 @@ uint16_t get_gptimer_status(void);
 void     set_gptimer_status(uint16_t value);
 void     set_spu_securep_msec(uint16_t n, bool msec);
 void     platform_ipi_init(void);
+#endif //_legacy_
 
 #endif /* __MACH_CPU_H */
