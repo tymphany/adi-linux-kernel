@@ -2519,7 +2519,7 @@ struct rproc *rproc_alloc(struct device *dev, const char *name,
 		return NULL;
 
 	rproc->priv = &rproc[1];
-	rproc->auto_boot = true;
+	rproc->auto_boot = false;
 	rproc->elf_class = ELFCLASSNONE;
 	rproc->elf_machine = EM_NONE;
 
