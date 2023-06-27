@@ -183,6 +183,13 @@ static int aw9110_write_reg(struct aw9110_drv *me, unsigned char reg, unsigned c
 /* ------------------------------------------------------------------------------------------------ */
 /* registers opr */
 
+static int aw9110_reg_set_gpio(struct aw9110_drv* me, unsigned int pin, bool value)
+{
+    unsigned char *pVal = ONE_OF_PORT(pin, &me->regs.output_portA, &me->regs.output_portB);
+    (value == 1) ? AW9110_SET_PORT_BIT(*pVal, pin) : AW9110_RESET_PORT_BIT(*pVal, pin);
+    return aw9110_write_reg(me, GET_OUTPUT_REG(pin), *pVal);
+}
+
 static void aw9110_reg_init(struct aw9110_drv* me)
 {
     //AD0 & AD1 high: default: pin0-pin3: 1, pin4-pin8: Hi-Z
@@ -196,7 +203,17 @@ static void aw9110_reg_init(struct aw9110_drv* me)
     aw9110_write_reg(me, AW9110_REG_FADE_TMR, me->regs.fade_timer.val);
     aw9110_write_reg(me, AW9110_REG_FULL_TMR, me->regs.full_timer.val);
 
+    // for 5 series
+    aw9110_reg_set_gpio(me, 3, false);
+    aw9110_reg_set_gpio(me, 4, false);
+    aw9110_reg_set_gpio(me, 5, false);
+    aw9110_reg_set_gpio(me, 6, false);
+    aw9110_reg_set_gpio(me, 7, false);
+    aw9110_reg_set_gpio(me, 8, false);
+    aw9110_reg_set_gpio(me, 9, false);
+
     me->regs.global_ctrl.reg_dscp.max_I = MAX_I_18p5_MA;
+    // once this output_mode bit is set, the gpios will be set to high automatically if we didn't set gpio before.
     me->regs.global_ctrl.reg_dscp.output_mode = OUTPUT_MODE_PUSH_PULL;
     me->regs.global_ctrl.reg_dscp.blink_en = true;
     aw9110_write_reg(me, AW9110_REG_CTRL, me->regs.global_ctrl.val);
@@ -240,13 +257,6 @@ static int aw9110_reg_pin_blink_mode_en(struct aw9110_drv* me, unsigned int pin,
     }
     else
         return -EINVAL;
-}
-
-static int aw9110_reg_set_gpio(struct aw9110_drv* me, unsigned int pin, bool value)
-{
-    unsigned char *pVal = ONE_OF_PORT(pin, &me->regs.output_portA, &me->regs.output_portB);
-    (value == 1) ? AW9110_SET_PORT_BIT(*pVal, pin) : AW9110_RESET_PORT_BIT(*pVal, pin);
-    return aw9110_write_reg(me, GET_OUTPUT_REG(pin), *pVal);
 }
 
 /* ------------------------------------------------------------------------------------------------ */
