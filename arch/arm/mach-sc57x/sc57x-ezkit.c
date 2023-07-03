@@ -182,7 +182,7 @@ static void sc57x_ezkit_restart(enum reboot_mode mode, const char *cmd)
 	if (!np)
 		goto restart_out;
 	softconfig_of_set_group_active_pins_output(
-						NULL, np, "reboot-pins", true);
+						NULL, np, "reboot-pins", false);
 	of_node_put(np);
 
 restart_out:
@@ -204,7 +204,7 @@ static int __init sc57x_softconfig_init(void)
 	if (!np)
 		return -ENODEV;
 	ret = softconfig_of_set_group_active_pins_output(
-						NULL, np, "boot-pins", false);
+						NULL, np, "boot-pins", true);
 	of_node_put(np);
 
 	return ret;

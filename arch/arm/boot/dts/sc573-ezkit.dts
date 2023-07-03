@@ -29,6 +29,13 @@
 
 	scb {
 		softconfig_default {
+			boot-pins = <&gpa 2 GPIO_ACTIVE_HIGH>,	/* SYS_PWR_EN */
+						<&gpc 6 GPIO_ACTIVE_HIGH>,	/* AMP_RST */
+						<&gpc 11 GPIO_ACTIVE_HIGH>,	/* STBY_ON */
+						<&gpf 1 GPIO_ACTIVE_HIGH>,	/* ADC_RST */
+						<&gpe 14 GPIO_ACTIVE_HIGH>,	/* DAC_RST */
+						<&gpc 12 GPIO_ACTIVE_LOW>,	/* AMP_MUTE */
+						<&gpa 9 GPIO_ACTIVE_LOW>;	/* CH1_GAIN */
 		};
 
 		core1-rproc@0x3108C000 {
