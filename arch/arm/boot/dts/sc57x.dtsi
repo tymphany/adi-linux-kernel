@@ -873,5 +873,14 @@
 			interrupts = <GIC_SPI 145 IRQ_TYPE_LEVEL_HIGH>;
 			spu_securep_id = <93>;
 		};
+
+		hadc: hadc@0x31016000 {
+			compatible = "adi,hadc";
+			reg = <0x31016000 0x100>;
+			interrupt-parent = <&gic>;
+			interrupts = <GIC_SPI 140 IRQ_TYPE_EDGE_RISING>;
+			#iio-cells = <1>;
+			status = "okay";
+		};
 	};
 };
