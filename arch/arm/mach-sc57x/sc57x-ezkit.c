@@ -77,8 +77,6 @@ static void sc57x_ezkit_restart(enum reboot_mode mode, const char *cmd)
 	if (!of_machine_is_compatible(sc57x_dt_board_compat[0]))
 		goto restart_out;
 
-	of_node_put(np);
-
 restart_out:
 	sc57x_restart(mode, cmd);
 }
@@ -93,8 +91,6 @@ static int __init sc57x_softconfig_init(void)
 
 	if (!of_machine_is_compatible(sc57x_dt_board_compat[0]))
 		return -ENODEV;
-
-	of_node_put(np);
 
 	return ret;
 }
