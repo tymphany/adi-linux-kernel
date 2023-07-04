@@ -72,8 +72,6 @@ static const char * const sc57x_dt_board_compat[] __initconst = {
  */
 static void sc57x_ezkit_restart(enum reboot_mode mode, const char *cmd)
 {
-	struct device_node *np;
-
 	if (!of_machine_is_compatible(sc57x_dt_board_compat[0]))
 		goto restart_out;
 
@@ -87,7 +85,6 @@ restart_out:
 static int __init sc57x_softconfig_init(void)
 {
 	int ret = 0;
-	struct device_node *np;
 
 	if (!of_machine_is_compatible(sc57x_dt_board_compat[0]))
 		return -ENODEV;

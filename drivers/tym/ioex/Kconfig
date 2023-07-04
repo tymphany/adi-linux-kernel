@@ -5,6 +5,7 @@ config IOEX_AW9110
 	select NEW_LEDS
 	select LEDS_CLASS
 	select LEDS_TRIGGERS
+	select REGMAP_I2C
 	default y
 	help
 	  if you say yes here you can get support for awinic
