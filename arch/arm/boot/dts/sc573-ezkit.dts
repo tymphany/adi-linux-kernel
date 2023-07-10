@@ -79,6 +79,10 @@
 			label = "root file system (spi)";
 			reg = <0x400000 0xc00000>;
 		};
+		partition@3 {
+			label = "data(spi)";
+			reg = <0x1000000 0x1000000>;
+		};
 	};
 };
 
