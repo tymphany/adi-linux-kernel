@@ -42,15 +42,6 @@ static int dwmac_adi_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "dt configuration failed\n");
 			return PTR_ERR(plat_dat);
 		}
-
-		if (likely(of_count_phandle_with_args(pdev->dev.of_node,
-							"enable-pin", NULL) > 0)) {
-			if (softconfig_of_set_active_pin_output(&pdev->dev,
-						pdev->dev.of_node, "enable-pin", 0, &dwmac->enable_pin,
-						&dwmac->enable_pin_active_low, true))
-				return -ENODEV;
-		}
-
 	} else {
 		plat_dat = dev_get_platdata(&pdev->dev);
 		if (!plat_dat) {

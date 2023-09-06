@@ -57,10 +57,10 @@
 	pinctrl-0 = <&spi2_quad>;
 	status = "okay";
 
-	flash: mx25l25635e@0 {
+	flash: mx25l51235e@0 {
 		#address-cells = <1>;
 		#size-cells = <1>;
-		compatible = "Macronix,mx25l25635e";
+		compatible = "Macronix,mx25l51235e";
 		spi-max-frequency = <50000000>;
 		reg = <31>;
 		spi-cpol;
@@ -77,7 +77,7 @@
 		};
 		partition@2 {
 			label = "root file system (spi)";
-			reg = <0x400000 0xc00000>;
+			reg = <0x400000 0x4000000>;
 		};
 	};
 };

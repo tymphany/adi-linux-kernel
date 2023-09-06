@@ -235,12 +235,6 @@ static int m25p_probe(struct spi_mem *spimem)
 	else
 		flash_name = spi->modalias;
 
-#if defined (CONFIG_ARCH_SC58X) || defined (CONFIG_ARCH_SC57X)
-		ret = softconfig_of_set_group_active_pins_output(nor->dev,
-					        spi_nor_get_flash_node(nor), "en-pins", true);
-		if (ret)
-			return ret;
-#endif
 	ret = spi_nor_scan(nor, flash_name, &hwcaps);
 	if (ret)
 		return ret;
@@ -257,10 +251,6 @@ static int m25p_remove(struct spi_mem *spimem)
 
 	spi_nor_restore(nor);
 
-#if defined (CONFIG_ARCH_SC58X) || defined (CONFIG_ARCH_SC57X)
-	softconfig_of_set_group_active_pins_output(nor->dev,
-				        spi_nor_get_flash_node(nor), "en-pins", false);
-#endif
 	/* Clean up MTD stuff. */
 	return mtd_device_unregister(&flash->spi_nor.mtd);
 }
@@ -303,7 +293,7 @@ static const struct spi_device_id m25p_ids[] = {
 	 */
 	{"at25df321a"},	{"at25df641"},	{"at26df081a"},
 	{"mx25l4005a"},	{"mx25l1606e"},	{"mx25l6405d"},	{"mx25l12805d"},
-	{"mx25l25635e"},{"mx66l51235l"},
+	{"mx25l25635e"},{"mx25l51235e"},{"mx66l51235l"},
 	{"n25q064"},	{"n25q128a11"},	{"n25q128a13"},	{"n25q512a"},
 	{"s25fl256s1"},	{"s25fl512s"},	{"s25sl12801"},	{"s25fl008k"},
 	{"s25fl064k"},

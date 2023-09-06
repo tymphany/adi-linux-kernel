@@ -782,16 +782,6 @@ int adau1962_probe(struct device *dev, struct regmap *regmap,
 	adau1962->constraints.count = ARRAY_SIZE(adau1962_rates);
 
 	if (dev->of_node) {
-		if (likely(of_count_phandle_with_args(dev->of_node,
-							"enable-pin", NULL) > 0)) {
-			if (softconfig_of_set_active_pin_output(dev,
-							dev->of_node, "enable-pin", 0,
-							&adau1962->enable_pin,
-							&adau1962->enable_pin_active_low,
-							true))
-				return -EINVAL;
-		}
-
 		adau1962->reset_gpio =
 				of_get_named_gpio(dev->of_node, "reset-gpio", 0);
 		if (!gpio_is_valid(adau1962->reset_gpio)) {

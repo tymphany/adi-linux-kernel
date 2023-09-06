@@ -1227,30 +1227,6 @@ static int adi_uart4_serial_probe(struct platform_device *pdev)
 				uart->hwflow_mode = ADI_UART_NO_HWFLOW;
 		}
 
-		if (pdev->dev.of_node) {
-			if (likely(of_count_phandle_with_args(pdev->dev.of_node,
-							"enable-pin", NULL) > 0)) {
-				ret = softconfig_of_set_active_pin_output(&pdev->dev,
-							pdev->dev.of_node, "enable-pin", 0,
-							&uart->enable_pin, &uart->enable_pin_active_low,
-							true);
-				if (ret)
-					goto out_error_unmap;
-			}
-
-			if (uart->hwflow_mode == ADI_UART_HWFLOW_PERI &&
-						likely(of_count_phandle_with_args(pdev->dev.of_node,
-							"hwflow-en-pin", NULL) > 0)) {
-				ret = softconfig_of_set_active_pin_output(&pdev->dev,
-							pdev->dev.of_node, "hwflow-en-pin", 0,
-							&uart->hwflow_en_pin,
-							&uart->hwflow_en_pin_active_low, true);
-				if (ret) {
-					uart->hwflow_mode = ADI_UART_NO_HWFLOW;
-					goto out_error_unmap;
-				}
-			}
-		}
 	}
 
 	uart = adi_uart4_serial_ports[uartid];
