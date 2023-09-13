@@ -13,7 +13,6 @@
 
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/gpio/gpio.h>
-#include <dt-bindings/net/ti-dp83867.h>
 #include <dt-bindings/pinctrl/adi-adsp.h>
 #include <dt-bindings/pinctrl/adi-adsp-sru.h>
 #include "sc57x.dtsi"
@@ -98,23 +97,19 @@
 		/*adi,enable-dma;*/
 		partition@0 {
 			label = "kernel";
-			reg = <0x0 0x380000>;
+			reg = <0x0 0x500000>;
 		};
 		partition@1 {
 			label = "param";
-			reg = <0x380000 0x80000>;
+			reg = <0x500000 0x480000>;
 		};
 		partition@2 {
-			label = "env";
-			reg = <0x400000 0x2000000>;
+			label = "rootfs";
+			reg = <0x980000 0x3B00000>;
 		};
 		partition@3 {
-			label = "rootfs";
-			reg = <0x2400000 0x4000000>;
-		};
-		partition@4 {
 			label = "data";
-			reg = <0x6400000 0x1c00000>;
+			reg = <0x4480000 0x3B80000>;
 		};
 	};
 };
@@ -157,24 +152,18 @@
 };
 
 &emac0 {
-	snps,reset-gpio = <&gpa 5 0>;
-	snps,reset-active-low;
-	snps,reset-delays-us = <0 10000 10000>;
-	phy-handle = <&dp83867>;
+	phy-handle = <&adin1300>;
 	phy-mode = "rgmii-id";
-	pinctrl-names = "default";
-	pinctrl-0 = <&eth0_default>;
 	status = "okay";
 	mdio0 {
 		compatible = "snps,dwmac-mdio";
 		#address-cells = <1>;
 		#size-cells = <0>;
-		dp83867: ethernet-phy@0 {
+		adin1300: ethernet-phy@0 {
+			compatible = "ethernet-phy-id0283.bc30", "ethernet-phy-ieee802.3-c22";
 			reg = <0>;
-			ti,rx-internal-delay = <DP83867_RGMIIDCTL_2_00_NS>;
-			ti,tx-internal-delay = <DP83867_RGMIIDCTL_2_00_NS>;
-			ti,fifo-depth = <DP83867_PHYCR_FIFO_DEPTH_8_B_NIB>;
-			ti,dp83867-rxctrl-strap-quirk;
+			adi,rx-internal-delay-ps = <1800>;
+			adi,tx-internal-delay-ps = <2200>;
 		};
 	};
 };
