@@ -77,7 +77,7 @@
 		};
 		partition@2 {
 			label = "root file system (spi)";
-			reg = <0x400000 0x4000000>;
+			reg = <0x400000 0x3C00000>;
 		};
 	};
 };
