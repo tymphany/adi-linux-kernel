@@ -45,13 +45,6 @@
 			adi,tru = <&tru>;
 			adi,tru-master-id = <71>; /* trigger master SOFT4 */
 		};
-
-		sound {
-			compatible = "sc5xx,asoc-card";
-			adi,cpu-dai = <&i2s0>;
-			adi,codec = <&adau1962>, <&adau1979>;
-			status = "okay";
-		};
 	};
 };
 
@@ -116,17 +109,6 @@
 
 &i2c0 {
 	status = "okay";
-
-	adau1979: adau1979@0x11 {
-		compatible = "adi,adau1977";
-		reg = <0x11>;
-	};
-
-	adau1962: adau1962@0x4 {
-		compatible = "adi,adau1962";
-		reg = <0x4>;
-		reset-gpios = <&gpa 6 GPIO_ACTIVE_LOW>;
-	};
 };
 
 &i2c1 {
