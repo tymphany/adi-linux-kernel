@@ -93,15 +93,15 @@
 		reg = <0x5b>;
 
 		led0 {
-			label = "led-g";
+			label = "led-r";
 			led-gpios = <&ioex0 0 0>;
 		};
 		led1 {
-			label = "led-b";
+			label = "led-g";
 			led-gpios = <&ioex0 1 0>;
 		};
 		led2 {
-			label = "led-r";
+			label = "led-b";
 			led-gpios = <&ioex0 2 0>;
 		};
 	};
