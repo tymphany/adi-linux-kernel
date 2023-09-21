@@ -73,7 +73,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&spi2_quad>;
 	status = "okay";
-	cs-gpios = <&gpb 15 GPIO_ACTIVE_LOW>, <&gpf 10 GPIO_ACTIVE_LOW>;
+	cs-gpios = <&gpb 15 GPIO_ACTIVE_LOW>, <&gpc 0 GPIO_ACTIVE_LOW>;
 
 	flash: mx35lf1ge4ab@0 {
 		#address-cells = <1>;
