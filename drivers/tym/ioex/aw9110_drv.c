@@ -162,6 +162,7 @@ struct aw9110_drv {
     struct regmap       *regmap;
     struct mutex        lock;
     struct led_trigger  *trigger;
+    bool gpio_value[MAX_PINS];
 
     struct aw9110_led {
         struct aw9110_drv       *me;
@@ -283,12 +284,20 @@ static int aw9110_direction_input(struct gpio_chip *chip, unsigned offset)
 
 static int aw9110_direction_output(struct gpio_chip *chip, unsigned offset, int value)
 {
-    return 0; //not support
+    struct aw9110_drv *me = gpiochip_get_data(chip);
+
+    mutex_lock(&me->lock);
+    aw9110_reg_set_gpio(me, offset, (bool)value);
+    me->gpio_value[offset] = (bool)value;
+    mutex_unlock(&me->lock);
+
+    return 0;
 }
 
 static int aw9110_get(struct gpio_chip *chip, unsigned offset)
 {
-    return 0; //not support
+    struct aw9110_drv *me = gpiochip_get_data(chip);
+    return (int)me->gpio_value[offset];
 }
 
 static void aw9110_set(struct gpio_chip *chip, unsigned offset, int value)
@@ -297,6 +306,7 @@ static void aw9110_set(struct gpio_chip *chip, unsigned offset, int value)
 
     mutex_lock(&me->lock);
     aw9110_reg_set_gpio(me, offset, (bool)value);
+    me->gpio_value[offset] = (bool)value;
     mutex_unlock(&me->lock);
 }
 
@@ -413,20 +423,13 @@ static struct regmap_config regmap_config = {
 static int aw9110_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
     struct aw9110_drv *me;
-    int ret;
+    int ret, i;
 
     me = devm_kzalloc(&client->dev, sizeof(*me), GFP_KERNEL);
     if (!me)
         return -ENOMEM;
 
     mutex_init(&me->lock);
-
-    /* reg value init */
-    me->regs.gpmode_portA = AW9110_REG_GPMD_DEFAULT_VAL;
-    me->regs.gpmode_portB = AW9110_REG_GPMD_DEFAULT_VAL;
-    me->regs.output_portA = AW9110_REG_CFG_DEFAULT_VAL;
-    me->regs.output_portB = AW9110_REG_CFG_DEFAULT_VAL;
-    me->regs.breath_en = 0;
 
     me->regmap = devm_regmap_init_i2c(client, &regmap_config);
     if (IS_ERR(me->regmap))
@@ -435,6 +438,16 @@ static int aw9110_probe(struct i2c_client *client, const struct i2c_device_id *i
         goto free_mutex;
     }
 
+    /* reg value init */
+    me->regs.gpmode_portA = AW9110_REG_GPMD_DEFAULT_VAL;
+    me->regs.gpmode_portB = AW9110_REG_GPMD_DEFAULT_VAL;
+    me->regs.output_portA = AW9110_REG_CFG_DEFAULT_VAL;
+    me->regs.output_portB = AW9110_REG_CFG_DEFAULT_VAL;
+    me->regs.breath_en = 0;
+    for(i = 0; i < MAX_PINS; i ++)
+    {
+        me->gpio_value[i] = 0;
+    }
     aw9110_reg_init(me);
 
     /* gpio subsystem */
