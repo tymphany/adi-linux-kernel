@@ -104,6 +104,9 @@
 #define ADIN1300_RMII_20_BITS			0x0004
 #define ADIN1300_RMII_24_BITS			0x0005
 
+/* RGMII IO control */
+#define ADIN1300_RGMII_IO_CONT			0Xff3a
+
 /**
  * struct adin_cfg_reg_map - map a config value to aregister value
  * @cfg		value in device configuration
@@ -407,10 +410,20 @@ static int adin_set_tunable(struct phy_device *phydev,
 	}
 }
 
+static void adin_fill_register(struct phy_device *phydev)
+{
+	int reg = 0;
+
+	/* set IO control to 0b11 for low EMC */
+	reg = phy_read(phydev, ADIN1300_RGMII_IO_CONT);
+	reg |= BIT(3);
+	reg |= BIT(2);
+	phy_write(phydev, ADIN1300_RGMII_IO_CONT, reg);
+}
+
 static int adin_config_init(struct phy_device *phydev)
 {
 	int rc;
-
 	phydev->mdix_ctrl = ETH_TP_MDI_AUTO;
 
 	rc = adin_config_rgmii_mode(phydev);
@@ -428,6 +441,8 @@ static int adin_config_init(struct phy_device *phydev)
 	rc = adin_set_edpd(phydev, ETHTOOL_PHY_EDPD_DFLT_TX_MSECS);
 	if (rc < 0)
 		return rc;
+
+	adin_fill_register(phydev);
 
 	phydev_dbg(phydev, "PHY is using mode '%s'\n",
 		   phy_modes(phydev->interface));
