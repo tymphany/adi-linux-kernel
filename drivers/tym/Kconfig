@@ -1,0 +1,5 @@
+menu "tymphany drivers support"
+
+source "drivers/tym/ioex/Kconfig"
+
+endmenu
