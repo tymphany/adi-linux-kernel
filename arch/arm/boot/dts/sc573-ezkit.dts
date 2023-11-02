@@ -105,6 +105,26 @@
 
 &i2c0 {
 	status = "okay";
+
+	ioex0: aw9110@0x5b {
+		compatible = "awinic,aw9110";
+		gpio-controller;
+		#gpio-cells = <2>;
+		reg = <0x5b>;
+
+		led0 {
+			label = "led-r";
+			led-gpios = <&ioex0 0 0>;
+		};
+		led1 {
+			label = "led-g";
+			led-gpios = <&ioex0 1 0>;
+		};
+		led2 {
+			label = "led-b";
+			led-gpios = <&ioex0 2 0>;
+		};
+	};
 };
 
 &i2c1 {
