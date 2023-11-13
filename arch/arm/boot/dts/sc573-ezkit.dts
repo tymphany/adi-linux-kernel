@@ -46,6 +46,18 @@
 			adi,tru-master-id = <71>; /* trigger master SOFT4 */
 		};
 	};
+
+	gpio-keys {
+			compatible = "gpio-keys";
+			autorepeat;
+
+			button0 {
+				label = "reset";
+				linux,code = <0x100>; /* BTN_0. see linux-event-codes.h*/
+				gpios = <&gpa 3 GPIO_ACTIVE_LOW>;
+				debounce-interval = <15>;
+			};
+	};
 };
 
 &tru {
