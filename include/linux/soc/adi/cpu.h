@@ -86,6 +86,9 @@ void     gptimer_disable(struct sc5xx_gptimer *timer);
 void     gptimer_clear_interrupt(struct sc5xx_gptimer *timer);
 bool     gptimer_is_running(struct sc5xx_gptimer *timer);
 
+void     set_spu_securep_msec(uint16_t n, bool msec);
+void     platform_ipi_init(void);
+
 #else //_legacy_
 struct gptimer3 {
 	__BFP(config);
@@ -138,8 +141,6 @@ void     disable_gptimers(uint16_t mask);
 void     map_gptimers(void);
 uint16_t get_gptimer_status(void);
 void     set_gptimer_status(uint16_t value);
-void     set_spu_securep_msec(uint16_t n, bool msec);
-void     platform_ipi_init(void);
 #endif //_legacy_
 
 #endif /* __MACH_CPU_H */
