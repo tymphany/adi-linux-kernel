@@ -106,11 +106,11 @@
 		};
 		partition@1 {
 			label = "rootfs";
-			reg = <0x400000 0x4000000>;
+			reg = <0x400000 0x3C00000>;
 		};
 		partition@2 {
 			label = "data";
-			reg = <0x4400000 0x3C00000>;
+			reg = <0x4000000 0x4000000>;
 		};
 	};
 };
