@@ -151,14 +151,17 @@
 		led0 {
 			label = "led-r";
 			led-gpios = <&ioex0 0 0>;
+			brightness = <255>;
 		};
 		led1 {
 			label = "led-g";
 			led-gpios = <&ioex0 1 0>;
+			brightness = <255>;
 		};
 		led2 {
 			label = "led-b";
 			led-gpios = <&ioex0 2 0>;
+			brightness = <255>;
 		};
 	};
 };
