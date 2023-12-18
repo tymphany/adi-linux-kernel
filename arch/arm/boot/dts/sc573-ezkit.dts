@@ -87,6 +87,13 @@
 	};
 };
 
+&gptimer_counter {
+	/* enable PC_15 to work as TIMER0_TMR5 */
+	pinctrl-names = "default";
+	pinctrl-0 = <&extclkin_default>;
+	status = "okay";
+};
+
 &tru {
 	mcapi_to_a5: channel@0 {
 		adi,tru-master-id = <70>; /* trigger master SOFT3 */
@@ -246,6 +253,11 @@
 };
 
 &pinctrl0 {
+	extclkin_default: extclkin_default_pins {
+		pins {
+			pinmux = <ADI_ADSP_PINMUX('C', 15, ADI_ADSP_PINFUNC_ALT3)>;
+		};
+	};
 	uart0_default: uart0_default_pins {
 		pins {
 			pinmux = <ADI_ADSP_PINMUX('F', 8, ADI_ADSP_PINFUNC_ALT0)>,
