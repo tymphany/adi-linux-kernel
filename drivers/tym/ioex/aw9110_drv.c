@@ -194,7 +194,7 @@ static int aw9110_reg_set_gpio(struct aw9110_drv* me, unsigned int pin, bool val
 static void aw9110_reg_init(struct aw9110_drv* me)
 {
     //AD0 & AD1 high: default: pin0-pin3: 1, pin4-pin8: Hi-Z
-    // aw9110_write_reg(me, AW9110_REG_RESET, AW9110_VAL_RESET);
+    aw9110_write_reg(me, AW9110_REG_RESET, AW9110_VAL_RESET);
 
     // breathing pattern:
     me->regs.fade_timer.reg_dscp.fadeOn_time = FADE_TIME_1260_MS;
@@ -205,19 +205,19 @@ static void aw9110_reg_init(struct aw9110_drv* me)
     aw9110_write_reg(me, AW9110_REG_FULL_TMR, me->regs.full_timer.val);
 
     // for 5 series
-    // aw9110_reg_set_gpio(me, 3, false);
-    // aw9110_reg_set_gpio(me, 4, false);
-    // aw9110_reg_set_gpio(me, 5, false);
-    // aw9110_reg_set_gpio(me, 6, false);
-    // aw9110_reg_set_gpio(me, 7, false);
-    // aw9110_reg_set_gpio(me, 8, false);
-    // aw9110_reg_set_gpio(me, 9, false);
+    aw9110_reg_set_gpio(me, 3, false);
+    aw9110_reg_set_gpio(me, 4, false);
+    aw9110_reg_set_gpio(me, 5, false);
+    aw9110_reg_set_gpio(me, 6, false);
+    aw9110_reg_set_gpio(me, 7, false);
+    aw9110_reg_set_gpio(me, 8, false);
+    aw9110_reg_set_gpio(me, 9, false);
 
     me->regs.global_ctrl.reg_dscp.max_I = MAX_I_18p5_MA;
     // once this output_mode bit is set, the gpios will be set to high automatically if we didn't set gpio before.
     me->regs.global_ctrl.reg_dscp.output_mode = OUTPUT_MODE_PUSH_PULL;
     me->regs.global_ctrl.reg_dscp.blink_en = true;
-    // aw9110_write_reg(me, AW9110_REG_CTRL, me->regs.global_ctrl.val);
+    aw9110_write_reg(me, AW9110_REG_CTRL, me->regs.global_ctrl.val);
 }
 
 static inline int aw9110_reg_blink_go(struct aw9110_drv* me)
@@ -374,7 +374,6 @@ static int aw9110_parse_dt_and_led_register(struct device *dev, struct aw9110_dr
 {
     struct device_node *np = dev->of_node, *child;
     int ret;
-    int bri;
 
     // int count = of_get_child_count(np);
     // printk("of_get_child_count: %d\n", count);
@@ -401,17 +400,8 @@ static int aw9110_parse_dt_and_led_register(struct device *dev, struct aw9110_dr
 
         aw9110_reg_set_pin_mode(me, pin, PIN_MODE_LED);
         aw9110_reg_config_led_mode(me, pin, FADE_MODE_BLINK_MODE);
-
-        ret = of_property_read_u32(child, "brightness", &bri);
-        if(ret >= 0 && bri >= 0 && bri <= 255)
-        {
-            aw9110_reg_set_brightness(me, pin, bri);
-        }
-        else
-        {
-            // default: led off
-            aw9110_reg_set_brightness(me, pin, 0);
-        }
+        // default: led off
+        aw9110_reg_set_brightness(me, pin, 0);
 
         ret = devm_led_classdev_register(dev, &led->cdev);
         if(ret < 0)
