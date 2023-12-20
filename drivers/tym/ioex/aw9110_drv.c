@@ -213,7 +213,7 @@ static void aw9110_reg_init(struct aw9110_drv* me)
     // aw9110_reg_set_gpio(me, 8, false);
     // aw9110_reg_set_gpio(me, 9, false);
 
-    me->regs.global_ctrl.reg_dscp.max_I = MAX_I_18p5_MA;
+    me->regs.global_ctrl.reg_dscp.max_I = MAX_I_9p25_MA;
     // once this output_mode bit is set, the gpios will be set to high automatically if we didn't set gpio before.
     me->regs.global_ctrl.reg_dscp.output_mode = OUTPUT_MODE_PUSH_PULL;
     me->regs.global_ctrl.reg_dscp.blink_en = true;
@@ -252,6 +252,8 @@ static int aw9110_reg_pin_blink_mode_en(struct aw9110_drv* me, unsigned int pin,
     if(pin <= AW9110_MAX_BRE_PIN)
     {
         (en == true) ? SET_BITS(*pVal, BIT(pin)) : RESET_BITS(*pVal, BIT(pin));
+        ret |= aw9110_write_reg(me, AW9110_REG_BRE_EN, 0);
+        ret |= aw9110_reg_blink_go(me);
         ret |= aw9110_write_reg(me, AW9110_REG_BRE_EN, *pVal);
         ret |= aw9110_reg_blink_go(me);
         return ret;
