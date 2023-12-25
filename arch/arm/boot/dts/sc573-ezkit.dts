@@ -95,10 +95,8 @@
 		reg = <1>;
 		spi-cpol;
 		spi-cpha;
-		/*
 		spi-rx-bus-width = <4>;
 		spi-tx-bus-width = <4>;
-		*/
 		/*adi,enable-dma;*/
 		partition@0 {
 			label = "kernel";
