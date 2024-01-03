@@ -407,13 +407,14 @@ static int aw9110_parse_dt_and_led_register(struct device *dev, struct aw9110_dr
         ret = of_property_read_u32(child, "brightness", &bri);
         if(ret >= 0 && bri >= 0 && bri <= 255)
         {
-            aw9110_reg_set_brightness(me, pin, bri);
+            led->cdev.brightness = bri;
         }
         else
         {
             // default: led off
-            aw9110_reg_set_brightness(me, pin, 0);
+            led->cdev.brightness = 0;
         }
+        aw9110_reg_set_brightness(me, pin, led->cdev.brightness);
 
         ret = devm_led_classdev_register(dev, &led->cdev);
         if(ret < 0)
