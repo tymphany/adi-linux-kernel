@@ -113,7 +113,7 @@
 	status = "okay";
 	cs-gpios = <&gpb 15 GPIO_ACTIVE_LOW>, <&gpc 0 GPIO_ACTIVE_LOW>;
 
-	flash: mx35lf1ge4ab@0 {
+	nand: mx35lf1ge4ab@0 {
 		#address-cells = <1>;
 		#size-cells = <1>;
 		compatible = "spi-nand";
@@ -135,6 +135,38 @@
 		partition@2 {
 			label = "data";
 			reg = <0x4000000 0x4000000>;
+		};
+	};
+	nor: mx66l51235l@1 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "jedec,spi-nor";
+		spi-max-frequency = <50000000>;
+		reg = <0>;
+		spi-cpol;
+		spi-cpha;
+		spi-rx-bus-width = <4>;
+		spi-tx-bus-width = <4>;
+		adi,enable-dma;
+		partition@0 {
+			label = "spl";
+			reg = <0x0 0x20000>;
+		};
+		partition@1 {
+			label = "u-boot";
+			reg = <0x20000 0xC0000>;
+		};
+		partition@2 {
+			label = "env";
+			reg = <0xE0000 0x20000>;
+		};
+		partition@3 {
+			label = "back";
+			reg = <0x100000 0x100000>;
+		};
+		partition@4 {
+			label = "fs";
+			reg = <0x200000 0x600000>;
 		};
 	};
 };
