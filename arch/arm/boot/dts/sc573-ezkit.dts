@@ -165,7 +165,7 @@
 			reg = <0x100000 0x100000>;
 		};
 		partition@4 {
-			label = "fs";
+			label = "nor-fs";
 			reg = <0x200000 0x600000>;
 		};
 	};
