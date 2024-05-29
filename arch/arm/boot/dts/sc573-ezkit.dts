@@ -126,16 +126,20 @@
 		spi-rx-bus-width = <4>;
 		adi,enable-dma;
 		partition@0 {
-			label = "kernel";
-			reg = <0x0 0x400000>;
+			label = "badblock";
+			reg = <0x0 0x200000>;
 		};
 		partition@1 {
-			label = "rootfs";
-			reg = <0x400000 0x3C00000>;
+			label = "kernel";
+			reg = <0x200000 0x400000>;
 		};
 		partition@2 {
+			label = "rootfs";
+			reg = <0x600000 0x3C00000>;
+		};
+		partition@3 {
 			label = "data";
-			reg = <0x4000000 0x4000000>;
+			reg = <0x4200000 0x3E00000>;
 		};
 	};
 	nor: mx66l51235l@1 {
