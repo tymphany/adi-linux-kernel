@@ -162,6 +162,7 @@ static void adi_twi_handle_interrupt(struct adi_twi_iface *iface,
 			iowrite16(*(iface->transPtr++), &iface->regs_base->xmt_data8);
 			iface->writeNum--;
 		}
+		twi_int_status &= ~(XMTSERV);
 	}
 	if (twi_int_status & RCVSERV) {
 		while (iface->readNum > 0 &&
@@ -202,6 +203,7 @@ static void adi_twi_handle_interrupt(struct adi_twi_iface *iface,
 				}
 			}
 		}
+		twi_int_status &= ~(RCVSERV);
 	}
 	if (twi_int_status & MERR) {
 		iowrite16(0, &iface->regs_base->int_mask);
