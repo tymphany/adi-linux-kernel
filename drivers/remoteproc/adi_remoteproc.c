@@ -133,7 +133,6 @@ struct adi_rproc_data {
 	u64 l1_da_range[2];
 	u64 l2_da_range[2];
 	u32 verify;
-	u32 uboot_loaded;
 	struct adi_sharc_resource_table *adi_rsc_table;
 	struct sharc_resource_table *loaded_rsc_table;
 };
@@ -373,13 +372,13 @@ static int adi_ldr_load(struct adi_rproc_data *rproc_data,
 			return -ENOMEM;
 		}
 	}
-	if (!rproc_data->uboot_loaded) {
-		memcpy((char*)rproc_data->mem_virt, fw->data, fw->size);
 
-		enable_spu();
-		ldr_load(rproc_data);
-		disable_spu();
-	}
+	memcpy((char*)rproc_data->mem_virt, fw->data, fw->size);
+
+	enable_spu();
+	ldr_load(rproc_data);
+	disable_spu();
+
 	return 0;
 }
 
@@ -422,20 +421,17 @@ static int adi_rproc_load(struct rproc *rproc, const struct firmware *fw)
 static int adi_rproc_start(struct rproc *rproc)
 {
 	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)rproc->priv;
-	int ret = 0;
+	int ret;
 
-	if (rproc_data->uboot_loaded) {
-		ret = adi_core_set_svect(rproc_data, rproc_data->ldr_load_addr);
-		if (ret)
-			return ret;
+	ret = adi_core_set_svect(rproc_data, rproc_data->ldr_load_addr);
+	if (ret)
+		return ret;
 
-		ret = adi_core_reset(rproc_data);
-		if (ret)
-			return ret;
+	ret = adi_core_reset(rproc_data);
+	if (ret)
+		return ret;
 
-		return adi_core_start(rproc_data);
-	}
-	return ret;
+	return adi_core_start(rproc_data);
 }
 
 /*
@@ -448,7 +444,6 @@ static int adi_rproc_stop(struct rproc *rproc)
 	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)rproc->priv;
 	int ret;
 
-	rproc_data->uboot_loaded = 0;
 	ret = adi_core_set_svect(rproc_data, SHARC_IDLE_ADDR);
 	if (ret)
 		return ret;
@@ -460,6 +455,7 @@ static int adi_rproc_stop(struct rproc *rproc)
 	ret = adi_core_reset(rproc_data);
 	if (ret)
 		return ret;
+
 
 	if (rproc_data->mem_virt) {
 		memset(rproc_data->mem_virt, 0, rproc_data->fw_size * MEMORY_COUNT);
@@ -793,7 +789,6 @@ static int adi_remoteproc_probe(struct platform_device *pdev)
 	struct resource *res;
 	struct reserved_mem *rmem;
 	u32 addr[2];
-	u32 loaded;
 	int ret, core_id;
 	const char *name;
 
@@ -813,22 +808,14 @@ static int adi_remoteproc_probe(struct platform_device *pdev)
 		goto free_adi_rcu;
 	}
 
-	ret = of_property_read_u32(np, "u-boot,loaded", &loaded);
-	if (ret) {
-		dev_err(dev, "Unable to get u-boot,loaded property\n");
-		loaded = 0;
-	}
-
-	if (!loaded) {
-		ret = adi_rcu_is_core_idle(adi_rcu, core_id);
-		if (ret < 0){
-			dev_err(dev, "Invalid core-id\n");
-			goto free_adi_rcu;
-		} else if (ret == 0) {
-			dev_err(dev, "Error: Core%d not idle\n", core_id);
-			ret = -EBUSY;
-			goto free_adi_rcu;
-		}
+	ret = adi_rcu_is_core_idle(adi_rcu, core_id);
+	if (ret < 0){
+		dev_err(dev, "Invalid core-id\n");
+		goto free_adi_rcu;
+	} else if (ret == 0) {
+		dev_err(dev, "Error: Core%d not idle\n", core_id);
+		ret = -EBUSY;
+		goto free_adi_rcu;
 	}
 
 	adi_tru = get_adi_tru_from_node(dev);
@@ -955,7 +942,6 @@ static int adi_remoteproc_probe(struct platform_device *pdev)
 	rproc_data->fw_size = 0;
 	rproc_data->ldr_load_addr = SHARC_IDLE_ADDR;
 	rproc_data->rpmsg_state = ADI_RP_RPMSG_TIMED_OUT;
-	rproc_data->uboot_loaded = loaded;
 
 	ret = rproc_add(rproc);
 	if (ret) {
