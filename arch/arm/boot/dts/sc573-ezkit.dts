@@ -86,6 +86,13 @@
 	};
 };
 
+&gptimer_counter {
+	/* enable PC_15 to work as TIMER0_TMR5 */
+	pinctrl-names = "default";
+	pinctrl-0 = <&extclkin_default>;
+	status = "okay";
+};
+
 &tru {
 	mcapi_to_a5: channel@0 {
 		adi,tru-master-id = <70>; /* trigger master SOFT3 */
@@ -125,16 +132,20 @@
 		spi-rx-bus-width = <4>;
 		adi,enable-dma;
 		partition@0 {
-			label = "kernel";
-			reg = <0x0 0x400000>;
+			label = "badblock";
+			reg = <0x0 0x200000>;
 		};
 		partition@1 {
-			label = "rootfs";
-			reg = <0x400000 0x3C00000>;
+			label = "kernel";
+			reg = <0x200000 0x400000>;
 		};
 		partition@2 {
+			label = "rootfs";
+			reg = <0x600000 0x3C00000>;
+		};
+		partition@3 {
 			label = "data";
-			reg = <0x4000000 0x4000000>;
+			reg = <0x4200000 0x3E00000>;
 		};
 	};
 	nor: mx66l51235l@1 {
@@ -241,6 +252,11 @@
 };
 
 &pinctrl0 {
+	extclkin_default: extclkin_default_pins {
+		pins {
+			pinmux = <ADI_ADSP_PINMUX('C', 15, ADI_ADSP_PINFUNC_ALT3)>;
+		};
+	};
 	uart0_default: uart0_default_pins {
 		pins {
 			pinmux = <ADI_ADSP_PINMUX('F', 8, ADI_ADSP_PINFUNC_ALT0)>,
