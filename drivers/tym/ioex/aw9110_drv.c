@@ -191,35 +191,6 @@ static int aw9110_reg_set_gpio(struct aw9110_drv* me, unsigned int pin, bool val
     return aw9110_write_reg(me, GET_OUTPUT_REG(pin), *pVal);
 }
 
-static void aw9110_reg_init(struct aw9110_drv* me)
-{
-    //AD0 & AD1 high: default: pin0-pin3: 1, pin4-pin8: Hi-Z
-    // aw9110_write_reg(me, AW9110_REG_RESET, AW9110_VAL_RESET);
-
-    // breathing pattern:
-    me->regs.fade_timer.reg_dscp.fadeOn_time = FADE_TIME_1260_MS;
-    me->regs.full_timer.reg_dscp.fullOn_time = FULL_TIME_0_MS;
-    me->regs.fade_timer.reg_dscp.fadeOff_time = FADE_TIME_1260_MS;
-    me->regs.full_timer.reg_dscp.fullOff_time = FULL_TIME_0_MS;
-    aw9110_write_reg(me, AW9110_REG_FADE_TMR, me->regs.fade_timer.val);
-    aw9110_write_reg(me, AW9110_REG_FULL_TMR, me->regs.full_timer.val);
-
-    // for 5 series
-    // aw9110_reg_set_gpio(me, 3, false);
-    // aw9110_reg_set_gpio(me, 4, false);
-    // aw9110_reg_set_gpio(me, 5, false);
-    // aw9110_reg_set_gpio(me, 6, false);
-    // aw9110_reg_set_gpio(me, 7, false);
-    // aw9110_reg_set_gpio(me, 8, false);
-    // aw9110_reg_set_gpio(me, 9, false);
-
-    me->regs.global_ctrl.reg_dscp.max_I = MAX_I_9p25_MA;
-    // once this output_mode bit is set, the gpios will be set to high automatically if we didn't set gpio before.
-    me->regs.global_ctrl.reg_dscp.output_mode = OUTPUT_MODE_PUSH_PULL;
-    me->regs.global_ctrl.reg_dscp.blink_en = true;
-    // aw9110_write_reg(me, AW9110_REG_CTRL, me->regs.global_ctrl.val);
-}
-
 static inline int aw9110_reg_blink_go(struct aw9110_drv* me)
 {
     return aw9110_write_reg(me, AW9110_REG_CTRL, me->regs.global_ctrl.val);
@@ -260,6 +231,39 @@ static int aw9110_reg_pin_blink_mode_en(struct aw9110_drv* me, unsigned int pin,
     }
     else
         return -EINVAL;
+}
+
+static void aw9110_reg_init(struct aw9110_drv* me)
+{
+    //AD0 & AD1 high: default: pin0-pin3: 1, pin4-pin8: Hi-Z
+    // aw9110_write_reg(me, AW9110_REG_RESET, AW9110_VAL_RESET);
+
+    // disable pattern:
+    aw9110_write_reg(me, AW9110_REG_BRE_EN, 0);
+    aw9110_reg_blink_go(me);
+
+    // breathing pattern:
+    // me->regs.fade_timer.reg_dscp.fadeOn_time = FADE_TIME_1260_MS;
+    // me->regs.full_timer.reg_dscp.fullOn_time = FULL_TIME_0_MS;
+    // me->regs.fade_timer.reg_dscp.fadeOff_time = FADE_TIME_1260_MS;
+    // me->regs.full_timer.reg_dscp.fullOff_time = FULL_TIME_0_MS;
+    // aw9110_write_reg(me, AW9110_REG_FADE_TMR, me->regs.fade_timer.val);
+    // aw9110_write_reg(me, AW9110_REG_FULL_TMR, me->regs.full_timer.val);
+
+    // for 5 series
+    // aw9110_reg_set_gpio(me, 3, false);
+    // aw9110_reg_set_gpio(me, 4, false);
+    // aw9110_reg_set_gpio(me, 5, false);
+    // aw9110_reg_set_gpio(me, 6, false);
+    // aw9110_reg_set_gpio(me, 7, false);
+    // aw9110_reg_set_gpio(me, 8, false);
+    // aw9110_reg_set_gpio(me, 9, false);
+
+    me->regs.global_ctrl.reg_dscp.max_I = MAX_I_9p25_MA;
+    // once this output_mode bit is set, the gpios will be set to high automatically if we didn't set gpio before.
+    me->regs.global_ctrl.reg_dscp.output_mode = OUTPUT_MODE_PUSH_PULL;
+    me->regs.global_ctrl.reg_dscp.blink_en = true;
+    // aw9110_write_reg(me, AW9110_REG_CTRL, me->regs.global_ctrl.val);
 }
 
 /* ------------------------------------------------------------------------------------------------ */
