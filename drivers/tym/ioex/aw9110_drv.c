@@ -239,8 +239,8 @@ static void aw9110_reg_init(struct aw9110_drv* me)
     // aw9110_write_reg(me, AW9110_REG_RESET, AW9110_VAL_RESET);
 
     // disable pattern:
-    aw9110_write_reg(me, AW9110_REG_BRE_EN, 0);
-    aw9110_reg_blink_go(me);
+    // aw9110_write_reg(me, AW9110_REG_BRE_EN, 0);
+    // aw9110_reg_blink_go(me);
 
     // breathing pattern:
     // me->regs.fade_timer.reg_dscp.fadeOn_time = FADE_TIME_1260_MS;
