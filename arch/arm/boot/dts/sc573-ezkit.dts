@@ -180,10 +180,8 @@
 	status = "okay";
 };
 
-&i2s0 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&sru_dai0>;
-	status = "okay";
+&sport_cluster0 {
+	status = "disabled";
 };
 
 &crc0 {
