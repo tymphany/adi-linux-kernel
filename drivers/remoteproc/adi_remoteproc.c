@@ -132,6 +132,7 @@ struct adi_rproc_data {
 	u64 l1_da_range[2];
 	u64 l2_da_range[2];
 	u32 verify;
+	u32 uboot_load;
 	struct adi_sharc_resource_table *adi_rsc_table;
 	struct sharc_resource_table *loaded_rsc_table;
 };
@@ -443,6 +444,7 @@ static int adi_rproc_stop(struct rproc *rproc)
 	struct adi_rproc_data *rproc_data = (struct adi_rproc_data *)rproc->priv;
 	int ret;
 
+	rproc_data->uboot_load = 0;
 	ret = adi_core_set_svect(rproc_data, SHARC_IDLE_ADDR);
 	if (ret)
 		return ret;
@@ -788,6 +790,7 @@ static int adi_remoteproc_probe(struct platform_device *pdev)
 	struct resource *res;
 	struct reserved_mem *rmem;
 	u32 addr[2];
+	u32 loaded;
 	int ret, core_id;
 	const char *name;
 
@@ -807,14 +810,21 @@ static int adi_remoteproc_probe(struct platform_device *pdev)
 		goto free_adi_rcu;
 	}
 
-	ret = adi_rcu_is_core_idle(adi_rcu, core_id);
-	if (ret < 0){
-		dev_err(dev, "Invalid core-id\n");
-		goto free_adi_rcu;
-	} else if (ret == 0) {
-		dev_err(dev, "Error: Core%d not idle\n", core_id);
-		ret = -EBUSY;
-		goto free_adi_rcu;
+	ret = of_property_read_u32(np, "u-boot,load", &loaded);
+	if (ret < 0) {
+		dev_err(dev, "Unable to get u-boot,loaded property\n");
+	}
+
+	if (!loaded) {
+		ret = adi_rcu_is_core_idle(adi_rcu, core_id);
+		if (ret < 0){
+			dev_err(dev, "Invalid core-id\n");
+			goto free_adi_rcu;
+		} else if (ret == 0) {
+			dev_err(dev, "Error: Core%d not idle\n", core_id);
+			ret = -EBUSY;
+			goto free_adi_rcu;
+		}
 	}
 
 	adi_tru = get_adi_tru_from_node(dev);
@@ -947,6 +957,7 @@ static int adi_remoteproc_probe(struct platform_device *pdev)
 		dev_err(dev, "Failed to add rproc\n");
 		goto free_workqueue;
 	}
+	rproc_data->uboot_load = loaded;
 
 	dmaengine_get();
 
