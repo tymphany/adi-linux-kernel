@@ -458,7 +458,8 @@ static int aw9110_probe(struct i2c_client *client, const struct i2c_device_id *i
     /* reg value init */
     me->regs.gpmode_portA = AW9110_REG_GPMD_DEFAULT_VAL;
     me->regs.gpmode_portB = AW9110_REG_GPMD_DEFAULT_VAL;
-    me->regs.output_portA = AW9110_REG_CFG_DEFAULT_VAL;
+    unsigned char val = AW9110_REG_CFG_DEFAULT_VAL;
+    me->regs.output_portA = AW9110_SET_PORT_BIT(val, 8);
     me->regs.output_portB = AW9110_REG_CFG_DEFAULT_VAL;
     me->regs.breath_en = 0;
     for(i = 0; i < MAX_PINS; i ++)
