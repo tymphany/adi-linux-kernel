@@ -167,16 +167,17 @@ static int adi_core_set_svect(struct adi_rproc_data *rproc_data,
 {
 	int coreid = rproc_data->core_id;
 
-	if (svect && (coreid == 1))
-		adi_rcu_writel(svect, rproc_data->rcu, ADI_RCU_REG_SVECT1);
-	else if (svect && (coreid == 2))
-		adi_rcu_writel(svect, rproc_data->rcu, ADI_RCU_REG_SVECT2);
-	else {
-		dev_err(rproc_data->dev, "%s, invalid svect:0x%lx, cord_id:%d\n",
-						__func__, svect, coreid);
-		return -EINVAL;
+	if (!rproc_data->uboot_load) {
+		if (svect && (coreid == 1))
+			adi_rcu_writel(svect, rproc_data->rcu, ADI_RCU_REG_SVECT1);
+		else if (svect && (coreid == 2))
+			adi_rcu_writel(svect, rproc_data->rcu, ADI_RCU_REG_SVECT2);
+		else {
+			dev_err(rproc_data->dev, "%s, invalid svect:0x%lx, cord_id:%d\n",
+							__func__, svect, coreid);
+			return -EINVAL;
+		}
 	}
-
 	return 0;
 }
 
@@ -196,12 +197,20 @@ static int adi_core_start(struct adi_rproc_data *rproc_data)
 		return -ENOENT;
 	}
 
-	return adi_rcu_start_core(rproc_data->rcu, rproc_data->core_id);
+	if (!rproc_data->uboot_load) {
+		ret = adi_rcu_start_core(rproc_data->rcu, rproc_data->core_id);
+	}
+	return ret;
 }
 
 static int adi_core_reset(struct adi_rproc_data *rproc_data)
 {
-	return adi_rcu_reset_core(rproc_data->rcu, rproc_data->core_id);
+	int ret = 0;
+
+	if (!rproc_data->uboot_load) {
+		ret = adi_rcu_reset_core(rproc_data->rcu, rproc_data->core_id);
+	}
+	return ret;
 }
 
 static int adi_core_stop(struct adi_rproc_data *rproc_data)
@@ -373,12 +382,12 @@ static int adi_ldr_load(struct adi_rproc_data *rproc_data,
 		}
 	}
 
-	memcpy((char*)rproc_data->mem_virt, fw->data, fw->size);
-
-	enable_spu();
-	ldr_load(rproc_data);
-	disable_spu();
-
+	if (!rproc_data->uboot_load) {
+		memcpy((char*)rproc_data->mem_virt, fw->data, fw->size);
+		enable_spu();
+		ldr_load(rproc_data);
+		disable_spu();
+	}
 	return 0;
 }
 
@@ -951,13 +960,14 @@ static int adi_remoteproc_probe(struct platform_device *pdev)
 	rproc_data->fw_size = 0;
 	rproc_data->ldr_load_addr = SHARC_IDLE_ADDR;
 	rproc_data->rpmsg_state = ADI_RP_RPMSG_TIMED_OUT;
+	rproc_data->rproc->auto_boot = false;
+	rproc_data->uboot_load = loaded;
 
 	ret = rproc_add(rproc);
 	if (ret) {
 		dev_err(dev, "Failed to add rproc\n");
 		goto free_workqueue;
 	}
-	rproc_data->uboot_load = loaded;
 
 	dmaengine_get();
 
