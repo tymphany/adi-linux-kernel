@@ -204,14 +204,9 @@
 			compatible = "adi,sram-controller";
 			#address-cells = <1>;
 			#size-cells = <1>;
-			adi,sram = <&sram0>,
-					<&sram1>;
-
-			sram-ecc-err@31080000 {
-				compatible = "adi,sram-ecc-err";
-				reg = <0x31080000 0x100>;
-				interrupts = <GIC_SPI 10 IRQ_TYPE_LEVEL_HIGH>;
-			};
+			adi,sram = <&sram0>, <&sram1>;
+			reg = <0x31080000 0x100>;
+			interrupts = <GIC_SPI 10 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
 		sram_mmap: sram-mmap@0 { /* mmap from sram1 pool*/
