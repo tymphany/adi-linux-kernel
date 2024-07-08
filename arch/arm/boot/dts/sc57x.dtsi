@@ -90,8 +90,8 @@
 		compatible = "mmio-sram";
 		#address-cells = <1>;
 		#size-cells = <1>;
-		reg = <0x20004000 0xFBFFF>;
-		ranges = <0 0x20004000 0xFBFFF>;
+		reg = <0x20004000 0x3B000>;
+		ranges = <0 0x20004000 0x3B000>;
 	};
 
 	sys_clkin0: sys-clkin0@1 {
