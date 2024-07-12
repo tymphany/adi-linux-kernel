@@ -404,7 +404,7 @@ static int aw9110_parse_dt_and_led_register(struct device *dev, struct aw9110_dr
         led->me = me;
         led->cdev.brightness_set = aw9110_brightness_set;
         me->pin_configured[pin] = true;
-
+/*
         aw9110_reg_set_pin_mode(me, pin, PIN_MODE_LED);
         aw9110_reg_config_led_mode(me, pin, FADE_MODE_BLINK_MODE);
 
@@ -418,9 +418,9 @@ static int aw9110_parse_dt_and_led_register(struct device *dev, struct aw9110_dr
             // default: led off
             led->cdev.brightness = 0;
         }
-        aw9110_reg_set_brightness(me, pin, led->cdev.brightness);
-
-        ret = devm_led_classdev_register(dev, &led->cdev);
+        //aw9110_reg_set_brightness(me, pin, led->cdev.brightness);
+*/
+       ret = devm_led_classdev_register(dev, &led->cdev);
         if(ret < 0)
         {
             printk(KERN_INFO "aw9110: devm_led_classdev_register(): failed.\n");
