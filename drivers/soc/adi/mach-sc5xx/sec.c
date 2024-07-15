@@ -189,7 +189,6 @@ static int adi_sec_probe(struct platform_device *pdev) {
 
 	adi_sec->ioaddr = base;
 
-#if 0
 	/* Disable SYSCD_RESETb and clear RCU reset status */
 	adi_rcu_writel(0x00, adi_rcu, ADI_RCU_REG_CTL);
 	adi_rcu_writel(0x0f, adi_rcu, ADI_RCU_REG_STAT);
@@ -216,7 +215,6 @@ static int adi_sec_probe(struct platform_device *pdev) {
 
 	/* Enable SYSCD_RESETb input */
 	adi_rcu_writel(0x100, adi_rcu, ADI_RCU_REG_CTL);
-#endif
 
 #ifdef CONFIG_ADI_WATCHDOG
 	/* @todo verify sec watchdog event number, make device tree based */
