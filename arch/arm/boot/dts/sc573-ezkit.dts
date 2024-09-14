@@ -179,6 +179,7 @@
 
 &i2c2 {
 	status = "okay";
+	clock-khz = <400>;
 };
 
 &sport_cluster0 {
